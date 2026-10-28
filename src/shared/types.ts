@@ -194,6 +194,8 @@ export interface Settings {
   transitionBufferMinutes: number
   claude: {
     model: string
+    /** Nur nötig für Schlüssel ohne Workspace-Zuordnung */
+    workspaceId?: string
     includeEmailBodies: boolean
     chatRetentionDays: number
   }

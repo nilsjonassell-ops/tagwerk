@@ -3,3 +3,6 @@ out/
 release/
 *.log
 .DS_Store
+.electron-download/
+start.log
+diagnose.*

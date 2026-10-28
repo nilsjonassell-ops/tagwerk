@@ -391,7 +391,7 @@ function ClaudeSettings() {
           <span>
             {claude.configured
               ? 'Verschlüsselt im Schlüsselspeicher des Betriebssystems gespeichert.'
-              : 'Einen Schlüssel erhältst du in der Claude Console unter „API Keys“. Er wird vor dem Speichern geprüft.'}
+              : 'Einen Schlüssel erstellst du auf platform.claude.com unter Settings → API keys. Er wird vor dem Speichern geprüft.'}
           </span>
         </div>
         {claude.configured && <button className="btn small" onClick={remove}>Trennen</button>}
@@ -409,8 +409,19 @@ function ClaudeSettings() {
             <button className="btn primary" onClick={save} disabled={!key.trim() || state.busy}>{state.busy ? <Loader2 className="spin" /> : null} Prüfen und speichern</button>
           </div>
           {state.error && <div className="error-text">{state.error}</div>}
+          <a className="link" href="https://platform.claude.com/settings/keys" target="_blank" rel="noreferrer">API-Schlüssel erstellen</a>
         </div>
       )}
+      <Row label="Workspace-ID (optional)" hint="Nur nötig, wenn dein Schlüssel keinem Workspace zugeordnet ist. Beginnt mit „wrkspc_“.">
+        <input
+          className="input"
+          defaultValue={s.claude.workspaceId ?? ''}
+          placeholder="wrkspc_…"
+          spellCheck={false}
+          onBlur={(e) => set({ claude: { ...s.claude, workspaceId: e.target.value.trim() || undefined } })}
+          aria-label="Workspace-ID"
+        />
+      </Row>
       {state.ok && <div className="row hint" style={{ padding: '8px 0' }}><Check size={14} color="var(--ok)" /> Claude ist verbunden.</div>}
       <Row label="Modell">
         <select className="select" value={s.claude.model} onChange={(e) => set({ claude: { ...s.claude, model: e.target.value } })}>

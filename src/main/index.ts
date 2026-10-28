@@ -418,7 +418,7 @@ function registerIpc() {
 
   ipcMain.handle('claude:status', async () => ({ configured: secrets.hasKey(), encrypted: await secrets.encryptionAvailable() }))
   ipcMain.handle('claude:setKey', async (_e, key: string) => {
-    const v = await verifyKey(String(key ?? ''), store.getSettings().claude.model)
+    const v = await verifyKey(String(key ?? ''), store.getSettings().claude.model, store.getSettings().claude.workspaceId)
     if (!v.ok) return v
     try {
       await secrets.setKey(key.trim())
