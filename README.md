@@ -4,9 +4,7 @@ Persönliches Produktivitäts-Dashboard für Windows und macOS: Kalender, E-Mail
 
 ## Starten
 
-**Fertige Windows-App (ohne Installation):** `release/Tagwerk-0.1.0-win.zip` entpacken und `Tagwerk.exe` starten. Windows SmartScreen meldet beim ersten Start eine unbekannte App, weil sie nicht signiert ist („Weitere Informationen“ → „Trotzdem ausführen“).
-
-**Aus dem Quellcode** (Node.js 20 oder neuer):
+Voraussetzung: Node.js 20 oder neuer. Im Projektordner (z. B. in PowerShell):
 
 ```bash
 npm install
@@ -15,6 +13,7 @@ npm run build      # Produktions-Build nach out/
 npm start          # Produktions-Build starten
 npm test           # Logik-Tests (Konflikte, freie Zeit, Wiederholungen, ICS-Import …)
 npm run dist:win   # Windows-Installer (.exe) nach release/ – auf Windows ausführen
+                   # (nicht signiert: SmartScreen → „Weitere Informationen“ → „Trotzdem ausführen“)
 npm run dist:mac   # macOS-Image (.dmg) – auf einem Mac ausführen
 ```
 
