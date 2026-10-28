@@ -1,0 +1,302 @@
+// Gemeinsame Datentypen für Haupt- und Renderer-Prozess.
+
+/** Herkunft eines Datensatzes – wird in der Oberfläche sichtbar gemacht. */
+export type Source = 'demo' | 'local' | 'ics'
+
+export type Priority = 'high' | 'medium' | 'low'
+export type TaskStatus = 'open' | 'doing' | 'done'
+export type Recurrence = 'none' | 'daily' | 'weekdays' | 'weekly' | 'monthly'
+
+export interface Person {
+  name: string
+  email: string
+}
+
+export interface TaskOrigin {
+  kind: 'email' | 'note' | 'meeting' | 'assistant'
+  refId: string
+  label: string
+}
+
+export interface Task {
+  id: string
+  title: string
+  notes?: string
+  priority: Priority
+  /** Fälligkeitsdatum als YYYY-MM-DD */
+  due?: string
+  projectId?: string
+  status: TaskStatus
+  recurrence: Recurrence
+  createdAt: string
+  completedAt?: string
+  archived?: boolean
+  origin?: TaskOrigin
+  source: Source
+}
+
+export interface CalEvent {
+  id: string
+  title: string
+  /** ISO-Zeitstempel */
+  start: string
+  end: string
+  allDay?: boolean
+  location?: string
+  attendees: Person[]
+  notes?: string
+  projectId?: string
+  source: Source
+  /** Importierte Termine (z. B. .ics) werden nicht zurückgeschrieben */
+  readOnly?: boolean
+  importId?: string
+}
+
+export type MailFolder = 'inbox' | 'sent' | 'archive'
+
+export interface Email {
+  id: string
+  threadId: string
+  from: Person
+  to: Person[]
+  subject: string
+  date: string
+  body: string
+  read: boolean
+  important: boolean
+  /** Erwartet eine Antwort von mir */
+  needsReply: boolean
+  replied: boolean
+  folder: MailFolder
+  projectId?: string
+  source: Source
+}
+
+export interface Note {
+  id: string
+  title: string
+  body: string
+  kind: 'note' | 'meeting'
+  eventId?: string
+  projectId?: string
+  decisions?: string
+  nextSteps?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type ProjectStatus = 'on-track' | 'at-risk' | 'paused' | 'done'
+
+export interface Project {
+  id: string
+  name: string
+  status: ProjectStatus
+  summary: string
+  nextSteps: string[]
+  hue: number
+  source: Source
+}
+
+export interface DocRef {
+  id: string
+  title: string
+  kind: 'Dokument' | 'Tabelle' | 'Präsentation' | 'PDF'
+  projectId?: string
+  updatedAt: string
+  source: Source
+}
+
+export type ProposalKind =
+  | 'create_task'
+  | 'complete_task'
+  | 'delete_task'
+  | 'create_event'
+  | 'update_event'
+  | 'draft_reply'
+
+export interface Proposal {
+  id: string
+  kind: ProposalKind
+  payload: Record<string, unknown>
+  status: 'pending' | 'confirmed' | 'rejected' | 'failed'
+  note?: string
+}
+
+export interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant'
+  text: string
+  proposals?: Proposal[]
+  /** Rohe Inhaltsblöcke der API-Antwort (für den Gesprächsverlauf) */
+  raw?: unknown
+  error?: boolean
+  createdAt: string
+}
+
+export interface IcsImport {
+  id: string
+  name: string
+  importedAt: string
+  count: number
+}
+
+export interface AppData {
+  version: 1
+  tasks: Task[]
+  events: CalEvent[]
+  emails: Email[]
+  notes: Note[]
+  projects: Project[]
+  docs: DocRef[]
+  chat: ChatMessage[]
+  sources: {
+    demo: boolean
+    icsImports: IcsImport[]
+  }
+}
+
+export type ThemeMode = 'system' | 'light' | 'dark'
+
+export type ViewId = 'today' | 'calendar' | 'inbox' | 'tasks' | 'notes' | 'projects'
+
+export type DashboardCardId = 'brief' | 'schedule' | 'tasks' | 'mail' | 'focus' | 'weather'
+
+export interface Settings {
+  userName: string
+  theme: ThemeMode
+  launchAtLogin: boolean
+  closeToTray: boolean
+  quickNoteShortcut: string
+  notifications: {
+    events: boolean
+    leadMinutes: number
+    dailyBrief: boolean
+    briefTime: string
+  }
+  sidebar: { id: ViewId; visible: boolean }[]
+  dashboardCards: { id: DashboardCardId; visible: boolean }[]
+  workHours: { start: number; end: number }
+  focusMinMinutes: number
+  transitionBufferMinutes: number
+  claude: {
+    model: string
+    includeEmailBodies: boolean
+    chatRetentionDays: number
+  }
+  retention: {
+    archivedTasksDays: number
+  }
+  weather: {
+    enabled: boolean
+    city: string
+  }
+  onboarded: boolean
+}
+
+export const DEFAULT_SETTINGS: Settings = {
+  userName: '',
+  theme: 'system',
+  launchAtLogin: false,
+  closeToTray: true,
+  quickNoteShortcut: 'CommandOrControl+Shift+Space',
+  notifications: { events: true, leadMinutes: 10, dailyBrief: true, briefTime: '08:00' },
+  sidebar: [
+    { id: 'today', visible: true },
+    { id: 'calendar', visible: true },
+    { id: 'inbox', visible: true },
+    { id: 'tasks', visible: true },
+    { id: 'notes', visible: true },
+    { id: 'projects', visible: true }
+  ],
+  dashboardCards: [
+    { id: 'brief', visible: true },
+    { id: 'schedule', visible: true },
+    { id: 'tasks', visible: true },
+    { id: 'mail', visible: true },
+    { id: 'focus', visible: true },
+    { id: 'weather', visible: false }
+  ],
+  workHours: { start: 8, end: 18 },
+  focusMinMinutes: 60,
+  transitionBufferMinutes: 10,
+  claude: { model: 'claude-sonnet-5-5', includeEmailBodies: false, chatRetentionDays: 30 },
+  retention: { archivedTasksDays: 180 },
+  weather: { enabled: false, city: '' },
+  onboarded: false
+}
+
+export const CLAUDE_MODELS = [
+  { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5 – ausgewogen' },
+  { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5 – schnell' },
+  { id: 'claude-opus-5-5', label: 'Claude Opus 5.5 – gründlich' }
+]
+
+// ---- IPC-Verträge ----
+
+export interface ClaudeRequest {
+  model: string
+  system: string
+  messages: unknown[]
+  tools?: unknown[]
+  max_tokens?: number
+}
+
+export type ClaudeResult =
+  | { ok: true; content: unknown[]; stop_reason: string }
+  | { ok: false; error: string; code: 'no-key' | 'offline' | 'auth' | 'rate' | 'server' | 'bad-request' | 'unknown' }
+
+export interface WeatherResult {
+  ok: boolean
+  city?: string
+  temperature?: number
+  min?: number
+  max?: number
+  code?: number
+  precipitation?: number
+  error?: string
+}
+
+export interface IcsResult {
+  ok: boolean
+  canceled?: boolean
+  import?: IcsImport
+  events?: CalEvent[]
+  error?: string
+}
+
+export interface PlatformInfo {
+  platform: 'win32' | 'darwin' | 'linux'
+  version: string
+}
+
+export interface TagwerkApi {
+  platform: PlatformInfo
+  data: {
+    load(): Promise<AppData | null>
+    save(data: AppData): Promise<void>
+    exportJson(): Promise<{ ok: boolean; path?: string }>
+    wipe(): Promise<void>
+    onExternalNote(cb: (note: Note) => void): () => void
+  }
+  settings: {
+    get(): Promise<Settings>
+    set(patch: Partial<Settings>): Promise<Settings>
+  }
+  claude: {
+    status(): Promise<{ configured: boolean; encrypted: boolean }>
+    setKey(key: string): Promise<{ ok: boolean; error?: string }>
+    clearKey(): Promise<void>
+    send(req: ClaudeRequest): Promise<ClaudeResult>
+  }
+  ics: { import(): Promise<IcsResult> }
+  weather: { get(city: string): Promise<WeatherResult> }
+  app: {
+    notify(title: string, body: string): Promise<void>
+    onNavigate(cb: (view: string) => void): () => void
+    onCommand(cb: (cmd: string) => void): () => void
+  }
+  quickNote: {
+    save(text: string): Promise<void>
+    close(): void
+  }
+}
