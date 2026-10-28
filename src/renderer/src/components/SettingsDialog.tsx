@@ -6,6 +6,7 @@ import { createDemoData, removeDemo } from '@shared/demo'
 import { CLAUDE_MODELS, type DashboardCardId, type Settings } from '@shared/types'
 import { confirm, useStore } from '@/lib/store'
 import { VIEW_META } from './Sidebar'
+import { GoogleSettings } from './GoogleSettings'
 import { Dialog, Switch } from './ui'
 import { isMac, modKey } from '@/lib/format'
 
@@ -282,7 +283,7 @@ function Sources() {
   return (
     <>
       <h3>Datenquellen</h3>
-      <p>Tagwerk nutzt externe Konten nur, wenn du sie ausdrücklich verbindest. Alle Daten liegen lokal auf diesem Gerät.</p>
+      <p>Tagwerk nutzt externe Konten nur, wenn du sie ausdrücklich verbindest. Synchronisierte Daten liegen lokal auf diesem Gerät, Zugangsdaten verschlüsselt im Schlüsselspeicher des Betriebssystems.</p>
 
       <div className="source-row">
         <div className="icon"><FlaskConical /></div>
@@ -292,6 +293,8 @@ function Sources() {
         </div>
         <button className="btn small" onClick={toggleDemo}>{data.sources.demo ? 'Entfernen' : 'Laden'}</button>
       </div>
+
+      <GoogleSettings />
 
       <div className="source-row">
         <div className="icon"><CalendarPlus /></div>
@@ -312,7 +315,6 @@ function Sources() {
       ))}
 
       {[
-        { icon: CalendarDays, name: 'Google Kalender & Gmail', text: 'Direkte Kontoverbindung (OAuth) ist noch nicht eingerichtet.' },
         { icon: Mail, name: 'Microsoft 365 / Outlook', text: 'Direkte Kontoverbindung (Microsoft Graph) ist noch nicht eingerichtet.' },
         { icon: Mail, name: 'E-Mail per IMAP/SMTP', text: 'Noch nicht verfügbar.' }
       ].map((x) => (

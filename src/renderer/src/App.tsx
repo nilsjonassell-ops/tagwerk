@@ -45,6 +45,25 @@ export function App() {
     return () => mq.removeEventListener('change', apply)
   }, [theme])
 
+  // Google: beim Start, alle 5 Minuten, bei Rückkehr ins Fenster und wenn wieder online
+  const googleConnected = useStore((s) => s.google.connected)
+  const online = useStore((s) => s.online)
+  useEffect(() => {
+    if (!ready || !googleConnected || !online) return
+    const st = useStore.getState
+    st().syncGoogle({ quiet: true })
+    const t = setInterval(() => st().syncGoogle({ quiet: true }), 5 * 60_000)
+    const onFocus = () => {
+      const last = st().googleSync.lastSync
+      if (!last || Date.now() - new Date(last).getTime() > 2 * 60_000) st().syncGoogle({ quiet: true })
+    }
+    window.addEventListener('focus', onFocus)
+    return () => {
+      clearInterval(t)
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [ready, googleConnected, online])
+
   // Online/Offline
   useEffect(() => {
     const on = () => useStore.getState().set({ online: navigator.onLine })

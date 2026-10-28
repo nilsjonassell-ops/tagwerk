@@ -1,11 +1,14 @@
+import { useEffect, useState } from 'react'
 import { useStore, useConfirm } from '@/lib/store'
 import { Dialog } from './ui'
 
 export function ConfirmHost() {
   const { state, set } = useConfirm()
+  const [checked, setChecked] = useState(false)
+  useEffect(() => setChecked(state?.option?.initial ?? false), [state])
   if (!state) return null
   const close = (ok: boolean) => {
-    state.resolve(ok)
+    state.resolve(ok, checked)
     set(null)
   }
   return (
@@ -24,6 +27,11 @@ export function ConfirmHost() {
       }
     >
       {state.body && <p>{state.body}</p>}
+      {state.option && (
+        <label className="row" style={{ gap: 8 }}>
+          <input type="checkbox" className="box-check" checked={checked} onChange={(e) => setChecked(e.target.checked)} /> {state.option.label}
+        </label>
+      )}
     </Dialog>
   )
 }

@@ -35,7 +35,20 @@ export function Sidebar() {
   }, [data.emails, data.tasks])
 
   const activeProjects = data.projects.filter((p) => p.status !== 'done').slice(0, 6)
-  const sourceLabel = data.sources.demo ? 'Demo-Daten aktiv' : data.sources.icsImports.length ? 'Kalender importiert' : 'Nur lokale Daten'
+  const google = useStore((s) => s.google)
+  const syncing = useStore((s) => s.googleSync.syncing)
+  const syncErr = useStore((s) => s.googleSync.errors)
+  const googleProblem = google.expired || !!syncErr.general || !!syncErr.calendar || !!syncErr.gmail
+  const sourceLabel = google.expired
+    ? 'Google: neu anmelden'
+    : google.connected
+      ? `${syncing ? 'Synchronisiert …' : googleProblem ? 'Google: Fehler' : 'Google verbunden'}${data.sources.demo ? ' + Demo' : ''}`
+      : data.sources.demo
+        ? 'Demo-Daten aktiv'
+        : data.sources.icsImports.length
+          ? 'Kalender importiert'
+          : 'Nur lokale Daten'
+  const dotClass = google.expired || (google.connected && googleProblem) ? 'off' : google.connected ? 'on' : data.sources.demo ? 'demo' : 'on'
 
   return (
     <aside className="sidebar" aria-label="Navigation">
@@ -99,7 +112,7 @@ export function Sidebar() {
           <span className="label">Einstellungen</span>
         </button>
         <button className="source-status" onClick={() => openDialog({ kind: 'settings', section: 'sources' })} title="Verbundene Datenquellen anzeigen">
-          {online ? <span className={`status-dot ${data.sources.demo ? 'demo' : 'on'}`} /> : <WifiOff size={13} />}
+          {online ? <span className={`status-dot ${dotClass}`} /> : <WifiOff size={13} />}
           <span className="label">{online ? sourceLabel : 'Offline – lokale Daten'}</span>
         </button>
       </div>

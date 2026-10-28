@@ -1,7 +1,7 @@
 // Gemeinsame Datentypen für Haupt- und Renderer-Prozess.
 
 /** Herkunft eines Datensatzes – wird in der Oberfläche sichtbar gemacht. */
-export type Source = 'demo' | 'local' | 'ics'
+export type Source = 'demo' | 'local' | 'ics' | 'google'
 
 export type Priority = 'high' | 'medium' | 'low'
 export type TaskStatus = 'open' | 'doing' | 'done'
@@ -50,6 +50,12 @@ export interface CalEvent {
   /** Importierte Termine (z. B. .ics) werden nicht zurückgeschrieben */
   readOnly?: boolean
   importId?: string
+  /** ID im Ursprungssystem (z. B. Google-Kalender-Event-ID) */
+  remoteId?: string
+  /** Link zum Termin im Ursprungssystem */
+  webLink?: string
+  /** Ich bin nicht Organisator:in */
+  organizer?: Person
 }
 
 export type MailFolder = 'inbox' | 'sent' | 'archive'
@@ -70,6 +76,13 @@ export interface Email {
   folder: MailFolder
   projectId?: string
   source: Source
+  /** Gmail-Nachrichten-ID */
+  remoteId?: string
+  /** Gmail-Thread-ID */
+  remoteThreadId?: string
+  /** RFC-822 Message-ID und References für korrekte Antwort-Verkettung */
+  rfcMessageId?: string
+  references?: string
 }
 
 export interface Note {
@@ -152,6 +165,7 @@ export interface AppData {
   sources: {
     demo: boolean
     icsImports: IcsImport[]
+    google?: { email: string; lastSync?: string }
   }
 }
 
@@ -264,6 +278,72 @@ export interface IcsResult {
   error?: string
 }
 
+// ---- Google ----
+
+export interface GoogleCapabilities {
+  calendarRead: boolean
+  calendarWrite: boolean
+  gmailRead: boolean
+  gmailWrite: boolean
+}
+
+export interface GoogleStatus {
+  /** OAuth-Client (Client-ID/Secret) hinterlegt */
+  clientConfigured: boolean
+  clientIdHint?: string
+  connected: boolean
+  email?: string
+  caps: GoogleCapabilities
+  /** Anmeldung abgelaufen oder widerrufen – neu verbinden */
+  expired: boolean
+  encrypted: boolean
+}
+
+export interface GoogleConnectOptions {
+  calendar: boolean
+  gmail: boolean
+  /** false = nur lesen */
+  write: boolean
+}
+
+export type GoogleErrorCode = 'not-connected' | 'expired' | 'scope' | 'api-disabled' | 'offline' | 'rate' | 'not-found' | 'conflict' | 'unknown'
+
+export type GResult<T> = { ok: true; value: T } | { ok: false; code: GoogleErrorCode; error: string }
+
+export interface GoogleSyncResult {
+  ok: boolean
+  syncedAt: string
+  events?: CalEvent[]
+  emails?: Email[]
+  errors: { calendar?: string; gmail?: string; general?: string }
+  status: GoogleStatus
+}
+
+export interface GoogleSendParams {
+  remoteThreadId: string
+  to: Person[]
+  subject: string
+  body: string
+  inReplyTo?: string
+  references?: string
+}
+
+export interface GoogleApi {
+  status(): Promise<GoogleStatus>
+  setClient(c: { clientId: string; clientSecret: string }): Promise<{ ok: boolean; error?: string }>
+  importClientFile(): Promise<{ ok: boolean; canceled?: boolean; error?: string }>
+  clearClient(): Promise<void>
+  connect(opts: GoogleConnectOptions): Promise<{ ok: boolean; error?: string; status: GoogleStatus }>
+  cancelConnect(): Promise<void>
+  disconnect(): Promise<GoogleStatus>
+  sync(): Promise<GoogleSyncResult>
+  createEvent(ev: CalEvent, notify: boolean): Promise<GResult<CalEvent>>
+  updateEvent(ev: CalEvent, notify: boolean): Promise<GResult<CalEvent>>
+  deleteEvent(remoteId: string, notify: boolean): Promise<GResult<null>>
+  modifyThread(remoteThreadId: string, add: string[], remove: string[]): Promise<GResult<null>>
+  send(p: GoogleSendParams): Promise<GResult<Email>>
+}
+
 export interface PlatformInfo {
   platform: 'win32' | 'darwin' | 'linux'
   version: string
@@ -289,6 +369,7 @@ export interface TagwerkApi {
     send(req: ClaudeRequest): Promise<ClaudeResult>
   }
   ics: { import(): Promise<IcsResult> }
+  google: GoogleApi
   weather: { get(city: string): Promise<WeatherResult> }
   app: {
     notify(title: string, body: string): Promise<void>

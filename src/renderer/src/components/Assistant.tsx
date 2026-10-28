@@ -220,7 +220,7 @@ function ProposalCard({ msgId, p }: { msgId: string; p: Proposal }) {
                 {pl.start ? `${when(pl._fromStart ?? ev.start)} → ${when(pl.start)}` : ''}
                 {pl.title ? ` · neuer Titel: ${pl.title}` : ''}
                 {pl.location ? ` · Ort: ${pl.location}` : ''}
-                {ev.attendees.length ? ` · ${ev.attendees.length} Teilnehmende` : ''}
+                {ev.attendees.length ? ` · ${ev.attendees.length} Teilnehmende${ev.source === 'google' ? ', werden nicht benachrichtigt' : ''}` : ''}
               </div>
             )}
           </>

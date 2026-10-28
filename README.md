@@ -34,12 +34,29 @@ Electron + React + TypeScript (Vite über electron-vite).
 | Kalenderdatei (.ics) | verfügbar – Import aus Outlook, Google oder Apple Kalender, schreibgeschützt |
 | Claude (Anthropic API) | verfügbar – eigener API-Schlüssel in Einstellungen → Claude |
 | Wetter (Open-Meteo) | verfügbar, optional, ohne Konto |
-| Google Kalender / Gmail | nicht verbunden – OAuth-Client muss eingerichtet werden |
+| Google Kalender & Gmail | verfügbar – einmalige Einrichtung, siehe unten |
 | Microsoft 365 / Outlook | nicht verbunden – App-Registrierung (Microsoft Graph) nötig |
 | IMAP/SMTP | nicht verbunden |
 | Pendelzeit | nicht verbunden – Routendienst nötig |
 
 Im Demo-Postfach werden Antworten nur lokal abgelegt und nie versendet.
+
+## Google verbinden (einmalig, ca. 10 Minuten)
+
+Tagwerk spricht direkt mit Google – es gibt keinen Tagwerk-Server dazwischen. Dafür brauchst du ein eigenes, kostenloses Google-Cloud-Projekt:
+
+1. [Google Cloud Console](https://console.cloud.google.com/) öffnen, neues Projekt „Tagwerk“ anlegen.
+2. **APIs & Dienste → Bibliothek**: *Google Calendar API* und *Gmail API* aktivieren.
+3. **Google Auth Platform** (früher „OAuth-Zustimmungsbildschirm“): Typ *Extern*, App-Name „Tagwerk“. Unter **Zielgruppe → Testnutzer** die eigene Gmail-Adresse eintragen.
+4. **Clients → Client erstellen**, Typ **Desktop-App**, JSON-Datei herunterladen.
+5. In Tagwerk: **Einstellungen → Datenquellen → Google** → Datei auswählen → Zugriff wählen → **Mit Google verbinden**. Im Browser bestätigen.
+
+Hinweise:
+- Google zeigt „Google hat diese App nicht überprüft“ – bei selbst erstellten Apps normal (über „Erweitert“ fortfahren).
+- Im Testmodus laufen Anmeldungen nach **7 Tagen** ab. Tagwerk zeigt das an; dann einfach neu verbinden.
+- Angefragte Berechtigungen (so eng wie möglich): `calendar.events.owned` bzw. `.readonly` (nur Termine in eigenen Kalendern), `gmail.modify` bzw. `gmail.readonly` (kein endgültiges Löschen), `openid email`.
+- Synchronisiert werden der Hauptkalender (30 Tage zurück bis 120 Tage voraus) und die letzten 40 Unterhaltungen im Posteingang, alle 5 Minuten solange Tagwerk läuft.
+- Senden, Löschen und Verschieben von Terminen mit Teilnehmenden verlangen immer eine Bestätigung; Teilnehmende werden nur benachrichtigt, wenn du das ankreuzt.
 
 ## Sicherheit und Kontrolle
 

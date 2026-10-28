@@ -33,6 +33,21 @@ const api: TagwerkApi = {
     send: (req) => ipcRenderer.invoke('claude:send', req)
   },
   ics: { import: () => ipcRenderer.invoke('ics:import') },
+  google: {
+    status: () => ipcRenderer.invoke('google:status'),
+    setClient: (c) => ipcRenderer.invoke('google:setClient', c),
+    importClientFile: () => ipcRenderer.invoke('google:importClientFile'),
+    clearClient: () => ipcRenderer.invoke('google:clearClient'),
+    connect: (o) => ipcRenderer.invoke('google:connect', o),
+    cancelConnect: () => ipcRenderer.invoke('google:cancelConnect'),
+    disconnect: () => ipcRenderer.invoke('google:disconnect'),
+    sync: () => ipcRenderer.invoke('google:sync'),
+    createEvent: (ev, notify) => ipcRenderer.invoke('google:createEvent', ev, notify),
+    updateEvent: (ev, notify) => ipcRenderer.invoke('google:updateEvent', ev, notify),
+    deleteEvent: (id, notify) => ipcRenderer.invoke('google:deleteEvent', id, notify),
+    modifyThread: (id, add, remove) => ipcRenderer.invoke('google:modifyThread', id, add, remove),
+    send: (p) => ipcRenderer.invoke('google:send', p)
+  },
   weather: { get: (city) => ipcRenderer.invoke('weather:get', city) },
   app: {
     notify: (title, body) => ipcRenderer.invoke('app:notify', title, body),

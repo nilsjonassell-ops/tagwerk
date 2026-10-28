@@ -142,6 +142,11 @@ export function EventDialog({ id, preset }: { id?: string; preset?: Partial<CalE
   const [notes, setNotes] = useState(existing?.notes ?? '')
   const [projectId, setProjectId] = useState(existing?.projectId ?? preset?.projectId ?? '')
   const [touched, setTouched] = useState(false)
+  const google = useStore((s) => s.google)
+  const isGoogle = existing?.source === 'google'
+  const [target, setTarget] = useState<'google' | 'local'>(google.caps.calendarWrite ? 'google' : 'local')
+  const [notify, setNotify] = useState(false)
+  const toGoogle = !existing && target === 'google'
 
   const start = allDay ? fromLocalInput(date, '00:00') : fromLocalInput(date, startT)
   let end = allDay ? fromLocalInput(date, '23:59') : fromLocalInput(date, endT)
@@ -149,13 +154,15 @@ export function EventDialog({ id, preset }: { id?: string; preset?: Partial<CalE
   const invalidTitle = !title.trim()
 
   const draft: CalEvent = {
+    ...existing,
     id: existing?.id ?? uid('e'),
     title: title.trim(),
     start,
     end,
     allDay: allDay || undefined,
     location: location.trim() || undefined,
-    attendees: parseAttendees(attendees),
+    // Teilnehmende bestehender Google-Termine werden in Google Kalender verwaltet.
+    attendees: isGoogle ? existing!.attendees : parseAttendees(attendees),
     notes: notes.trim() || undefined,
     projectId: projectId || undefined,
     source: existing?.source ?? 'local'
@@ -170,13 +177,31 @@ export function EventDialog({ id, preset }: { id?: string; preset?: Partial<CalE
   const submit = async () => {
     setTouched(true)
     if (invalidTitle) return
-    if (await saveEvent(draft, !existing)) close()
+    if (await saveEvent(draft, !existing, { target: existing ? undefined : target, notify })) close()
   }
 
   if (existing?.readOnly) {
+    const why = isGoogle
+      ? existing.organizer
+        ? `Organisiert von ${existing.organizer.name}. Nur die organisierende Person kann Zeit und Details ändern.`
+        : 'Tagwerk hat nur Lesezugriff auf deinen Google Kalender. Schreibzugriff kannst du in den Einstellungen unter Datenquellen freigeben.'
+      : 'Dieser Termin stammt aus einer importierten Kalenderdatei. Änderungen nimmst du in deinem Ursprungskalender vor und importierst die Datei erneut.'
     return (
-      <Dialog title="Importierter Termin" onClose={close} footer={<button className="btn" onClick={close}>Schließen</button>}>
-        <p>Dieser Termin stammt aus einer importierten Kalenderdatei und ist schreibgeschützt. Änderungen nimmst du in deinem Ursprungskalender vor und importierst die Datei erneut.</p>
+      <Dialog
+        title="Termin ist schreibgeschützt"
+        onClose={close}
+        footer={
+          <>
+            {existing.webLink && (
+              <a className="btn left" href={existing.webLink} target="_blank" rel="noreferrer">
+                In Google Kalender öffnen
+              </a>
+            )}
+            <button className="btn" onClick={close}>Schließen</button>
+          </>
+        }
+      >
+        <p>{why}</p>
       </Dialog>
     )
   }
@@ -209,6 +234,17 @@ export function EventDialog({ id, preset }: { id?: string; preset?: Partial<CalE
         style={{ display: 'contents' }}
       >
         {existing && <div className="row"><SourceTag source={existing.source} /></div>}
+        {!existing && google.connected && (
+          <label className="field">
+            <span>Kalender</span>
+            <select className="select" value={target} onChange={(e) => setTarget(e.target.value as 'google' | 'local')}>
+              <option value="google" disabled={!google.caps.calendarWrite}>
+                Google Kalender ({google.email}){google.caps.calendarWrite ? '' : ' – nur Lesezugriff'}
+              </option>
+              <option value="local">Nur in Tagwerk</option>
+            </select>
+          </label>
+        )}
         <label className="field">
           <span>Titel</span>
           <input className={`input ${touched && invalidTitle ? 'invalid' : ''}`} value={title} onChange={(e) => setTitle(e.target.value)} data-autofocus placeholder="z. B. Abstimmung Angebot" />
@@ -252,8 +288,23 @@ export function EventDialog({ id, preset }: { id?: string; preset?: Partial<CalE
         </label>
         <label className="field">
           <span>Teilnehmende</span>
-          <input className="input" value={attendees} onChange={(e) => setAttendees(e.target.value)} placeholder="Name <mail@beispiel.de>, …" />
-          <span className="hint">Es werden keine Einladungen verschickt – kein Kalenderkonto verbunden.</span>
+          <input
+            className="input"
+            value={attendees}
+            onChange={(e) => setAttendees(e.target.value)}
+            placeholder="Name <mail@beispiel.de>, …"
+            disabled={isGoogle}
+          />
+          {isGoogle ? (
+            <span className="hint">Teilnehmende änderst du direkt in Google Kalender.</span>
+          ) : toGoogle ? (
+            <label className="row" style={{ gap: 8 }}>
+              <input type="checkbox" className="box-check" checked={notify} onChange={(e) => setNotify(e.target.checked)} disabled={!parseAttendees(attendees).some((a) => a.email)} />
+              <span className="hint">Einladungen per E-Mail an die Teilnehmenden senden</span>
+            </label>
+          ) : (
+            <span className="hint">Es werden keine Einladungen verschickt{google.connected ? ' – der Termin bleibt nur in Tagwerk.' : ' – kein Kalenderkonto verbunden.'}</span>
+          )}
         </label>
         <div className="grid-2">
           <label className="field">

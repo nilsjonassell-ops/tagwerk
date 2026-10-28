@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, ChevronLeft, ChevronRight, Clock, FileText, Mail, MapPin, NotebookPen, Pencil, Plus, Sparkles, Trash2, Users, X, CheckSquare, Lock } from 'lucide-react'
+import { AlertTriangle, ExternalLink, ChevronLeft, ChevronRight, Clock, FileText, Mail, MapPin, NotebookPen, Pencil, Plus, Sparkles, Trash2, Users, X, CheckSquare, Lock } from 'lucide-react'
 import { addDays, eventsOnDay, findConflicts, freeBlocks, relatedToEvent, startOfDay, ymd, type Conflict } from '@shared/analysis'
 import type { CalEvent } from '@shared/types'
 import { useStore } from '@/lib/store'
 import { durationLabel, fDayLong, fDayMed, fMonthYear, fTime, fWeekdayShort, minutesBetween, projectHue, projectName } from '@/lib/format'
 import { deleteEvent, meetingNoteFor } from '@/lib/actions'
-import { Segmented, SourceTag, ViewHeader } from '@/components/ui'
+import { AccountStatus, Segmented, SourceTag, ViewHeader } from '@/components/ui'
 
 type Mode = 'day' | 'week' | 'month'
 const HOUR_PX = 48
@@ -63,6 +63,7 @@ export function CalendarView() {
   return (
     <>
       <ViewHeader title="Kalender">
+        <AccountStatus kind="calendar" />
         {data.sources.demo && <SourceTag source="demo" />}
         <button className="btn small" onClick={() => openDialog({ kind: 'event', preset: { start: defaultStart(anchor) } })}>
           <Plus /> Termin
@@ -383,6 +384,7 @@ function EventDetail({ ev, onClose }: { ev: CalEvent; onClose: () => void }) {
       </div>
       <div className="row" style={{ padding: '0 18px 12px', gap: 6, flexWrap: 'wrap' }}>
         <SourceTag source={ev.source} />
+        {ev.organizer && <span className="tag">von {ev.organizer.name}</span>}
         {ev.readOnly && (
           <span className="tag">
             <Lock /> schreibgeschützt
@@ -455,6 +457,11 @@ function EventDetail({ ev, onClose }: { ev: CalEvent; onClose: () => void }) {
         >
           <Sparkles /> Mit Claude vorbereiten
         </button>
+        {ev.webLink && (
+          <a className="btn small ghost" href={ev.webLink} target="_blank" rel="noreferrer" title="In Google Kalender öffnen">
+            <ExternalLink /> Google
+          </a>
+        )}
         {!ev.readOnly && (
           <>
             <button className="btn small ghost" onClick={() => openDialog({ kind: 'event', id: ev.id })}>

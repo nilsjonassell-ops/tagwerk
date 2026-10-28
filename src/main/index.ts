@@ -17,13 +17,14 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { eventsOnDay, hm } from '@shared/analysis'
-import type { AppData, ClaudeRequest, Note, Settings } from '@shared/types'
+import type { AppData, CalEvent, ClaudeRequest, GoogleConnectOptions, GoogleSendParams, Note, Settings } from '@shared/types'
 import { store } from './store'
 import { secrets } from './secrets'
 import { sendToClaude, verifyKey } from './claude'
 import { parseIcs } from './ics'
 import { getWeather } from './weather'
 import { startScheduler } from './scheduler'
+import * as google from './google'
 import { log } from './log'
 
 const isMac = process.platform === 'darwin'
@@ -392,9 +393,11 @@ function registerIpc() {
     writeFileSync(res.filePath, JSON.stringify(store.loadData(), null, 2), 'utf8')
     return { ok: true, path: res.filePath }
   })
-  ipcMain.handle('data:wipe', () => {
+  ipcMain.handle('data:wipe', async () => {
+    await google.disconnect().catch(() => {})
+    google.wipeGoogle()
     store.wipe()
-    secrets.clear()
+    secrets.wipeAll()
   })
 
   ipcMain.handle('settings:get', () => store.getSettings())
@@ -446,6 +449,27 @@ function registerIpc() {
       return { ok: false, error: 'Die Datei konnte nicht als Kalender gelesen werden.' }
     }
   })
+
+  ipcMain.handle('google:status', () => google.googleStatus())
+  ipcMain.handle('google:setClient', (_e, c: { clientId: string; clientSecret: string }) => google.setClient({ clientId: String(c?.clientId ?? ''), clientSecret: String(c?.clientSecret ?? '') }))
+  ipcMain.handle('google:importClientFile', () => google.importClientFile())
+  ipcMain.handle('google:clearClient', () => google.clearClient())
+  ipcMain.handle('google:connect', async (_e, o: GoogleConnectOptions) => {
+    const r = await google.connect({ calendar: !!o?.calendar, gmail: !!o?.gmail, write: !!o?.write })
+    // Nach der Anmeldung im Browser zurück zu Tagwerk
+    showMain()
+    return r
+  })
+  ipcMain.handle('google:cancelConnect', () => google.cancelConnect())
+  ipcMain.handle('google:disconnect', () => google.disconnect())
+  ipcMain.handle('google:sync', () => google.sync())
+  ipcMain.handle('google:createEvent', (_e, ev: CalEvent, notify: boolean) => google.createEvent(ev, !!notify))
+  ipcMain.handle('google:updateEvent', (_e, ev: CalEvent, notify: boolean) => google.updateEvent(ev, !!notify))
+  ipcMain.handle('google:deleteEvent', (_e, id: string, notify: boolean) => google.deleteEvent(String(id), !!notify))
+  ipcMain.handle('google:modifyThread', (_e, id: string, add: string[], remove: string[]) =>
+    google.modifyThread(String(id), Array.isArray(add) ? add.map(String) : [], Array.isArray(remove) ? remove.map(String) : [])
+  )
+  ipcMain.handle('google:send', (_e, p: GoogleSendParams) => google.send(p))
 
   ipcMain.handle('weather:get', (_e, city: string) => getWeather(String(city ?? '')))
 

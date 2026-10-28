@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import { FlaskConical, X } from 'lucide-react'
+import { FlaskConical, Loader2, RefreshCw, X, AlertTriangle } from 'lucide-react'
+import { useStore } from '@/lib/store'
 import type { Priority, Source } from '@shared/types'
 import { PRIORITY_LABEL } from '@/lib/format'
 
@@ -81,6 +82,7 @@ export function SourceTag({ source }: { source: Source }) {
       </span>
     )
   if (source === 'ics') return <span className="tag" title="Aus einer Kalenderdatei importiert, schreibgeschützt">Importiert</span>
+  if (source === 'google') return <span className="tag accent" title="Mit deinem Google-Konto synchronisiert">Google</span>
   return null
 }
 
@@ -113,5 +115,30 @@ export function Segmented<T extends string>({ value, options, onChange, label }:
         </button>
       ))}
     </div>
+  )
+}
+
+/** Kontostatus in der Kopfzeile: verbundenes Konto, letzte Synchronisation, Sync-Knopf. */
+export function AccountStatus({ kind }: { kind: 'gmail' | 'calendar' }) {
+  const google = useStore((s) => s.google)
+  const sync = useStore((s) => s.googleSync)
+  const syncGoogle = useStore((s) => s.syncGoogle)
+  const online = useStore((s) => s.online)
+  const has = kind === 'gmail' ? google.caps.gmailRead : google.caps.calendarRead
+  if (google.expired) return <span className="tag alert"><AlertTriangle /> Google-Anmeldung abgelaufen</span>
+  if (!google.connected || !has) return <span className="hint">{kind === 'gmail' ? 'Kein E-Mail-Konto verbunden' : 'Kein Kalenderkonto verbunden'}</span>
+  const err = kind === 'gmail' ? sync.errors.gmail : sync.errors.calendar
+  const time = sync.lastSync ? new Date(sync.lastSync).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : null
+  return (
+    <span className="row" style={{ gap: 6 }}>
+      {err ? (
+        <span className="tag alert" title={err}><AlertTriangle /> Synchronisation fehlgeschlagen</span>
+      ) : (
+        <span className="hint" title={google.email}>{google.email}{time ? ` · ${time}` : ''}</span>
+      )}
+      <button className="btn ghost small icon-btn" onClick={() => syncGoogle()} disabled={sync.syncing || !online} aria-label="Jetzt synchronisieren" title={online ? 'Jetzt synchronisieren' : 'Offline'}>
+        {sync.syncing ? <Loader2 className="spin" /> : <RefreshCw />}
+      </button>
+    </span>
   )
 }

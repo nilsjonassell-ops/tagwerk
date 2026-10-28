@@ -5,7 +5,7 @@ import { useStore } from '@/lib/store'
 import { hueFor, initials, mailDate, projectName } from '@/lib/format'
 import { archiveThread, markThread, sendReply, taskFromEmail } from '@/lib/actions'
 import { draftReply, summarizeThread } from '@/lib/assistant'
-import { Empty, ViewHeader } from '@/components/ui'
+import { AccountStatus, Empty, ViewHeader } from '@/components/ui'
 
 type Filter = 'important' | 'unread' | 'reply' | 'all' | 'sent' | 'archive'
 
@@ -23,6 +23,7 @@ export function InboxView() {
   const selectedId = useStore((s) => s.selection.inbox)
   const select = useStore((s) => s.select)
   const openDialog = useStore((s) => s.openDialog)
+  const google = useStore((s) => s.google)
   const [filter, setFilter] = useState<Filter>('all')
   const [query, setQuery] = useState('')
   const [projectFilter, setProjectFilter] = useState<string>('')
@@ -87,7 +88,7 @@ export function InboxView() {
   return (
     <>
       <ViewHeader title="Posteingang">
-        <span className="hint">Kein E-Mail-Konto verbunden</span>
+        <AccountStatus kind="gmail" />
         <button className="btn small ghost" onClick={() => openDialog({ kind: 'settings', section: 'sources' })}>
           Konten
         </button>
@@ -95,7 +96,14 @@ export function InboxView() {
       {data.sources.demo && (
         <div className="banner" role="note">
           <FlaskConical />
-          <span>Beispiel-Postfach aus der Demo-Datenquelle. Antworten werden nur lokal abgelegt, nichts wird verschickt.</span>
+          <span>
+            {google.caps.gmailRead
+              ? 'Neben deinem Gmail-Postfach sind noch Beispiel-Mails aus der Demo-Datenquelle sichtbar. Darauf geantwortet wird nur lokal.'
+              : 'Beispiel-Postfach aus der Demo-Datenquelle. Antworten werden nur lokal abgelegt, nichts wird verschickt.'}
+          </span>
+          <button className="btn small" onClick={() => openDialog({ kind: 'settings', section: 'sources' })}>
+            {google.caps.gmailRead ? 'Demo entfernen' : 'Gmail verbinden'}
+          </button>
         </div>
       )}
       <div className="view-body" style={{ overflow: 'hidden' }}>
@@ -199,6 +207,10 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
   }, [pendingDraft, thread.id])
 
   const claudeReady = claude.configured && online
+  const google = useStore((s) => s.google)
+  const isGmail = thread.messages.some((m) => m.source === 'google')
+  const canModify = !isGmail || google.caps.gmailWrite
+  const readOnlyHint = isGmail && !google.caps.gmailWrite ? 'Nur Lesezugriff auf Gmail' : undefined
   const claudeHint = !claude.configured ? 'Claude ist nicht verbunden' : !online ? 'Offline' : undefined
   const proj = projectName(data, thread.projectId)
   const lastInbound = [...thread.messages].reverse().find((m) => m.folder !== 'sent')
@@ -245,11 +257,11 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
           </button>
           <div style={{ flex: 1 }} />
           {thread.folder === 'inbox' && (
-            <button className="btn small ghost" onClick={() => archiveThread(thread.id)} title="Archivieren (E)">
+            <button className="btn small ghost" onClick={() => archiveThread(thread.id)} title={readOnlyHint ?? 'Archivieren (E)'} disabled={!canModify}>
               <Archive /> Archivieren
             </button>
           )}
-          <button className="btn small ghost icon-btn" onClick={() => markThread(thread.id, { read: false })} title="Als ungelesen markieren" aria-label="Als ungelesen markieren">
+          <button className="btn small ghost icon-btn" onClick={() => markThread(thread.id, { read: false })} title={readOnlyHint ?? 'Als ungelesen markieren'} aria-label="Als ungelesen markieren" disabled={!canModify}>
             <Mail />
           </button>
         </div>
@@ -308,7 +320,8 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
           <div className="composer">
             <div className="to">
               An: {lastInbound?.from.name} &lt;{lastInbound?.from.email}&gt;
-              {data.sources.demo && thread.messages[0].source === 'demo' && <span className="tag demo" style={{ marginLeft: 'auto' }}>wird nicht versendet</span>}
+              {thread.messages[0].source === 'demo' && <span className="tag demo" style={{ marginLeft: 'auto' }}>wird nicht versendet</span>}
+              {isGmail && <span className="tag" style={{ marginLeft: 'auto' }}>{google.caps.gmailWrite ? `über Gmail · ${google.email}` : 'nur Lesezugriff – Senden nicht möglich'}</span>}
             </div>
             <textarea
               value={composer.drafting ? 'Claude schreibt einen Entwurf …' : composer.body}
@@ -338,7 +351,7 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
               <button className="btn small ghost" onClick={() => setComposer({ open: false, body: '', drafting: false, instruction: '' })}>
                 Verwerfen
               </button>
-              <button className="btn small primary" onClick={doSend} disabled={!composer.body.trim() || composer.drafting}>
+              <button className="btn small primary" onClick={doSend} disabled={!composer.body.trim() || composer.drafting || !canModify} title={readOnlyHint}>
                 <Send /> Senden …
               </button>
             </div>

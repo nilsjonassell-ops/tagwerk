@@ -1,7 +1,21 @@
 import { create } from 'zustand'
 import { applyRetention } from '@shared/analysis'
 import { createDemoData, emptyData } from '@shared/demo'
-import { DEFAULT_SETTINGS, type AppData, type Settings, type ViewId } from '@shared/types'
+import { DEFAULT_SETTINGS, type AppData, type GoogleStatus, type Settings, type ViewId } from '@shared/types'
+
+export const EMPTY_GOOGLE: GoogleStatus = {
+  clientConfigured: false,
+  connected: false,
+  caps: { calendarRead: false, calendarWrite: false, gmailRead: false, gmailWrite: false },
+  expired: false,
+  encrypted: true
+}
+
+export interface GoogleSyncState {
+  syncing: boolean
+  lastSync?: string
+  errors: { calendar?: string; gmail?: string; general?: string }
+}
 
 export interface Toast {
   id: number
@@ -46,12 +60,16 @@ interface State {
   assistantSeed?: { text: string; bodiesFor?: string[] }
   resolvedTheme: 'light' | 'dark'
   pendingDraft?: { threadId: string; body: string }
+  google: GoogleStatus
+  googleSync: GoogleSyncState
 
   init(): Promise<void>
   mutate(fn: (d: AppData) => AppData, opts?: { toast?: string; undoable?: boolean }): void
   replaceData(d: AppData): void
   updateSettings(patch: Partial<Settings>): Promise<void>
   refreshClaude(): Promise<void>
+  refreshGoogle(): Promise<GoogleStatus>
+  syncGoogle(opts?: { quiet?: boolean }): Promise<void>
   go(view: ViewId, id?: string): void
   select(view: keyof Selection, id?: string): void
   toast(text: string, opts?: { tone?: Toast['tone']; undo?: () => void }): void
@@ -89,13 +107,16 @@ export const useStore = create<State>((set, get) => ({
   dialog: null,
   toasts: [],
   resolvedTheme: 'light',
+  google: EMPTY_GOOGLE,
+  googleSync: { syncing: false, errors: {} },
 
   async init() {
     try {
-      const [loaded, settings, claude] = await Promise.all([
+      const [loaded, settings, claude, google] = await Promise.all([
         window.tagwerk.data.load(),
         window.tagwerk.settings.get(),
-        window.tagwerk.claude.status()
+        window.tagwerk.claude.status(),
+        window.tagwerk.google.status()
       ])
       let data = loaded
       const firstRun = !data
@@ -104,7 +125,7 @@ export const useStore = create<State>((set, get) => ({
         await window.tagwerk.data.save(data)
       }
       data = applyRetention(data, new Date(), settings.retention.archivedTasksDays, settings.claude.chatRetentionDays)
-      set({ data, settings, claude, ready: true, dialog: firstRun || !settings.onboarded ? { kind: 'onboarding' } : null })
+      set({ data, settings, claude, google, googleSync: { syncing: false, errors: {}, lastSync: data.sources.google?.lastSync }, ready: true, dialog: firstRun || !settings.onboarded ? { kind: 'onboarding' } : null })
     } catch (err) {
       set({ ready: true, loadError: (err as Error).message })
     }
@@ -133,6 +154,34 @@ export const useStore = create<State>((set, get) => ({
 
   async refreshClaude() {
     set({ claude: await window.tagwerk.claude.status() })
+  },
+
+  async refreshGoogle() {
+    const google = await window.tagwerk.google.status()
+    set({ google })
+    return google
+  },
+
+  async syncGoogle(opts) {
+    if (get().googleSync.syncing) return
+    set({ googleSync: { ...get().googleSync, syncing: true } })
+    try {
+      const r = await window.tagwerk.google.sync()
+      set({ google: r.status })
+      // Google ist die Quelle der Wahrheit: Google-Datensätze werden je Dienst vollständig ersetzt.
+      get().mutate((d) => {
+        let next = d
+        if (r.events) next = { ...next, events: [...next.events.filter((e) => e.source !== 'google'), ...r.events] }
+        if (r.emails) next = { ...next, emails: [...next.emails.filter((e) => e.source !== 'google'), ...r.emails] }
+        if (r.status.connected && r.status.email) next = { ...next, sources: { ...next.sources, google: { email: r.status.email, lastSync: r.syncedAt } } }
+        return next
+      })
+      set({ googleSync: { syncing: false, lastSync: r.events || r.emails ? r.syncedAt : get().googleSync.lastSync, errors: r.errors } })
+      const err = r.errors.general ?? r.errors.calendar ?? r.errors.gmail
+      if (err && !opts?.quiet) get().toast(err, { tone: 'error' })
+    } catch {
+      set({ googleSync: { ...get().googleSync, syncing: false, errors: { general: 'Synchronisation fehlgeschlagen.' } } })
+    }
   },
 
   go(view, id) {
@@ -174,9 +223,11 @@ export interface ConfirmOptions {
   body?: string
   confirmLabel: string
   danger?: boolean
+  /** Optionales Häkchen im Dialog, z. B. „Teilnehmende benachrichtigen“ */
+  option?: { label: string; initial: boolean }
 }
 
-type ConfirmState = (ConfirmOptions & { resolve: (ok: boolean) => void }) | null
+type ConfirmState = (ConfirmOptions & { resolve: (ok: boolean, checked: boolean) => void }) | null
 
 export const useConfirm = create<{ state: ConfirmState; set: (s: ConfirmState) => void }>((set) => ({
   state: null,
@@ -184,5 +235,9 @@ export const useConfirm = create<{ state: ConfirmState; set: (s: ConfirmState) =
 }))
 
 export function confirm(opts: ConfirmOptions): Promise<boolean> {
-  return new Promise((resolve) => useConfirm.getState().set({ ...opts, resolve }))
+  return new Promise((resolve) => useConfirm.getState().set({ ...opts, resolve: (ok) => resolve(ok) }))
+}
+
+export function confirmWithOption(opts: ConfirmOptions & { option: { label: string; initial: boolean } }): Promise<{ ok: boolean; checked: boolean }> {
+  return new Promise((resolve) => useConfirm.getState().set({ ...opts, resolve: (ok, checked) => resolve({ ok, checked }) }))
 }
