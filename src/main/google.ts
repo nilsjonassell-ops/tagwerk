@@ -20,6 +20,7 @@ import type {
 } from '@shared/types'
 import { secrets } from './secrets'
 import { log } from './log'
+import { store } from './store'
 import { buildReplyMime, encodeB64Url, mapGoogleEvent, mapGoogleThread, toGoogleEvent, type GEvent, type GThread } from './google-map'
 
 // Nur in Entwicklungs-Builds auf einen lokalen Test-Server umlenkbar.
@@ -456,7 +457,12 @@ async function fetchEvents(canWrite: boolean): Promise<CalEvent[]> {
 }
 
 async function fetchInbox(me: string): Promise<Email[]> {
-  const list = await api<{ threads?: { id: string; historyId?: string }[] }>(`${URLS.gmail}/users/me/threads?labelIds=INBOX&maxResults=40`)
+  // Ausgeblendete Gmail-Kategorien (z. B. Werbung, Soziale Netzwerke) gar nicht erst laden.
+  const allowed = new Set(['promotions', 'social', 'updates', 'forums'])
+  const hidden = (store.getSettings().gmailHiddenCategories ?? []).filter((c) => allowed.has(c))
+  const q = new URLSearchParams({ labelIds: 'INBOX', maxResults: '40' })
+  if (hidden.length) q.set('q', hidden.map((c) => `-category:${c}`).join(' '))
+  const list = await api<{ threads?: { id: string; historyId?: string }[] }>(`${URLS.gmail}/users/me/threads?${q}`)
   const threads = list.threads ?? []
   const results = await pool(threads, 6, async (t) => {
     const cached = threadCache.get(t.id)

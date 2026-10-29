@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { CalendarDays, Check, ChevronDown, ChevronRight, FileJson, Loader2, RefreshCw, AlertTriangle } from 'lucide-react'
 import { removeDemo } from '@shared/demo'
+import { GMAIL_CATEGORIES, type GmailCategory } from '@shared/types'
 import { confirm, useStore } from '@/lib/store'
 import { Switch } from './ui'
 
@@ -70,6 +71,13 @@ export function GoogleSettings() {
     }
   }
   const cancel = () => window.tagwerk.google.cancelConnect()
+
+  const hiddenCats = useStore((s) => s.settings.gmailHiddenCategories)
+  const toggleCategory = async (id: GmailCategory, hide: boolean) => {
+    const next = hide ? [...new Set([...hiddenCats, id])] : hiddenCats.filter((c) => c !== id)
+    await useStore.getState().updateSettings({ gmailHiddenCategories: next })
+    syncGoogle({ quiet: true })
+  }
 
   const disconnect = async () => {
     const ok = await confirm({
@@ -149,6 +157,21 @@ export function GoogleSettings() {
           {syncError && (
             <div className="callout" style={{ margin: '8px 0 0' }}>
               <AlertTriangle /> <span>{syncError}</span>
+            </div>
+          )}
+          {google.caps.gmailRead && (
+            <div style={{ marginTop: 14 }}>
+              <div className="field-label" style={{ marginBottom: 2 }}>Im Posteingang von Tagwerk ausblenden</div>
+              <div className="hint" style={{ marginBottom: 4 }}>Nutzt die Kategorien von Gmail. In Gmail selbst bleibt alles, wie es ist.</div>
+              {GMAIL_CATEGORIES.map((c) => (
+                <div key={c.id} className="perm-row">
+                  <span>
+                    {c.label}
+                    <small>{c.hint}</small>
+                  </span>
+                  <Switch label={`${c.label} ausblenden`} checked={hiddenCats.includes(c.id)} onChange={(v) => toggleCategory(c.id, v)} />
+                </div>
+              ))}
             </div>
           )}
           {google.expiresAt && (

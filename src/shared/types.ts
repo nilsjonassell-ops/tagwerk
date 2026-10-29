@@ -206,8 +206,19 @@ export interface Settings {
     enabled: boolean
     city: string
   }
+  /** Gmail-Kategorien, die Tagwerk nicht in den Posteingang holt */
+  gmailHiddenCategories: GmailCategory[]
   onboarded: boolean
 }
+
+export type GmailCategory = 'promotions' | 'social' | 'updates' | 'forums'
+
+export const GMAIL_CATEGORIES: { id: GmailCategory; label: string; hint: string }[] = [
+  { id: 'promotions', label: 'Werbung', hint: 'Angebote, Newsletter von Shops, Rabatte' },
+  { id: 'social', label: 'Soziale Netzwerke', hint: 'Instagram, LinkedIn, Facebook & Co.' },
+  { id: 'updates', label: 'Benachrichtigungen', hint: 'Rechnungen, Bestätigungen, Kontoauszüge' },
+  { id: 'forums', label: 'Foren', hint: 'Mailinglisten und Diskussionsgruppen' }
+]
 
 export const DEFAULT_SETTINGS: Settings = {
   userName: '',
@@ -238,6 +249,7 @@ export const DEFAULT_SETTINGS: Settings = {
   claude: { model: 'claude-sonnet-5-5', includeEmailBodies: false, chatRetentionDays: 30 },
   retention: { archivedTasksDays: 180 },
   weather: { enabled: false, city: '' },
+  gmailHiddenCategories: ['promotions', 'social'],
   onboarded: false
 }
 

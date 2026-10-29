@@ -78,6 +78,7 @@ function mergeSettings(raw: Partial<Settings>): Settings {
     weather: { ...d.weather, ...raw.weather }
   }
   // Neue Ansichten/Karten aus Updates ergänzen, ohne die Nutzerreihenfolge zu verlieren.
+  if (!Array.isArray(s.gmailHiddenCategories)) s.gmailHiddenCategories = [...d.gmailHiddenCategories]
   s.sidebar = completeList(raw.sidebar, d.sidebar)
   s.dashboardCards = completeList(raw.dashboardCards, d.dashboardCards)
   return s
