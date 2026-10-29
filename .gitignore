@@ -6,3 +6,4 @@ release/
 .electron-download/
 start.log
 diagnose.*
+build.log
