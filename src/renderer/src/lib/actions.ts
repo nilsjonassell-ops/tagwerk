@@ -141,8 +141,22 @@ export async function saveEvent(ev: CalEvent, isNew: boolean, opts: SaveEventOpt
 export async function deleteEvent(id: string): Promise<boolean> {
   const ev = S().data.events.find((e) => e.id === id)
   if (!ev) return false
+  if (ev.readOnly && ev.source === 'google' && ev.organizer && ev.remoteId && S().google.caps.calendarWrite) {
+    // Einladung von jemand anderem: nur aus dem eigenen Kalender entfernen, nichts beim Veranstalter ändern.
+    const ok = await confirm({
+      title: 'Aus deinem Kalender entfernen?',
+      body: `„${ev.title}“ ist eine Einladung von ${ev.organizer.name}. Der Termin wird nur aus deinem Google Kalender entfernt – für ${ev.organizer.name} und andere Teilnehmende bleibt er bestehen.`,
+      confirmLabel: 'Entfernen',
+      danger: true
+    })
+    if (!ok) return false
+    const r = await window.tagwerk.google.deleteEvent(ev.remoteId, false)
+    if (!r.ok && r.code !== 'not-found') return googleFail('Termin nicht entfernt', r.error), false
+    S().mutate((d) => ({ ...d, events: d.events.filter((e) => e.id !== id) }), { toast: 'Aus deinem Kalender entfernt' })
+    return true
+  }
   if (ev.readOnly) {
-    S().toast(ev.source === 'google' ? 'Diesen Termin kannst du in Tagwerk nicht löschen.' : 'Importierte Termine sind schreibgeschützt. Entferne den Import in den Einstellungen.', { tone: 'error' })
+    S().toast(ev.source === 'google' ? 'Tagwerk hat nur Lesezugriff auf deinen Google Kalender. Verbinde Google mit Schreibzugriff neu, um Termine zu ändern.' : 'Importierte Termine sind schreibgeschützt. Entferne den Import in den Einstellungen.', { tone: 'error' })
     return false
   }
   const base = `„${ev.title}“ am ${fDayMed.format(new Date(ev.start))}`

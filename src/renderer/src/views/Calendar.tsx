@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, ExternalLink, ChevronLeft, ChevronRight, Clock, FileText, Mail, MapPin, NotebookPen, Pencil, Plus, Sparkles, Trash2, Users, X, CheckSquare, Lock } from 'lucide-react'
-import { addDays, eventsOnDay, findConflicts, freeBlocks, relatedToEvent, startOfDay, ymd, type Conflict } from '@shared/analysis'
+import { AlertTriangle, ExternalLink, ChevronLeft, ChevronRight, Clock, FileText, Mail, MapPin, NotebookPen, Pencil, Plus, Sparkles, Trash2, Users, X, CheckSquare, Lock, Target, Settings2 } from 'lucide-react'
+import { addDays, eventsOnDay, findConflicts, freeBlocks, relatedToEvent, startOfDay, ymd, type Conflict, type FreeBlock } from '@shared/analysis'
 import type { CalEvent } from '@shared/types'
 import { useStore } from '@/lib/store'
 import { durationLabel, fDayLong, fDayMed, fMonthYear, fTime, fWeekdayShort, minutesBetween, projectHue, projectName } from '@/lib/format'
@@ -19,6 +19,10 @@ export function CalendarView() {
   const [mode, setMode] = useState<Mode>('week')
   const [anchor, setAnchor] = useState(() => startOfDay(new Date()))
   const selected = data.events.find((e) => e.id === selectedId)
+  const [free, setFree] = useState<FreeBlock | null>(null)
+  useEffect(() => {
+    if (selectedId) setFree(null)
+  }, [selectedId])
 
   // Ausgewählten Termin in den sichtbaren Zeitraum holen
   useEffect(() => {
@@ -39,6 +43,7 @@ export function CalendarView() {
       else if (e.key === 'w') setMode('week')
       else if (e.key === 'm') setMode('month')
       else if (e.key === 'Escape' && selectedId) select('calendar', undefined)
+      else if (e.key === 'Escape' && free) setFree(null)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -101,10 +106,11 @@ export function CalendarView() {
               {mode === 'month' ? (
                 <MonthGrid anchor={anchor} events={data.events} onPickDay={(d) => (setAnchor(d), setMode('day'))} />
               ) : (
-                <TimeGrid days={days} events={data.events} settings={settings} />
+                <TimeGrid days={days} events={data.events} settings={settings} picked={free} onPickFree={(f) => (select('calendar', undefined), setFree(f))} />
               )}
             </div>
             {selected && <EventDetail ev={selected} onClose={() => select('calendar', undefined)} />}
+            {!selected && free && <FreeDetail block={free} onClose={() => setFree(null)} />}
           </div>
         </div>
       </div>
@@ -159,7 +165,19 @@ function layoutDay(evs: CalEvent[]): Map<string, { col: number; cols: number }> 
   return out
 }
 
-function TimeGrid({ days, events, settings }: { days: Date[]; events: CalEvent[]; settings: ReturnType<typeof useStore.getState>['settings'] }) {
+function TimeGrid({
+  days,
+  events,
+  settings,
+  picked,
+  onPickFree
+}: {
+  days: Date[]
+  events: CalEvent[]
+  settings: ReturnType<typeof useStore.getState>['settings']
+  picked: FreeBlock | null
+  onPickFree: (f: FreeBlock) => void
+}) {
   const data = useStore((s) => s.data)
   const selectedId = useStore((s) => s.selection.calendar)
   const select = useStore((s) => s.select)
@@ -235,9 +253,16 @@ function TimeGrid({ days, events, settings }: { days: Date[]; events: CalEvent[]
                 <div className="offhours" style={{ top: 0, height: settings.workHours.start * HOUR_PX }} />
                 <div className="offhours" style={{ top: settings.workHours.end * HOUR_PX, bottom: 0 }} />
                 {free.map((f, i) => (
-                  <div key={i} className="focus-block" style={{ top: minutesOfDay(f.start) * (HOUR_PX / 60), height: f.minutes * (HOUR_PX / 60) }}>
+                  <button
+                    key={i}
+                    className={`focus-block ${picked && picked.start.getTime() === f.start.getTime() ? 'selected' : ''}`}
+                    style={{ top: minutesOfDay(f.start) * (HOUR_PX / 60), height: f.minutes * (HOUR_PX / 60) }}
+                    onClick={() => onPickFree(f)}
+                    onDoubleClick={(e) => (e.stopPropagation(), openDialog({ kind: 'event', preset: { start: f.start.toISOString(), end: new Date(Math.min(f.end.getTime(), f.start.getTime() + 3600_000)).toISOString() } }))}
+                    title={`Freie Zeit ${fTime.format(f.start)}–${fTime.format(f.end)} · Klicken für Details, Doppelklick für neuen Termin`}
+                  >
                     frei · {durationLabel(f.minutes)}
-                  </div>
+                  </button>
                 ))}
                 {timed.map((e) => {
                   const s = new Date(e.start)
@@ -339,6 +364,7 @@ function EventDetail({ ev, onClose }: { ev: CalEvent; onClose: () => void }) {
   const go = useStore((s) => s.go)
   const openDialog = useStore((s) => s.openDialog)
   const setAssistant = useStore((s) => s.setAssistant)
+  const google = useStore((s) => s.google)
   const related = useMemo(() => relatedToEvent(data, ev), [data, ev])
   const conflicts: Conflict[] = useMemo(
     () => findConflicts(eventsOnDay(data.events, new Date(ev.start)), settings.transitionBufferMinutes).filter((c) => c.a.id === ev.id || c.b.id === ev.id),
@@ -386,8 +412,17 @@ function EventDetail({ ev, onClose }: { ev: CalEvent; onClose: () => void }) {
         <SourceTag source={ev.source} />
         {ev.organizer && <span className="tag">von {ev.organizer.name}</span>}
         {ev.readOnly && (
-          <span className="tag">
-            <Lock /> schreibgeschützt
+          <span
+            className="tag"
+            title={
+              ev.source === 'google'
+                ? ev.organizer
+                  ? `Einladung von ${ev.organizer.name} – nur der Veranstalter kann den Termin ändern.`
+                  : 'Tagwerk hat nur Lesezugriff auf deinen Google Kalender.'
+                : 'Importierter Termin – lässt sich nicht bearbeiten.'
+            }
+          >
+            <Lock /> {ev.source === 'google' && ev.organizer ? 'Einladung' : 'schreibgeschützt'}
           </span>
         )}
         {proj && (
@@ -462,6 +497,11 @@ function EventDetail({ ev, onClose }: { ev: CalEvent; onClose: () => void }) {
             <ExternalLink /> Google
           </a>
         )}
+        {ev.readOnly && ev.source === 'google' && ev.organizer && google.caps.calendarWrite && (
+          <button className="btn small ghost danger-hover" onClick={async () => (await deleteEvent(ev.id)) && onClose()} title="Nur aus deinem Kalender entfernen">
+            <Trash2 /> Entfernen
+          </button>
+        )}
         {!ev.readOnly && (
           <>
             <button className="btn small ghost" onClick={() => openDialog({ kind: 'event', id: ev.id })}>
@@ -472,6 +512,45 @@ function EventDetail({ ev, onClose }: { ev: CalEvent; onClose: () => void }) {
             </button>
           </>
         )}
+      </div>
+    </aside>
+  )
+}
+
+/** Details zu einer freien Lücke – kein Termin, sondern aus Kalender und Arbeitszeit berechnet. */
+function FreeDetail({ block, onClose }: { block: FreeBlock; onClose: () => void }) {
+  const openDialog = useStore((s) => s.openDialog)
+  const settings = useStore((s) => s.settings)
+  const hourEnd = new Date(Math.min(block.end.getTime(), block.start.getTime() + 3600_000))
+  return (
+    <aside className="detail-pane" aria-label="Freie Zeit">
+      <div className="pane-head">
+        <h3>Freie Zeit</h3>
+        <button className="btn ghost small icon-btn" onClick={onClose} aria-label="Details schließen">
+          <X />
+        </button>
+      </div>
+      <div className="kv">
+        <Clock />
+        <div>
+          {fDayMed.format(block.start)}
+          <br />
+          {fTime.format(block.start)}–{fTime.format(block.end)} Uhr · {durationLabel(block.minutes)}
+        </div>
+      </div>
+      <p className="hint" style={{ padding: '0 18px', margin: '0 0 14px', lineHeight: 1.5 }}>
+        Das ist kein Termin, sondern eine Lücke zwischen deinen Terminen innerhalb deiner Arbeitszeit ({settings.workHours.start}–{settings.workHours.end} Uhr). Tagwerk zeigt Lücken ab {settings.focusMinMinutes} Minuten an, damit du konzentriertes Arbeiten planen kannst.
+      </p>
+      <div className="pane-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '0 18px 18px' }}>
+        <button className="btn small primary" onClick={() => openDialog({ kind: 'event', preset: { title: 'Fokuszeit', start: block.start.toISOString(), end: block.end.toISOString() } })}>
+          <Target /> Als Fokuszeit blocken
+        </button>
+        <button className="btn small" onClick={() => openDialog({ kind: 'event', preset: { start: block.start.toISOString(), end: hourEnd.toISOString() } })}>
+          <Plus /> Termin eintragen
+        </button>
+        <button className="btn small ghost" onClick={() => openDialog({ kind: 'settings', section: 'calendar' })}>
+          <Settings2 /> Arbeitszeit ändern
+        </button>
       </div>
     </aside>
   )

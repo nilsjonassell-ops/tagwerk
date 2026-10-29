@@ -4,6 +4,10 @@ import { useStore } from '@/lib/store'
 import type { Priority, Source } from '@shared/types'
 import { PRIORITY_LABEL } from '@/lib/format'
 
+// Offene Dialoge von unten nach oben – Esc schließt immer nur den obersten,
+// egal wo der Fokus gerade ist.
+const dialogStack: symbol[] = []
+
 export function Dialog(props: {
   title: string
   onClose: () => void
@@ -14,16 +18,30 @@ export function Dialog(props: {
   bodyClass?: string
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  const closeRef = useRef(props.onClose)
+  closeRef.current = props.onClose
+  useEffect(() => {
+    const me = Symbol('dialog')
+    dialogStack.push(me)
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || dialogStack[dialogStack.length - 1] !== me) return
+      e.preventDefault()
+      e.stopPropagation()
+      closeRef.current()
+    }
+    window.addEventListener('keydown', onEsc, true)
+    return () => {
+      window.removeEventListener('keydown', onEsc, true)
+      const i = dialogStack.indexOf(me)
+      if (i >= 0) dialogStack.splice(i, 1)
+    }
+  }, [])
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null
     const el = ref.current
     const first = el?.querySelector<HTMLElement>('[data-autofocus]') ?? el?.querySelector<HTMLElement>('.dialog-body input, .dialog-body textarea, .dialog-body select')
     ;(first ?? el)?.focus()
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation()
-        props.onClose()
-      }
       if (e.key === 'Tab' && el) {
         const f = [...el.querySelectorAll<HTMLElement>('button, input, textarea, select, [tabindex]:not([tabindex="-1"])')].filter((x) => !x.hasAttribute('disabled'))
         if (!f.length) return
