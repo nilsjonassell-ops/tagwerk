@@ -1,7 +1,7 @@
 // Reine Logik ohne UI- oder Electron-Abhängigkeiten: Konflikte, freie Zeit,
 // Fälligkeiten, Wiederholungen, Tagesbriefing und Aufgaben-Erkennung.
 
-import type { AppData, CalEvent, Email, Note, Recurrence, Task } from './types.ts'
+import type { AppData, CalEvent, Email, Note, Priority, Recurrence, Task } from './types.ts'
 
 const MIN = 60_000
 
@@ -432,4 +432,88 @@ export function applyRetention(data: AppData, now: Date, archivedTasksDays: numb
     tasks: data.tasks.filter((t) => !(t.archived && t.completedAt && new Date(t.completedAt).getTime() < taskCut)),
     chat: data.chat.filter((m) => new Date(m.createdAt).getTime() >= chatCut)
   }
+}
+
+// ---------- Aufgaben in freie Zeit einplanen (ohne KI) ----------
+
+export interface PlanSlot {
+  taskId: string
+  start: Date
+  end: Date
+  /** Liegt nach dem Fälligkeitsdatum */
+  late: boolean
+}
+
+export interface PlanOptions {
+  workHours: { start: number; end: number }
+  /** Arbeitstage, die durchsucht werden (inkl. heute) */
+  days?: number
+  /** Puffer nach jedem geplanten Block in Minuten */
+  bufferMinutes?: number
+  /** Dauer pro Aufgabe in Minuten (sonst nach Priorität) */
+  durations?: Record<string, number>
+  /** Höchstens so viele Aufgaben */
+  limit?: number
+}
+
+export const DEFAULT_TASK_MINUTES: Record<Priority, number> = { high: 60, medium: 45, low: 30 }
+
+/** Offene Aufgaben in sinnvoller Reihenfolge: überfällig → nach Fälligkeit → nach Priorität. */
+export function planCandidates(tasks: Task[], events: CalEvent[], now: Date): Task[] {
+  const planned = new Set(events.filter((e) => e.taskId && new Date(e.end) > now).map((e) => e.taskId))
+  return tasks
+    .filter((t) => t.status !== 'done' && !t.archived && !planned.has(t.id))
+    .sort((a, b) => {
+      const da = a.due ?? '9999-99-99'
+      const db = b.due ?? '9999-99-99'
+      if (da !== db) return da < db ? -1 : 1
+      return PLAN_RANK[a.priority] - PLAN_RANK[b.priority]
+    })
+}
+
+const PLAN_RANK: Record<Priority, number> = { high: 0, medium: 1, low: 2 }
+
+/** Verteilt Aufgaben der Reihe nach auf die erste passende Lücke in der Arbeitszeit. */
+export function planTasks(tasks: Task[], events: CalEvent[], now: Date, opts: PlanOptions): PlanSlot[] {
+  const horizon = opts.days ?? 5
+  const buffer = opts.bufferMinutes ?? 10
+  const limit = opts.limit ?? 10
+  // Werktage ab heute sammeln
+  const days: Date[] = []
+  for (let d = startOfDay(now); days.length < horizon; d = addDays(d, 1)) {
+    if (d.getDay() !== 0 && d.getDay() !== 6) days.push(d)
+  }
+  // Bestehende Termine mit Puffer danach, damit kein Block direkt anschließt
+  const busy: CalEvent[] = events
+    .filter((e) => !e.allDay)
+    .map((e) => ({ ...e, end: new Date(new Date(e.end).getTime() + buffer * MIN).toISOString() }))
+  const out: PlanSlot[] = []
+  for (const t of tasks) {
+    if (out.length >= limit) break
+    const minutes = opts.durations?.[t.id] ?? DEFAULT_TASK_MINUTES[t.priority]
+    let placed: PlanSlot | null = null
+    for (const day of days) {
+      const onDay = eventsOnDay(busy, day)
+      const from = ymd(day) === ymd(now) ? now : undefined
+      const slot = freeBlocks(onDay, day, opts.workHours, minutes, from)[0]
+      if (slot) {
+        const start = slot.start
+        const end = new Date(start.getTime() + minutes * MIN)
+        placed = { taskId: t.id, start, end, late: !!t.due && ymd(start) > t.due }
+        break
+      }
+    }
+    if (!placed) continue
+    out.push(placed)
+    // Belegt den Block inkl. Puffer, damit die nächste Aufgabe dahinter landet
+    busy.push({
+      id: `plan-${t.id}`,
+      title: '',
+      start: placed.start.toISOString(),
+      end: new Date(placed.end.getTime() + buffer * MIN).toISOString(),
+      attendees: [],
+      source: 'local'
+    })
+  }
+  return out
 }

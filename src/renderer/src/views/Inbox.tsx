@@ -210,6 +210,7 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
     }
   }, [pendingDraft, thread.id])
 
+  const aiOn = useStore((s) => s.settings.claude.enabled)
   const claudeReady = claude.configured && online
   const google = useStore((s) => s.google)
   const isGmail = thread.messages.some((m) => m.source === 'google')
@@ -250,12 +251,16 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
           <button className="btn small" onClick={() => (setComposer((c) => ({ ...c, open: true })), setTimeout(() => document.querySelector('.composer')?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 50))}>
             <Reply /> Antworten
           </button>
-          <button className="btn small" onClick={doDraft} disabled={!claudeReady || composer.drafting} title={claudeHint}>
-            <Sparkles /> Antwort entwerfen
-          </button>
-          <button className="btn small" onClick={doSummary} disabled={!claudeReady || summary.state === 'loading'} title={claudeHint}>
-            <Sparkles /> Zusammenfassen
-          </button>
+          {aiOn && (
+            <>
+              <button className="btn small" onClick={doDraft} disabled={!claudeReady || composer.drafting} title={claudeHint}>
+                <Sparkles /> Antwort entwerfen
+              </button>
+              <button className="btn small" onClick={doSummary} disabled={!claudeReady || summary.state === 'loading'} title={claudeHint}>
+                <Sparkles /> Zusammenfassen
+              </button>
+            </>
+          )}
           <button className="btn small" onClick={onTask}>
             <CheckSquare /> Aufgabe
           </button>
@@ -272,7 +277,7 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
             <Mail />
           </button>
         </div>
-        {!claude.configured && (
+        {aiOn && !claude.configured && (
           <div className="hint" style={{ marginTop: 8 }}>
             Zusammenfassen und Entwerfen brauchen Claude.{' '}
             <button className="link" onClick={() => openDialog({ kind: 'settings', section: 'claude' })}>
@@ -343,6 +348,8 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
             />
             {composer.error && <div className="error-text" style={{ padding: '0 14px 8px' }}>{composer.error}</div>}
             <div className="foot">
+              {aiOn ? (
+                <>
               <input
                 className="input"
                 style={{ height: 28, flex: 1, fontSize: 'var(--fs-sm)' }}
@@ -355,6 +362,10 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
               <button className="btn small" onClick={doDraft} disabled={!claudeReady || composer.drafting}>
                 <Sparkles /> {composer.body ? 'Neu entwerfen' : 'Entwerfen'}
               </button>
+                </>
+              ) : (
+                <div style={{ flex: 1 }} />
+              )}
               <button className="btn small ghost" onClick={() => setComposer({ open: false, body: '', drafting: false, instruction: '' })}>
                 Verwerfen
               </button>

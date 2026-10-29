@@ -56,9 +56,11 @@ export function TodayView() {
           ))}
           <div className="brief-foot">
             <span>Automatisch aus Kalender, Aufgaben und Posteingang</span>
-            <button className="btn small" onClick={() => setAssistant(true, 'Erstelle meine Tagesübersicht für heute: Was ist wichtig, wo gibt es Konflikte und wie sollte ich die freie Zeit nutzen?')}>
-              <Sparkles /> Mit Claude planen
-            </button>
+            {settings.claude.enabled && (
+              <button className="btn small" onClick={() => setAssistant(true, 'Erstelle meine Tagesübersicht für heute: Was ist wichtig, wo gibt es Konflikte und wie sollte ich die freie Zeit nutzen?')}>
+                <Sparkles /> Mit Claude planen
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -102,7 +104,10 @@ export function TodayView() {
       <section className="dash-section" key="tasks" aria-labelledby="h-tasks">
         <h2 id="h-tasks">
           Aufgaben für heute <span className="sub">{tasks.length || ''}</span>
-          <button className="link" onClick={() => go('tasks')}>
+          <button className="link" onClick={() => useStore.getState().openDialog({ kind: 'plan' })} style={{ marginLeft: 'auto' }}>
+            Einplanen
+          </button>
+          <button className="link" onClick={() => go('tasks')} style={{ marginLeft: 0 }}>
             Alle Aufgaben
           </button>
         </h2>

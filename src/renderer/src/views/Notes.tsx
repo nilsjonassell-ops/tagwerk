@@ -182,6 +182,7 @@ export function ExtractTasksDialog({ noteId }: { noteId: string }) {
   const data = useStore((s) => s.data)
   const claude = useStore((s) => s.claude)
   const online = useStore((s) => s.online)
+  const aiOn = useStore((s) => s.settings.claude.enabled)
   const close = () => useStore.getState().openDialog(null)
   const note = data.notes.find((n) => n.id === noteId)
   const [items, setItems] = useState<{ title: string; on: boolean; by: 'local' | 'claude' }[]>(() => (note ? extractTaskCandidates(note).map((t) => ({ title: t, on: true, by: 'local' as const })) : []))
@@ -218,9 +219,13 @@ export function ExtractTasksDialog({ noteId }: { noteId: string }) {
       onClose={close}
       footer={
         <>
-          <button className="btn left" onClick={askClaude} disabled={!claude.configured || !online || loading} title={!claude.configured ? 'Claude ist nicht verbunden' : undefined}>
-            {loading ? <Loader2 className="spin" /> : <Sparkles />} Claude fragen
-          </button>
+          {aiOn ? (
+            <button className="btn left" onClick={askClaude} disabled={!claude.configured || !online || loading} title={!claude.configured ? 'Claude ist nicht verbunden' : undefined}>
+              {loading ? <Loader2 className="spin" /> : <Sparkles />} Claude fragen
+            </button>
+          ) : (
+            <span className="left" />
+          )}
           <button className="btn" onClick={close}>
             Abbrechen
           </button>
@@ -233,7 +238,7 @@ export function ExtractTasksDialog({ noteId }: { noteId: string }) {
       <p>Prüfe die Vorschläge. Nur ausgewählte Aufgaben werden angelegt.</p>
       {items.length === 0 && !loading && (
         <div className="hint">
-          In der Notiz wurden keine Aufgaben erkannt. Schreibe Zeilen mit „- [ ] …“, „TODO: …“ oder nutze den Abschnitt „Nächste Schritte“{claude.configured ? ' – oder frag Claude.' : '.'}
+          In der Notiz wurden keine Aufgaben erkannt. Schreibe Zeilen mit „- [ ] …“, „TODO: …“ oder nutze den Abschnitt „Nächste Schritte“{aiOn && claude.configured ? ' – oder frag Claude.' : '.'}
         </div>
       )}
       <div className="list">

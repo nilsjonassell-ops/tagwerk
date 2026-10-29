@@ -40,6 +40,7 @@ export type DialogState =
   | { kind: 'shortcuts' }
   | { kind: 'extract'; noteId: string }
   | { kind: 'onboarding' }
+  | { kind: 'plan' }
   | null
 
 interface State {
@@ -171,7 +172,15 @@ export const useStore = create<State>((set, get) => ({
       // Google ist die Quelle der Wahrheit: Google-Datensätze werden je Dienst vollständig ersetzt.
       get().mutate((d) => {
         let next = d
-        if (r.events) next = { ...next, events: [...next.events.filter((e) => e.source !== 'google'), ...r.events] }
+        if (r.events) {
+          // Lokale Zusatzinfos (Projekt, Aufgabe) bleiben beim Abgleich erhalten
+          const local = new Map(next.events.filter((e) => e.source === 'google').map((e) => [e.remoteId, e]))
+          const merged = r.events.map((e) => {
+            const old = local.get(e.remoteId)
+            return old ? { ...e, projectId: e.projectId ?? old.projectId, taskId: e.taskId ?? old.taskId } : e
+          })
+          next = { ...next, events: [...next.events.filter((e) => e.source !== 'google'), ...merged] }
+        }
         if (r.emails) next = { ...next, emails: [...next.emails.filter((e) => e.source !== 'google'), ...r.emails] }
         if (r.status.connected && r.status.email) next = { ...next, sources: { ...next.sources, google: { email: r.status.email, lastSync: r.syncedAt } } }
         return next
@@ -208,6 +217,7 @@ export const useStore = create<State>((set, get) => ({
   },
 
   setAssistant(open, seed, bodiesFor) {
+    if (open && !get().settings.claude.enabled) return
     set({ assistantOpen: open, assistantSeed: seed ? { text: seed, bodiesFor } : undefined })
   },
 

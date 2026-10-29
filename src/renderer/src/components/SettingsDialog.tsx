@@ -384,6 +384,11 @@ function ClaudeSettings() {
     <>
       <h3>Claude</h3>
       <p>Claude beantwortet Fragen zu deinem Tag, fasst E-Mails zusammen und entwirft Antworten. Aktionen schlägt Claude nur vor – du bestätigst sie.</p>
+      <Row label="Claude-Funktionen anzeigen" hint="Die Claude API ist kostenpflichtig (Abrechnung nach Nutzung bei Anthropic). Ausgeschaltet verschwinden Assistent und alle Claude-Knöpfe – Tagwerk funktioniert ohne Claude vollständig.">
+        <Switch label="Claude-Funktionen anzeigen" checked={s.claude.enabled} onChange={(v) => set({ claude: { ...s.claude, enabled: v } })} />
+      </Row>
+      {s.claude.enabled && (
+      <>
       <div className="source-row">
         <div className="icon"><KeyRound /></div>
         <div className="label">
@@ -434,6 +439,8 @@ function ClaudeSettings() {
       <p className="hint" style={{ marginTop: 12 }}>
         Bei jeder Frage werden Termine der nächsten 7 Tage, offene Aufgaben, Projekte, Notiztitel und die Posteingangsübersicht an die Claude API von Anthropic übertragen. Nichts wird im Hintergrund gesendet.
       </p>
+      </>
+      )}
     </>
   )
 }

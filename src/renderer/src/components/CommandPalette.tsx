@@ -32,8 +32,13 @@ export function CommandPalette() {
       { id: 'c-task', group: 'Aktionen', label: 'Neue Aufgabe', side: 'N', icon: Plus, run: () => st().openDialog({ kind: 'task' }) },
       { id: 'c-event', group: 'Aktionen', label: 'Neuer Termin', icon: CalendarPlus, run: () => st().openDialog({ kind: 'event' }) },
       { id: 'c-note', group: 'Aktionen', label: 'Neue Notiz', icon: NotebookPen, run: () => (close(), createNote()) },
-      { id: 'c-ai', group: 'Aktionen', label: 'Claude fragen', icon: Sparkles, run: () => (close(), st().setAssistant(true)) },
-      { id: 'c-brief', group: 'Aktionen', label: 'Tagesübersicht mit Claude erstellen', icon: Sparkles, run: () => (close(), st().setAssistant(true, 'Erstelle meine Tagesübersicht für heute.')) },
+      { id: 'c-plan', group: 'Aktionen', label: 'Aufgaben in freie Zeit einplanen', icon: CalendarDays, run: () => st().openDialog({ kind: 'plan' }) },
+      ...(st().settings.claude.enabled
+        ? [
+            { id: 'c-ai', group: 'Aktionen', label: 'Claude fragen', icon: Sparkles, run: () => (close(), st().setAssistant(true)) },
+            { id: 'c-brief', group: 'Aktionen', label: 'Tagesübersicht mit Claude erstellen', icon: Sparkles, run: () => (close(), st().setAssistant(true, 'Erstelle meine Tagesübersicht für heute.')) }
+          ]
+        : []),
       ...(Object.keys(VIEW_META) as ViewId[]).map((v) => ({ id: `v-${v}`, group: 'Gehe zu', label: VIEW_META[v].label, icon: VIEW_META[v].icon, run: () => st().go(v) })),
       {
         id: 'c-theme',

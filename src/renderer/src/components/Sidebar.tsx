@@ -119,11 +119,13 @@ export function Sidebar() {
 
       <div className="sidebar-spacer" />
       <div className="sidebar-footer">
-        <button className="nav-item" aria-pressed={assistantOpen} onClick={() => setAssistant(!assistantOpen)} title={`Claude-Assistent (${modKey()}+J)`}>
+        {settings.claude.enabled && (
+          <button className="nav-item" aria-pressed={assistantOpen} onClick={() => setAssistant(!assistantOpen)} title={`Claude-Assistent (${modKey()}+J)`}>
           <Sparkles aria-hidden="true" />
           <span className="label">Claude</span>
           <span className="count">{claude.configured ? '' : 'nicht verbunden'}</span>
         </button>
+        )}
         <button className="nav-item" onClick={() => openDialog({ kind: 'settings' })} title={`Einstellungen (${modKey()}+,)`}>
           <SettingsIcon aria-hidden="true" />
           <span className="label">Einstellungen</span>

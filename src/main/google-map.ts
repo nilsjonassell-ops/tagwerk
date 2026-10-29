@@ -17,6 +17,7 @@ export interface GEvent {
   attendees?: { email: string; displayName?: string; self?: boolean; resource?: boolean; responseStatus?: string }[]
   organizer?: { email?: string; displayName?: string; self?: boolean }
   guestsCanModify?: boolean
+  extendedProperties?: { private?: Record<string, string> }
 }
 
 function localMidnight(date: string): string {
@@ -51,7 +52,8 @@ export function mapGoogleEvent(e: GEvent, canWrite: boolean): CalEvent | null {
     organizer: foreign ? { name: e.organizer!.displayName || (e.organizer!.email ?? '').split('@')[0], email: e.organizer!.email ?? '' } : undefined,
     webLink: e.htmlLink,
     source: 'google',
-    readOnly: !canWrite || (foreign && !e.guestsCanModify) || undefined
+    readOnly: !canWrite || (foreign && !e.guestsCanModify) || undefined,
+    taskId: e.extendedProperties?.private?.tagwerkTaskId || undefined
   }
 }
 
@@ -76,6 +78,7 @@ export function toGoogleEvent(ev: CalEvent, opts: { includeAttendees: boolean })
     body.start = { dateTime: ev.start }
     body.end = { dateTime: ev.end }
   }
+  if (ev.taskId) body.extendedProperties = { private: { tagwerkTaskId: ev.taskId } }
   if (opts.includeAttendees) body.attendees = ev.attendees.filter((a) => /@/.test(a.email)).map((a) => ({ email: a.email, displayName: a.name }))
   return body
 }

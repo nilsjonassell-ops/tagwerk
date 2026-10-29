@@ -31,6 +31,9 @@ export function TasksView() {
   return (
     <>
       <ViewHeader title="Aufgaben">
+        <button className="btn small" onClick={() => useStore.getState().openDialog({ kind: 'plan' })} title="Offene Aufgaben in freie Zeit im Kalender einplanen">
+          <CalendarClock /> Einplanen
+        </button>
         {doneCount > 0 && tab !== 'done' && (
           <button className="btn small ghost" onClick={archiveCompleted}>
             <Archive /> {doneCount} Erledigte archivieren

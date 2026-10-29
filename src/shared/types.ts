@@ -56,6 +56,8 @@ export interface CalEvent {
   webLink?: string
   /** Ich bin nicht Organisator:in */
   organizer?: Person
+  /** Zeitblock für diese Aufgabe (vom Planer angelegt) */
+  taskId?: string
 }
 
 export type MailFolder = 'inbox' | 'sent' | 'archive'
@@ -193,6 +195,8 @@ export interface Settings {
   focusMinMinutes: number
   transitionBufferMinutes: number
   claude: {
+    /** Claude-Funktionen in der Oberfläche anzeigen (kostenpflichtige API, daher standardmäßig aus) */
+    enabled: boolean
     model: string
     /** Nur nötig für Schlüssel ohne Workspace-Zuordnung */
     workspaceId?: string
@@ -246,7 +250,7 @@ export const DEFAULT_SETTINGS: Settings = {
   workHours: { start: 8, end: 18 },
   focusMinMinutes: 60,
   transitionBufferMinutes: 10,
-  claude: { model: 'claude-sonnet-5-5', includeEmailBodies: false, chatRetentionDays: 30 },
+  claude: { enabled: false, model: 'claude-sonnet-5-5', includeEmailBodies: false, chatRetentionDays: 30 },
   retention: { archivedTasksDays: 180 },
   weather: { enabled: false, city: '' },
   gmailHiddenCategories: ['promotions', 'social'],

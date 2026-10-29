@@ -4,7 +4,7 @@ import { addDays, eventsOnDay, findConflicts, freeBlocks, relatedToEvent, startO
 import type { CalEvent } from '@shared/types'
 import { useStore } from '@/lib/store'
 import { durationLabel, fDayLong, fDayMed, fMonthYear, fTime, fWeekdayShort, minutesBetween, projectHue, projectName } from '@/lib/format'
-import { deleteEvent, meetingNoteFor } from '@/lib/actions'
+import { deleteEvent, meetingNoteFor, saveEvent } from '@/lib/actions'
 import { AccountStatus, Segmented, SourceTag, ViewHeader } from '@/components/ui'
 
 type Mode = 'day' | 'week' | 'month'
@@ -206,6 +206,79 @@ function TimeGrid({
     }
   })
 
+  // ---- Ziehen: verschieben, Länge ändern, neue Zeitspanne aufziehen ----
+  const colRefs = useRef<(HTMLDivElement | null)[]>([])
+  const suppressClick = useRef(false)
+  const [drag, setDrag] = useState<DragState | null>(null)
+  const dragRef = useRef<DragState | null>(null)
+
+  const pointerToSlot = (clientX: number, clientY: number) => {
+    let idx = -1
+    colRefs.current.forEach((el, i) => {
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      if (clientX >= r.left && clientX < r.right) idx = i
+    })
+    const el = colRefs.current[idx >= 0 ? idx : 0]
+    const top = el ? el.getBoundingClientRect().top : 0
+    const minutes = ((clientY - top) / HOUR_PX) * 60
+    return { idx, minutes }
+  }
+  const snap = (m: number) => Math.round(m / 15) * 15
+  const clampDay = (m: number) => Math.min(1440, Math.max(0, m))
+
+  const beginDrag = (e: React.PointerEvent, state: Omit<DragState, 'x0' | 'y0' | 'moved'>) => {
+    if (e.button !== 0) return
+    e.stopPropagation()
+    const st: DragState = { ...state, x0: e.clientX, y0: e.clientY, moved: false }
+    dragRef.current = st
+    setDrag(st)
+    const onMove = (ev: PointerEvent) => {
+      const d = dragRef.current
+      if (!d) return
+      if (!d.moved && Math.hypot(ev.clientX - d.x0, ev.clientY - d.y0) < 4) return
+      const { idx, minutes } = pointerToSlot(ev.clientX, ev.clientY)
+      const startPointer = pointerToSlot(d.x0, d.y0).minutes
+      let next: DragState
+      if (d.mode === 'move') {
+        const len = d.origEnd - d.origStart
+        const start = clampDay(snap(d.origStart + (minutes - startPointer)))
+        next = { ...d, moved: true, day: idx >= 0 ? idx : d.day, start: Math.min(start, 1440 - len), end: Math.min(start, 1440 - len) + len }
+      } else if (d.mode === 'resize') {
+        next = { ...d, moved: true, end: Math.max(d.start + 15, clampDay(snap(d.origEnd + (minutes - startPointer)))) }
+      } else {
+        const a = clampDay(Math.floor(startPointer / 15) * 15)
+        const b = clampDay(snap(minutes))
+        next = { ...d, moved: true, start: Math.min(a, b), end: Math.max(Math.max(a, b), Math.min(a, b) + 15) }
+      }
+      dragRef.current = next
+      setDrag(next)
+    }
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      const d = dragRef.current
+      setDrag(null)
+      if (!d || !d.moved) return
+      suppressClick.current = true
+      setTimeout(() => (suppressClick.current = false), 50)
+      const dayStart = days[d.day]
+      const toIso = (m: number) => new Date(dayStart.getTime() + m * 60000).toISOString()
+      if (d.mode === 'create') {
+        openDialog({ kind: 'event', preset: { start: toIso(d.start), end: toIso(d.end) } })
+        return
+      }
+      const ev = events.find((x) => x.id === d.id)
+      if (!ev) return
+      const start = toIso(d.start)
+      const end = toIso(d.end)
+      if (start === ev.start && end === ev.end) return
+      saveEvent({ ...ev, start, end }, false)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
+
   const createAt = (day: Date, e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
     const minutes = Math.floor(((e.clientY - rect.top) / HOUR_PX) * 4) * 15
@@ -243,10 +316,21 @@ function TimeGrid({
               </div>
             ))}
           </div>
-          {perDay.map(({ day, timed, layout, conflicts, free }) => {
+          {perDay.map(({ day, timed, layout, conflicts, free }, dayIdx) => {
             const isToday = ymd(day) === ymd(now)
             return (
-              <div key={day.toISOString()} className={`day-col ${isToday ? 'is-today' : ''}`} onDoubleClick={(e) => (e.target as HTMLElement).classList.contains('slot') && createAt(day, e)}>
+              <div
+                key={day.toISOString()}
+                ref={(el) => {
+                  colRefs.current[dayIdx] = el
+                }}
+                className={`day-col ${isToday ? 'is-today' : ''}`}
+                onDoubleClick={(e) => (e.target as HTMLElement).classList.contains('slot') && createAt(day, e)}
+                onPointerDown={(e) => {
+                  const t = e.target as HTMLElement
+                  if (t.classList.contains('slot') || t.classList.contains('offhours')) beginDrag(e, { mode: 'create', day: dayIdx, start: 0, end: 0, origStart: 0, origEnd: 0 })
+                }}
+              >
                 {Array.from({ length: 48 }, (_, i) => (
                   <div key={i} className={`slot ${i % 2 ? 'half' : ''}`} style={{ height: HOUR_PX / 2 }} />
                 ))}
@@ -271,10 +355,18 @@ function TimeGrid({
                   const l = layout.get(e.id) ?? { col: 0, cols: 1 }
                   const c = conflicts.find((x) => x.a.id === e.id || x.b.id === e.id)
                   const height = Math.max(20, (endMin - startMin) * (HOUR_PX / 60) - 2)
+                  const sameDay = ymd(s) === ymd(new Date(new Date(e.end).getTime() - 1))
+                  const draggable = !e.readOnly && sameDay
+                  const isDragging = drag?.id === e.id && drag.moved
                   return (
                     <button
                       key={e.id}
-                      className={`cal-event ${selectedId === e.id ? 'selected' : ''} ${c ? (c.kind === 'overlap' ? 'conflict' : 'tight') : ''} ${new Date(e.end) < now ? 'past' : ''}`}
+                      className={`cal-event ${selectedId === e.id ? 'selected' : ''} ${c ? (c.kind === 'overlap' ? 'conflict' : 'tight') : ''} ${new Date(e.end) < now ? 'past' : ''} ${draggable ? 'draggable' : ''} ${isDragging ? 'drag-origin' : ''}`}
+                      onPointerDown={(pe) => {
+                        if (!draggable) return
+                        const mode = (pe.target as HTMLElement).classList.contains('resize-handle') ? 'resize' : 'move'
+                        beginDrag(pe, { mode, id: e.id, day: dayIdx, start: startMin, end: endMin, origStart: startMin, origEnd: endMin })
+                      }}
                       style={{
                         top: startMin * (HOUR_PX / 60) + 1,
                         height,
@@ -282,7 +374,7 @@ function TimeGrid({
                         width: `calc(${100 / l.cols}% - 6px)`,
                         ['--h' as string]: projectHue(data, e.projectId)
                       }}
-                      onClick={() => select('calendar', e.id)}
+                      onClick={() => !suppressClick.current && select('calendar', e.id)}
                       onDoubleClick={() => openDialog({ kind: 'event', id: e.id })}
                       title={c ? (c.kind === 'overlap' ? 'Überschneidung mit einem anderen Termin' : `Knapper Übergang (${c.gapMinutes} Min.)`) : undefined}
                     >
@@ -293,9 +385,27 @@ function TimeGrid({
                           {e.location && height > 52 ? ` · ${e.location}` : ''}
                         </span>
                       )}
+                      {draggable && <span className="resize-handle" aria-hidden="true" />}
                     </button>
                   )
                 })}
+                {drag?.moved && drag.day === dayIdx && (
+                  <div
+                    className={`cal-event drag-ghost ${drag.mode === 'create' ? 'creating' : ''}`}
+                    style={{
+                      top: drag.start * (HOUR_PX / 60) + 1,
+                      height: Math.max(20, (drag.end - drag.start) * (HOUR_PX / 60) - 2),
+                      left: 3,
+                      right: 3,
+                      ['--h' as string]: drag.id ? projectHue(data, events.find((x) => x.id === drag.id)?.projectId) : 250
+                    }}
+                  >
+                    <span className="t">{drag.mode === 'create' ? 'Neuer Termin' : events.find((x) => x.id === drag.id)?.title}</span>
+                    <span className="s">
+                      {fmtMin(drag.start)}–{fmtMin(drag.end)}
+                    </span>
+                  </div>
+                )}
                 {isToday && <div className="now-line" style={{ top: minutesOfDay(now) * (HOUR_PX / 60) }} />}
               </div>
             )
@@ -307,6 +417,21 @@ function TimeGrid({
 }
 
 const minutesOfDay = (d: Date) => d.getHours() * 60 + d.getMinutes()
+const fmtMin = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+
+interface DragState {
+  mode: 'move' | 'resize' | 'create'
+  id?: string
+  /** Index der Tagesspalte */
+  day: number
+  start: number
+  end: number
+  origStart: number
+  origEnd: number
+  x0: number
+  y0: number
+  moved: boolean
+}
 
 // ---------- Monat ----------
 
@@ -480,6 +605,7 @@ function EventDetail({ ev, onClose }: { ev: CalEvent; onClose: () => void }) {
         <button className="btn small" onClick={() => meetingNoteFor(ev)}>
           <NotebookPen /> Meetingnotiz
         </button>
+        {settings.claude.enabled && (
         <button
           className="btn small"
           onClick={() =>
@@ -492,6 +618,7 @@ function EventDetail({ ev, onClose }: { ev: CalEvent; onClose: () => void }) {
         >
           <Sparkles /> Mit Claude vorbereiten
         </button>
+        )}
         {ev.webLink && (
           <a className="btn small ghost" href={ev.webLink} target="_blank" rel="noreferrer" title="In Google Kalender öffnen">
             <ExternalLink /> Google

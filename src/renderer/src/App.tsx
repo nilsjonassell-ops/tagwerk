@@ -1,3 +1,4 @@
+import { PlanDialog } from '@/components/PlanDialog'
 import { useEffect } from 'react'
 import { AlertCircle } from 'lucide-react'
 import type { ViewId } from '@shared/types'
@@ -27,6 +28,7 @@ export function App() {
   const paletteOpen = useStore((s) => s.paletteOpen)
   const dialog = useStore((s) => s.dialog)
   const theme = useStore((s) => s.settings.theme)
+  const settings = useStore((s) => s.settings)
 
   useEffect(() => {
     useStore.getState().init()
@@ -169,7 +171,7 @@ export function App() {
         {view === 'notes' && <NotesView />}
         {view === 'projects' && <ProjectsView />}
       </main>
-      {assistantOpen ? <AssistantPanel /> : <div />}
+      {assistantOpen && settings.claude.enabled ? <AssistantPanel /> : <div />}
 
       {paletteOpen && <CommandPalette />}
       {dialog?.kind === 'task' && <TaskDialog key={dialog.id ?? 'new'} id={dialog.id} preset={dialog.preset} />}
@@ -179,6 +181,7 @@ export function App() {
       {dialog?.kind === 'shortcuts' && <ShortcutsDialog />}
       {dialog?.kind === 'extract' && <ExtractTasksDialog noteId={dialog.noteId} />}
       {dialog?.kind === 'onboarding' && <OnboardingDialog />}
+      {dialog?.kind === 'plan' && <PlanDialog />}
       <ConfirmHost />
       <Toasts />
     </div>
