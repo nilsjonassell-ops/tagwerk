@@ -14,8 +14,8 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -24,6 +24,13 @@ jobs:
       - run: npm test
       - run: npx electron-vite build
       - name: Installer bauen und veröffentlichen
-        run: npx electron-builder --win --publish always
+        shell: bash
+        run: |
+          set -o pipefail
+          npx electron-builder --win --publish always 2>&1 | tee builder.log || {
+            # Fehler als Annotationen ausgeben, damit sie ohne Log-Download lesbar sind
+            tail -n 40 builder.log | sed 's/^/::error::/'
+            exit 1
+          }
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
