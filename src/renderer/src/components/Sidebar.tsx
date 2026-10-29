@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, CheckSquare, FolderKanban, Inbox, NotebookPen, Settings as SettingsIcon, Sparkles, Sun, WifiOff } from 'lucide-react'
 import { groupThreads, isDueToday, isOverdue } from '@shared/analysis'
 import type { ViewId } from '@shared/types'
@@ -25,6 +25,19 @@ export function Sidebar() {
   const setAssistant = useStore((s) => s.setAssistant)
   const openDialog = useStore((s) => s.openDialog)
   const selection = useStore((s) => s.selection)
+
+  // Gleitende Markierung hinter dem aktiven Menüpunkt
+  const navRef = useRef<HTMLElement>(null)
+  const [pill, setPill] = useState<{ y: number; h: number } | null>(null)
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = navRef.current?.querySelector<HTMLElement>('.nav-item[aria-current="page"]')
+      setPill(el ? { y: el.offsetTop, h: el.offsetHeight } : null)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [view, settings.sidebar])
 
   const counts = useMemo(() => {
     const now = new Date()
@@ -62,7 +75,8 @@ export function Sidebar() {
         </svg>
         <span className="brand">Tagwerk</span>
       </div>
-      <nav className="nav">
+      <nav className="nav main-nav" ref={navRef}>
+        {pill && <span className="nav-pill" aria-hidden="true" style={{ transform: `translateY(${pill.y}px)`, height: pill.h }} />}
         {settings.sidebar
           .filter((s) => s.visible)
           .map(({ id }) => {
