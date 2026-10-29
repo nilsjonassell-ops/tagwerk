@@ -13,7 +13,7 @@ import {
   shell,
   Tray
 } from 'electron'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { eventsOnDay, hm } from '@shared/analysis'
@@ -40,10 +40,24 @@ let hintedTray = false
 app.setName('Tagwerk')
 if (isWin) app.setAppUserModelId('de.nilssell.tagwerk')
 
-if (!app.requestSingleInstanceLock()) {
+// Startprotokoll (nur Ereignisse, keine Inhalte) – hilft bei Startproblemen.
+function trace(msg: string) {
+  try {
+    appendFileSync(join(app.getPath('userData'), 'start.log'), `${new Date().toISOString()} [${process.pid}] ${msg}\n`)
+  } catch {
+    /* egal */
+  }
+}
+
+const gotLock = app.requestSingleInstanceLock()
+trace(`start lock=${gotLock}`)
+if (!gotLock) {
   app.quit()
 } else {
-  app.on('second-instance', () => showMain())
+  app.on('second-instance', () => {
+    trace(`second-instance window=${mainWindow ? (mainWindow.isDestroyed() ? 'destroyed' : mainWindow.isVisible() ? 'visible' : 'hidden') : 'none'}`)
+    showMain()
+  })
   app.whenReady().then(init)
 }
 
@@ -114,6 +128,7 @@ function createMainWindow(startHidden: boolean) {
     if (!startHidden) mainWindow?.show()
   })
   mainWindow.on('close', (e) => {
+    trace(`close quitting=${quitting} tray=${!!tray}`)
     saveBounds()
     if (!quitting && store.getSettings().closeToTray && tray) {
       e.preventDefault()
@@ -149,10 +164,16 @@ function hardenContents(wc: Electron.WebContents) {
 }
 
 function showMain(view?: string) {
-  if (!mainWindow) createMainWindow(false)
+  if (!mainWindow || mainWindow.isDestroyed()) createMainWindow(false)
   if (!mainWindow) return
   if (mainWindow.isMinimized()) mainWindow.restore()
   mainWindow.show()
+  // Windows verhindert sonst oft, dass ein Hintergrundprozess sein Fenster nach vorn holt.
+  if (isWin) {
+    mainWindow.setAlwaysOnTop(true)
+    mainWindow.focus()
+    setTimeout(() => mainWindow?.setAlwaysOnTop(false), 300)
+  }
   mainWindow.focus()
   if (view) mainWindow.webContents.send('app:navigate', view)
 }
@@ -523,7 +544,7 @@ app.on('before-quit', () => {
   quitting = true
   saveBounds()
 })
-app.on('will-quit', () => globalShortcut.unregisterAll())
+app.on('will-quit', () => (trace('quit'), globalShortcut.unregisterAll()))
 app.on('window-all-closed', () => {
   if (!tray && !isMac) app.quit()
 })
