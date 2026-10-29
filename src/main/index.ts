@@ -465,6 +465,7 @@ function registerIpc() {
   ipcMain.handle('google:sync', () => google.sync())
   ipcMain.handle('google:createEvent', (_e, ev: CalEvent, notify: boolean) => google.createEvent(ev, !!notify))
   ipcMain.handle('google:updateEvent', (_e, ev: CalEvent, notify: boolean) => google.updateEvent(ev, !!notify))
+  ipcMain.handle('google:trashThread', (_e, id: string, restore: boolean) => google.trashThread(String(id), !!restore))
   ipcMain.handle('google:deleteEvent', (_e, id: string, notify: boolean) => google.deleteEvent(String(id), !!notify))
   ipcMain.handle('google:modifyThread', (_e, id: string, add: string[], remove: string[]) =>
     google.modifyThread(String(id), Array.isArray(add) ? add.map(String) : [], Array.isArray(remove) ? remove.map(String) : [])

@@ -357,6 +357,7 @@ export interface GoogleApi {
   updateEvent(ev: CalEvent, notify: boolean): Promise<GResult<CalEvent>>
   deleteEvent(remoteId: string, notify: boolean): Promise<GResult<null>>
   modifyThread(remoteThreadId: string, add: string[], remove: string[]): Promise<GResult<null>>
+  trashThread(remoteThreadId: string, restore?: boolean): Promise<GResult<null>>
   send(p: GoogleSendParams): Promise<GResult<Email>>
 }
 

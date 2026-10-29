@@ -540,6 +540,7 @@ export function ShortcutsDialog() {
     ['D · W · M', 'Kalender: Tag, Woche, Monat'],
     ['J · K', 'Posteingang: nächste / vorherige'],
     ['E', 'Posteingang: archivieren'],
+    ['Entf', 'Posteingang: löschen (Papierkorb)'],
     [`${m} Enter`, 'Antwort senden (mit Bestätigung)']
   ]
   return (

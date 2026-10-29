@@ -523,6 +523,17 @@ export function modifyThread(remoteThreadId: string, add: string[], remove: stri
   })
 }
 
+/** Verschiebt eine Unterhaltung in den Gmail-Papierkorb (oder holt sie zurück). Endgültiges Löschen gibt es bewusst nicht. */
+export function trashThread(remoteThreadId: string, restore = false) {
+  return wrap(async () => {
+    if (!caps(account()).gmailWrite) throw new GError('scope', 'Tagwerk hat nur Lesezugriff auf Gmail.')
+    await api(`${URLS.gmail}/users/me/threads/${encodeURIComponent(remoteThreadId)}/${restore ? 'untrash' : 'trash'}`, { method: 'POST' })
+    threadCache.delete(remoteThreadId)
+    log.info(restore ? 'gmail untrash' : 'gmail trash')
+    return null
+  })
+}
+
 export function send(p: GoogleSendParams) {
   return wrap(async () => {
     const a = account()

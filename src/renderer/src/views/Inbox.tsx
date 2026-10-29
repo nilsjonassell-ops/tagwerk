@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Archive, CheckSquare, FlaskConical, Inbox as InboxIcon, Mail, MailOpen, Reply, Search, Send, Sparkles, Star, X, AlertCircle, Clock, Loader2 } from 'lucide-react'
+import { Archive, CheckSquare, FlaskConical, Inbox as InboxIcon, Mail, MailOpen, Reply, Search, Send, Sparkles, Star, Trash2, X, AlertCircle, Clock, Loader2 } from 'lucide-react'
 import { groupThreads, type Thread } from '@shared/analysis'
 import { useStore } from '@/lib/store'
 import { hueFor, initials, mailDate, projectName } from '@/lib/format'
-import { archiveThread, markThread, sendReply, taskFromEmail } from '@/lib/actions'
+import { archiveThread, deleteThread, markThread, sendReply, taskFromEmail } from '@/lib/actions'
 import { draftReply, summarizeThread } from '@/lib/assistant'
 import { AccountStatus, Empty, ViewHeader } from '@/components/ui'
 
@@ -79,6 +79,10 @@ export function InboxView() {
         e.preventDefault()
       } else if (e.key === 'e' && selected && selected.folder === 'inbox') {
         archiveThread(selected.id)
+      } else if ((e.key === 'Delete' || e.key === '#') && selected) {
+        const next = threads[idx + 1] ?? threads[idx - 1]
+        deleteThread(selected.id).then((done) => done && next && select('inbox', next.id))
+        e.preventDefault()
       }
     }
     window.addEventListener('keydown', onKey)
@@ -261,6 +265,9 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
               <Archive /> Archivieren
             </button>
           )}
+          <button className="btn small ghost icon-btn danger-hover" onClick={() => deleteThread(thread.id)} title={readOnlyHint ?? 'Löschen (Entf)'} aria-label="Löschen" disabled={!canModify}>
+            <Trash2 />
+          </button>
           <button className="btn small ghost icon-btn" onClick={() => markThread(thread.id, { read: false })} title={readOnlyHint ?? 'Als ungelesen markieren'} aria-label="Als ungelesen markieren" disabled={!canModify}>
             <Mail />
           </button>

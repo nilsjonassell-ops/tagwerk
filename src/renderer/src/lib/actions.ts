@@ -213,6 +213,52 @@ export async function archiveThread(threadId: string) {
   S().toast('Unterhaltung archiviert', { undo: () => S().replaceData(prev) })
 }
 
+/** Löscht eine Unterhaltung – nur nach Bestätigung. Gmail: in den Papierkorb (30 Tage wiederherstellbar). */
+export async function deleteThread(threadId: string): Promise<boolean> {
+  const msgs = threadOf(threadId)
+  if (!msgs.length) return false
+  const subject = msgs[0].subject || '(ohne Betreff)'
+  const google = isGoogleThread(threadId)
+  if (google && !S().google.caps.gmailWrite) {
+    S().toast('Tagwerk hat nur Lesezugriff auf Gmail.', { tone: 'error' })
+    return false
+  }
+  const ok = await confirm({
+    title: 'E-Mail löschen?',
+    body: google
+      ? `„${subject}“ wird in Gmail in den Papierkorb verschoben. Dort kannst du sie 30 Tage lang wiederherstellen, danach löscht Google sie endgültig.`
+      : `„${subject}“ wird aus Tagwerk entfernt.`,
+    confirmLabel: 'Löschen',
+    danger: true
+  })
+  if (!ok) return false
+  const prev = S().data
+  const remove = () => S().mutate((d) => ({ ...d, emails: d.emails.filter((m) => m.threadId !== threadId) }))
+  if (google) {
+    const id = remoteThread(threadId)!
+    const r = await window.tagwerk.google.trashThread(id)
+    if (!r.ok && r.code !== 'not-found') return googleFail('Nicht gelöscht', r.error), false
+    remove()
+    S().toast('In den Gmail-Papierkorb verschoben', {
+      undo: async () => {
+        const u = await window.tagwerk.google.trashThread(id, true)
+        if (!u.ok) return googleFail('Rückgängig fehlgeschlagen', u.error)
+        const back = prev.emails.filter((m) => m.threadId === threadId)
+        S().mutate((d) => ({ ...d, emails: [...d.emails.filter((m) => m.threadId !== threadId), ...back] }))
+      }
+    })
+    return true
+  }
+  remove()
+  S().toast('E-Mail gelöscht', {
+    undo: () => {
+      const back = prev.emails.filter((m) => m.threadId === threadId)
+      S().mutate((d) => ({ ...d, emails: [...d.emails.filter((m) => m.threadId !== threadId), ...back] }))
+    }
+  })
+  return true
+}
+
 /** Versendet eine Antwort – nur nach Bestätigung. Im Demo-Postfach wird nichts verschickt. */
 export async function sendReply(threadId: string, body: string): Promise<boolean> {
   const msgs = threadOf(threadId).sort((a, b) => a.date.localeCompare(b.date))

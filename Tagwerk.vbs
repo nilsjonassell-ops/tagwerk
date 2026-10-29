@@ -15,4 +15,5 @@ If Not fso.FileExists(dir & "\out\renderer\index.html") Then
     WScript.Quit 1
   End If
 End If
-sh.Run """" & exe & """ """ & dir & """", 1, False
+sh.Environment("Process")("ELECTRON_ENABLE_LOGGING") = "1"
+sh.Run "cmd /c """"" & exe & """ """ & dir & """ > """ & dir & "\tagwerk.log"" 2>&1""", 0, False

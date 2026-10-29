@@ -405,6 +405,9 @@ button {
 :root[data-theme='dark'] .btn.danger {
   color: #1d0f0e;
 }
+.btn.ghost.danger-hover:not(:disabled):hover {
+  color: var(--alert);
+}
 .btn.ghost {
   border-color: transparent;
   background: transparent;

@@ -140,7 +140,7 @@ export function GoogleSettings() {
           </div>
           <div className="kv-line">
             <span>Gmail</span>
-            <b>{capLabel(google.caps.gmailRead, google.caps.gmailWrite, 'lesen, archivieren, Antworten senden')}</b>
+            <b>{capLabel(google.caps.gmailRead, google.caps.gmailWrite, 'lesen, archivieren, löschen, Antworten senden')}</b>
           </div>
           {google.expiresAt && (
             <div className="kv-line">

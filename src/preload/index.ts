@@ -45,6 +45,7 @@ const api: TagwerkApi = {
     createEvent: (ev, notify) => ipcRenderer.invoke('google:createEvent', ev, notify),
     updateEvent: (ev, notify) => ipcRenderer.invoke('google:updateEvent', ev, notify),
     deleteEvent: (id, notify) => ipcRenderer.invoke('google:deleteEvent', id, notify),
+    trashThread: (id, restore) => ipcRenderer.invoke('google:trashThread', id, !!restore),
     modifyThread: (id, add, remove) => ipcRenderer.invoke('google:modifyThread', id, add, remove),
     send: (p) => ipcRenderer.invoke('google:send', p)
   },
