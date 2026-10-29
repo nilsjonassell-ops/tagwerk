@@ -95,7 +95,8 @@ function saveBounds() {
 
 function overlayColors() {
   const dark = nativeTheme.shouldUseDarkColors
-  return dark ? { color: '#171b1a', symbolColor: '#d9dfdc', height: 44 } : { color: '#eef1ef', symbolColor: '#2a3330', height: 44 }
+  // Transparent, damit der Glas-Hintergrund bis in die Titelleiste reicht.
+  return dark ? { color: '#00000000', symbolColor: '#e6e8ff', height: 44 } : { color: '#00000000', symbolColor: '#2a2f55', height: 44 }
 }
 
 function createMainWindow(startHidden: boolean) {
@@ -110,7 +111,7 @@ function createMainWindow(startHidden: boolean) {
     show: false,
     title: 'Tagwerk',
     icon: resource('icon.png'),
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#171b1a' : '#eef1ef',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#090b1a' : '#eef1fb',
     titleBarStyle: isMac ? 'hiddenInset' : 'hidden',
     trafficLightPosition: isMac ? { x: 16, y: 15 } : undefined,
     titleBarOverlay: isMac ? undefined : overlayColors(),
@@ -204,7 +205,7 @@ function openQuickNote() {
     skipTaskbar: true,
     show: false,
     transparent: false,
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#1f2422' : '#ffffff',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#14172e' : '#f7f8ff',
     roundedCorners: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
