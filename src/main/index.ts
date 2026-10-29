@@ -289,7 +289,7 @@ function buildAppMenu() {
         { label: 'Schnellnotiz', click: openQuickNote },
         { type: 'separator' },
         ...(isMac ? [] : [cmd('Einstellungen', 'open-settings', 'Ctrl+,'), { type: 'separator' as const }]),
-        isMac ? { role: 'close', label: 'Fenster schließen' } : { label: 'Beenden', click: () => ((quitting = true), app.quit()) }
+        isMac ? { role: 'close', label: 'Fenster schließen' } : { label: 'Beenden', accelerator: 'Ctrl+Q', click: () => ((quitting = true), app.quit()) }
       ]
     },
     {
