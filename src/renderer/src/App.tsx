@@ -1,3 +1,4 @@
+import { UpdateBanner } from '@/components/Updates'
 import { FocusHost } from '@/components/Focus'
 import { useFocus } from '@/lib/focus'
 import { PlanDialog } from '@/components/PlanDialog'
@@ -189,6 +190,7 @@ export function App() {
       {dialog?.kind === 'onboarding' && <OnboardingDialog />}
       {dialog?.kind === 'plan' && <PlanDialog />}
       <FocusHost />
+      <UpdateBanner />
       <ConfirmHost />
       <Toasts />
     </div>

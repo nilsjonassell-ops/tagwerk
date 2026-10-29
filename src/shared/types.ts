@@ -155,6 +155,15 @@ export interface IcsImport {
   count: number
 }
 
+export interface UpdateStatus {
+  state: 'dev' | 'idle' | 'checking' | 'current' | 'downloading' | 'ready' | 'error'
+  current: string
+  version?: string
+  percent?: number
+  checkedAt?: number
+  error?: string
+}
+
 /** Eine abgeschlossene Fokus-Sitzung */
 export interface FocusEntry {
   id: string
@@ -448,6 +457,12 @@ export interface TagwerkApi {
     notify(title: string, body: string): Promise<void>
     onNavigate(cb: (view: string) => void): () => void
     onCommand(cb: (cmd: string) => void): () => void
+  }
+  updates: {
+    status(): Promise<UpdateStatus>
+    check(): Promise<UpdateStatus>
+    install(): void
+    onStatus(cb: (s: UpdateStatus) => void): () => void
   }
   focus: {
     signal(s: FocusSignal): void

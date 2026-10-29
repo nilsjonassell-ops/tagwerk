@@ -23,6 +23,7 @@ import { secrets } from './secrets'
 import { sendToClaude, verifyKey } from './claude'
 import { parseIcs } from './ics'
 import { getWeather } from './weather'
+import { check as checkUpdate, initUpdater, installNow, updateStatus } from './updater'
 import { focusState, focusSummary, initFocus, setFocus } from './focus'
 import { startScheduler } from './scheduler'
 import * as google from './google'
@@ -522,6 +523,12 @@ function registerIpc() {
     quickWindow?.close()
   })
   ipcMain.on('quicknote:close', () => quickWindow?.close())
+  ipcMain.handle('update:status', () => updateStatus())
+  ipcMain.handle('update:check', () => checkUpdate())
+  ipcMain.on('update:install', () => {
+    quitting = true
+    installNow()
+  })
   ipcMain.on('focus:signal', (_e, sig: FocusSignal) => {
     if (!sig || typeof sig !== 'object') return
     setFocus({
@@ -548,6 +555,7 @@ function init() {
   registerIpc()
   buildAppMenu()
   createTray()
+  initUpdater(() => mainWindow)
   initFocus({ window: () => mainWindow, changed: () => buildTrayMenu(), open: () => (showMain(), mainWindow?.webContents.send('focus:action', 'open')) })
 
   const startHidden = process.argv.includes('--hidden')

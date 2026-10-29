@@ -1,3 +1,4 @@
+import { VersionRow } from '@/components/Updates'
 import { useState, type ReactNode } from 'react'
 import {
   ArrowDown, ArrowUp, Bell, CalendarDays, CalendarPlus, CloudSun, Database, Eye, EyeOff, FlaskConical, KeyRound, LayoutDashboard, Mail, Monitor, Shield, Sparkles, Trash2, Loader2, Check, Download
@@ -117,6 +118,7 @@ function General() {
       >
         <input className="input" value={shortcut} onChange={(e) => setShortcut(e.target.value)} onBlur={saveShortcut} onKeyDown={(e) => e.key === 'Enter' && saveShortcut()} aria-label="Tastenkombination für Schnellnotiz" />
       </Row>
+      <VersionRow />
     </>
   )
 }

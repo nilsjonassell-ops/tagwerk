@@ -55,6 +55,12 @@ const api: TagwerkApi = {
     onNavigate: (cb) => on('app:navigate', cb),
     onCommand: (cb) => on('app:command', cb)
   },
+  updates: {
+    status: () => ipcRenderer.invoke('update:status'),
+    check: () => ipcRenderer.invoke('update:check'),
+    install: () => ipcRenderer.send('update:install'),
+    onStatus: (cb) => on('update:status', cb)
+  },
   focus: {
     signal: (s) => ipcRenderer.send('focus:signal', s),
     onAction: (cb) => on('focus:action', cb)
