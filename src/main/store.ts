@@ -75,7 +75,8 @@ function mergeSettings(raw: Partial<Settings>): Settings {
     workHours: { ...d.workHours, ...raw.workHours },
     claude: { ...d.claude, ...raw.claude },
     retention: { ...d.retention, ...raw.retention },
-    weather: { ...d.weather, ...raw.weather }
+    weather: { ...d.weather, ...raw.weather },
+    focus: { ...d.focus, ...raw.focus }
   }
   // Neue Ansichten/Karten aus Updates ergänzen, ohne die Nutzerreihenfolge zu verlieren.
   if (!Array.isArray(s.gmailHiddenCategories)) s.gmailHiddenCategories = [...d.gmailHiddenCategories]

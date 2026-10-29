@@ -55,6 +55,10 @@ const api: TagwerkApi = {
     onNavigate: (cb) => on('app:navigate', cb),
     onCommand: (cb) => on('app:command', cb)
   },
+  focus: {
+    signal: (s) => ipcRenderer.send('focus:signal', s),
+    onAction: (cb) => on('focus:action', cb)
+  },
   quickNote: {
     save: (text) => ipcRenderer.invoke('quicknote:save', text),
     close: () => ipcRenderer.send('quicknote:close')

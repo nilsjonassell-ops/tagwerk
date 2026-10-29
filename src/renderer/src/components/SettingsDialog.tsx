@@ -546,6 +546,8 @@ export function ShortcutsDialog() {
     ['T · ← →', 'Kalender: heute, zurück, weiter'],
     ['D · W · M', 'Kalender: Tag, Woche, Monat'],
     ['J · K', 'Posteingang: nächste / vorherige'],
+    [`${m} ⇧ F`, 'Fokus-Modus'],
+    ['Leertaste', 'Fokus: Pause / Weiter'],
     ['E', 'Posteingang: archivieren'],
     ['Entf', 'Posteingang: löschen (Papierkorb)'],
     [`${m} Enter`, 'Antwort senden (mit Bestätigung)']

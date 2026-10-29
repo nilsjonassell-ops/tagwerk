@@ -1,7 +1,7 @@
 // Reine Logik ohne UI- oder Electron-Abhängigkeiten: Konflikte, freie Zeit,
 // Fälligkeiten, Wiederholungen, Tagesbriefing und Aufgaben-Erkennung.
 
-import type { AppData, CalEvent, Email, Note, Priority, Recurrence, Task } from './types.ts'
+import type { AppData, CalEvent, Email, FocusEntry, Note, Priority, Recurrence, Task } from './types.ts'
 
 const MIN = 60_000
 
@@ -516,4 +516,46 @@ export function planTasks(tasks: Task[], events: CalEvent[], now: Date, opts: Pl
     })
   }
   return out
+}
+
+// ---------- Fokus-Statistik ----------
+
+export interface FocusStats {
+  todayMinutes: number
+  todaySessions: number
+  weekMinutes: number
+  /** Aufeinanderfolgende Tage (bis heute bzw. gestern) mit Fokuszeit */
+  streak: number
+  /** Minuten der letzten 7 Tage, ältester zuerst */
+  last7: { day: string; minutes: number }[]
+}
+
+export function focusStats(log: FocusEntry[] | undefined, now: Date): FocusStats {
+  const byDay = new Map<string, { m: number; n: number }>()
+  for (const e of log ?? []) {
+    const k = ymd(new Date(e.start))
+    const v = byDay.get(k) ?? { m: 0, n: 0 }
+    v.m += e.minutes
+    v.n += 1
+    byDay.set(k, v)
+  }
+  const today = ymd(now)
+  const last7 = Array.from({ length: 7 }, (_, i) => {
+    const d = ymd(addDays(startOfDay(now), i - 6))
+    return { day: d, minutes: byDay.get(d)?.m ?? 0 }
+  })
+  let streak = 0
+  let cursor = startOfDay(now)
+  if (!byDay.has(today)) cursor = addDays(cursor, -1)
+  while (byDay.has(ymd(cursor))) {
+    streak++
+    cursor = addDays(cursor, -1)
+  }
+  return {
+    todayMinutes: byDay.get(today)?.m ?? 0,
+    todaySessions: byDay.get(today)?.n ?? 0,
+    weekMinutes: last7.reduce((a, b) => a + b.minutes, 0),
+    streak,
+    last7
+  }
 }

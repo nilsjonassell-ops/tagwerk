@@ -3,6 +3,7 @@ import { CalendarDays, CheckSquare, FolderKanban, Inbox, NotebookPen, Settings a
 import { groupThreads, isDueToday, isOverdue } from '@shared/analysis'
 import type { ViewId } from '@shared/types'
 import { useStore } from '@/lib/store'
+import { FocusLaunch } from '@/components/Focus'
 import { modKey } from '@/lib/format'
 
 export const VIEW_META: Record<ViewId, { label: string; icon: typeof Sun; key: string }> = {
@@ -119,6 +120,7 @@ export function Sidebar() {
 
       <div className="sidebar-spacer" />
       <div className="sidebar-footer">
+        <FocusLaunch />
         {settings.claude.enabled && (
           <button className="nav-item" aria-pressed={assistantOpen} onClick={() => setAssistant(!assistantOpen)} title={`Claude-Assistent (${modKey()}+J)`}>
           <Sparkles aria-hidden="true" />

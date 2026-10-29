@@ -155,6 +155,30 @@ export interface IcsImport {
   count: number
 }
 
+/** Eine abgeschlossene Fokus-Sitzung */
+export interface FocusEntry {
+  id: string
+  start: string
+  end: string
+  minutes: number
+  taskId?: string
+}
+
+export type FocusSound = 'none' | 'rain' | 'brown' | 'white' | 'cafe'
+
+/** Zustand für den Hauptprozess (Benachrichtigungen stumm, Fortschritt in der Taskleiste) */
+export interface FocusSignal {
+  active: boolean
+  phase: 'focus' | 'break'
+  /** ms seit 1970, null wenn pausiert */
+  endsAt: number | null
+  /** Restzeit in ms (maßgeblich, wenn pausiert) */
+  remainingMs: number
+  totalMs: number
+  label: string
+  allowMeetingAlerts: boolean
+}
+
 export interface AppData {
   version: 1
   tasks: Task[]
@@ -164,6 +188,7 @@ export interface AppData {
   projects: Project[]
   docs: DocRef[]
   chat: ChatMessage[]
+  focusLog?: FocusEntry[]
   sources: {
     demo: boolean
     icsImports: IcsImport[]
@@ -210,6 +235,20 @@ export interface Settings {
     enabled: boolean
     city: string
   }
+  focus: {
+    minutes: number
+    breakMinutes: number
+    longBreakMinutes: number
+    /** Runden bis zur langen Pause */
+    rounds: number
+    pomodoro: boolean
+    autoStartBreak: boolean
+    allowMeetingAlerts: boolean
+    sound: FocusSound
+    volume: number
+    chime: boolean
+    dailyGoalMinutes: number
+  }
   /** Gmail-Kategorien, die Tagwerk nicht in den Posteingang holt */
   gmailHiddenCategories: GmailCategory[]
   onboarded: boolean
@@ -253,6 +292,19 @@ export const DEFAULT_SETTINGS: Settings = {
   claude: { enabled: false, model: 'claude-sonnet-5-5', includeEmailBodies: false, chatRetentionDays: 30 },
   retention: { archivedTasksDays: 180 },
   weather: { enabled: false, city: '' },
+  focus: {
+    minutes: 25,
+    breakMinutes: 5,
+    longBreakMinutes: 15,
+    rounds: 4,
+    pomodoro: true,
+    autoStartBreak: true,
+    allowMeetingAlerts: true,
+    sound: 'none',
+    volume: 0.4,
+    chime: true,
+    dailyGoalMinutes: 120
+  },
   gmailHiddenCategories: ['promotions', 'social'],
   onboarded: false
 }
@@ -396,6 +448,10 @@ export interface TagwerkApi {
     notify(title: string, body: string): Promise<void>
     onNavigate(cb: (view: string) => void): () => void
     onCommand(cb: (cmd: string) => void): () => void
+  }
+  focus: {
+    signal(s: FocusSignal): void
+    onAction(cb: (action: 'pause' | 'resume' | 'stop' | 'skip' | 'open') => void): () => void
   }
   quickNote: {
     save(text: string): Promise<void>

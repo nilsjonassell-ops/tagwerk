@@ -17,12 +17,13 @@ import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { eventsOnDay, hm } from '@shared/analysis'
-import type { AppData, CalEvent, ClaudeRequest, GoogleConnectOptions, GoogleSendParams, Note, Settings } from '@shared/types'
+import type { AppData, CalEvent, ClaudeRequest, GoogleConnectOptions, GoogleSendParams, Note, Settings, FocusSignal } from '@shared/types'
 import { store } from './store'
 import { secrets } from './secrets'
 import { sendToClaude, verifyKey } from './claude'
 import { parseIcs } from './ics'
 import { getWeather } from './weather'
+import { focusState, focusSummary, initFocus, setFocus } from './focus'
 import { startScheduler } from './scheduler'
 import * as google from './google'
 import { log } from './log'
@@ -243,16 +244,31 @@ function buildTrayMenu() {
       { label: next ? `Als Nächstes: ${hm(next.start)} ${truncate(next.title, 32)}` : 'Heute keine weiteren Termine', enabled: false },
       { label: openTasks ? `${openTasks} Aufgaben fällig` : 'Keine fälligen Aufgaben', enabled: false },
       { type: 'separator' },
+      ...focusTrayItems(),
       { label: 'Tagwerk öffnen', click: () => showMain('today') },
       { label: 'Schnellnotiz', accelerator: store.getSettings().quickNoteShortcut, registerAccelerator: false, click: openQuickNote },
       { label: 'Neue Aufgabe', click: () => sendCommand('new-task') },
-      { label: 'Claude fragen', click: () => sendCommand('open-assistant') },
+      ...(store.getSettings().claude.enabled ? [{ label: 'Claude fragen', click: () => sendCommand('open-assistant') }] : []),
       { type: 'separator' },
       { label: 'Einstellungen', click: () => sendCommand('open-settings') },
       { label: 'Tagwerk beenden', click: () => ((quitting = true), app.quit()) }
     ])
   )
-  tray.setToolTip(next ? `Tagwerk – ${hm(next.start)} ${next.title}` : 'Tagwerk')
+  const fs = focusSummary()
+  tray.setToolTip(fs ? `Tagwerk – ${fs}` : next ? `Tagwerk – ${hm(next.start)} ${next.title}` : 'Tagwerk')
+}
+
+function focusTrayItems(): Electron.MenuItemConstructorOptions[] {
+  const s = focusState()
+  const act = (a: string) => () => mainWindow?.webContents.send('focus:action', a)
+  if (!s) return [{ label: 'Fokus starten', click: () => sendCommand('focus-start') }, { type: 'separator' }]
+  return [
+    { label: focusSummary() ?? 'Fokus', enabled: false },
+    s.endsAt ? { label: 'Pausieren', click: act('pause') } : { label: 'Fortsetzen', click: act('resume') },
+    { label: s.phase === 'break' ? 'Pause überspringen' : 'Fokus beenden', click: act(s.phase === 'break' ? 'skip' : 'stop') },
+    { label: 'Fokusansicht öffnen', click: () => (showMain(), act('open')()) },
+    { type: 'separator' }
+  ]
 }
 
 const truncate = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…' : s)
@@ -506,6 +522,18 @@ function registerIpc() {
     quickWindow?.close()
   })
   ipcMain.on('quicknote:close', () => quickWindow?.close())
+  ipcMain.on('focus:signal', (_e, sig: FocusSignal) => {
+    if (!sig || typeof sig !== 'object') return
+    setFocus({
+      active: !!sig.active,
+      phase: sig.phase === 'break' ? 'break' : 'focus',
+      endsAt: typeof sig.endsAt === 'number' ? sig.endsAt : null,
+      remainingMs: Number(sig.remainingMs) || 0,
+      totalMs: Number(sig.totalMs) || 1,
+      label: String(sig.label ?? '').slice(0, 120),
+      allowMeetingAlerts: !!sig.allowMeetingAlerts
+    })
+  })
 }
 
 // ---------- Init ----------
@@ -520,6 +548,7 @@ function init() {
   registerIpc()
   buildAppMenu()
   createTray()
+  initFocus({ window: () => mainWindow, changed: () => buildTrayMenu(), open: () => (showMain(), mainWindow?.webContents.send('focus:action', 'open')) })
 
   const startHidden = process.argv.includes('--hidden')
   createMainWindow(startHidden && !!tray)

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CalendarDays, CheckSquare, FolderKanban, Mail, NotebookPen, Plus, Search, Settings, Sparkles, Moon, Keyboard, CalendarPlus } from 'lucide-react'
+import { CalendarDays, CheckSquare, FolderKanban, Mail, NotebookPen, Plus, Search, Settings, Sparkles, Moon, Keyboard, CalendarPlus, Target } from 'lucide-react'
 import { search, type SearchHit } from '@shared/analysis'
+import { useFocus } from '@/lib/focus'
 import type { ViewId } from '@shared/types'
 import { useStore } from '@/lib/store'
 import { createNote } from '@/lib/actions'
@@ -32,6 +33,7 @@ export function CommandPalette() {
       { id: 'c-task', group: 'Aktionen', label: 'Neue Aufgabe', side: 'N', icon: Plus, run: () => st().openDialog({ kind: 'task' }) },
       { id: 'c-event', group: 'Aktionen', label: 'Neuer Termin', icon: CalendarPlus, run: () => st().openDialog({ kind: 'event' }) },
       { id: 'c-note', group: 'Aktionen', label: 'Neue Notiz', icon: NotebookPen, run: () => (close(), createNote()) },
+      { id: 'c-focus', group: 'Aktionen', label: 'Fokus starten', icon: Target, run: () => (close(), useFocus.getState().show(true)) },
       { id: 'c-plan', group: 'Aktionen', label: 'Aufgaben in freie Zeit einplanen', icon: CalendarDays, run: () => st().openDialog({ kind: 'plan' }) },
       ...(st().settings.claude.enabled
         ? [

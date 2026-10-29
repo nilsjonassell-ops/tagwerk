@@ -5,6 +5,7 @@ import { Notification } from 'electron'
 import { buildBrief, ymd } from '@shared/analysis'
 import { store } from './store'
 import { googleExpiry } from './google'
+import { focusMute } from './focus'
 
 const notified = new Set<string>()
 let lastBriefDay = ''
@@ -39,8 +40,9 @@ function run(onClick: (view: string) => void) {
   const s = store.getSettings()
   if (!data) return
   const now = new Date()
+  const fm = focusMute()
 
-  if (s.notifications.events) {
+  if (s.notifications.events && (!fm.muted || fm.allowMeetings)) {
     const lead = s.notifications.leadMinutes * 60_000
     for (const ev of data.events) {
       if (ev.allDay) continue
@@ -55,7 +57,7 @@ function run(onClick: (view: string) => void) {
     }
   }
 
-  if (s.notifications.dailyBrief) {
+  if (s.notifications.dailyBrief && !fm.muted) {
     const [h, m] = s.notifications.briefTime.split(':').map(Number)
     const today = ymd(now)
     const due = new Date(now)
@@ -79,7 +81,7 @@ function run(onClick: (view: string) => void) {
 
 /** Erinnert ab einem Tag vor Ablauf einmal täglich daran, Google neu zu verbinden. */
 function remindGoogle(onClick: () => void) {
-  if (!Notification.isSupported()) return
+  if (!Notification.isSupported() || focusMute().muted) return
   const { expiresAt } = googleExpiry()
   if (!expiresAt) return
   const now = Date.now()

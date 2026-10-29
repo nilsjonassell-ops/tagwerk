@@ -1,3 +1,5 @@
+import { FocusHost } from '@/components/Focus'
+import { useFocus } from '@/lib/focus'
 import { PlanDialog } from '@/components/PlanDialog'
 import { useEffect } from 'react'
 import { AlertCircle } from 'lucide-react'
@@ -119,6 +121,10 @@ export function App() {
       } else if (mod && e.key === '/') {
         runCommand('show-shortcuts')
         e.preventDefault()
+      } else if (mod && e.shiftKey && e.key.toLowerCase() === 'f') {
+        const f = useFocus.getState()
+        f.show(!f.open)
+        e.preventDefault()
       } else if (mod && e.shiftKey && e.key.toLowerCase() === 'n') {
         runCommand('new-event')
         e.preventDefault()
@@ -182,6 +188,7 @@ export function App() {
       {dialog?.kind === 'extract' && <ExtractTasksDialog noteId={dialog.noteId} />}
       {dialog?.kind === 'onboarding' && <OnboardingDialog />}
       {dialog?.kind === 'plan' && <PlanDialog />}
+      <FocusHost />
       <ConfirmHost />
       <Toasts />
     </div>
@@ -209,6 +216,8 @@ function runCommand(cmd: string) {
       return st.setAssistant(!st.assistantOpen)
     case 'toggle-sidebar':
       return st.set({ sidebarHidden: !st.sidebarHidden })
+    case 'focus-start':
+      return useFocus.getState().show(true)
     case 'show-shortcuts':
       return st.openDialog({ kind: 'shortcuts' })
   }

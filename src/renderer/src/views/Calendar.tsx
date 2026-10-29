@@ -3,6 +3,7 @@ import { AlertTriangle, ExternalLink, ChevronLeft, ChevronRight, Clock, FileText
 import { addDays, eventsOnDay, findConflicts, freeBlocks, relatedToEvent, startOfDay, ymd, type Conflict, type FreeBlock } from '@shared/analysis'
 import type { CalEvent } from '@shared/types'
 import { useStore } from '@/lib/store'
+import { useFocus } from '@/lib/focus'
 import { durationLabel, fDayLong, fDayMed, fMonthYear, fTime, fWeekdayShort, minutesBetween, projectHue, projectName } from '@/lib/format'
 import { deleteEvent, meetingNoteFor, saveEvent } from '@/lib/actions'
 import { AccountStatus, Segmented, SourceTag, ViewHeader } from '@/components/ui'
@@ -675,6 +676,11 @@ function FreeDetail({ block, onClose }: { block: FreeBlock; onClose: () => void 
         <button className="btn small" onClick={() => openDialog({ kind: 'event', preset: { start: block.start.toISOString(), end: hourEnd.toISOString() } })}>
           <Plus /> Termin eintragen
         </button>
+        {block.start.getTime() - 15 * 60_000 <= Date.now() && block.end.getTime() > Date.now() && (
+          <button className="btn small" onClick={() => useFocus.getState().show(true)}>
+            <Target /> Jetzt fokussieren
+          </button>
+        )}
         <button className="btn small ghost" onClick={() => openDialog({ kind: 'settings', section: 'calendar' })}>
           <Settings2 /> Arbeitszeit ändern
         </button>

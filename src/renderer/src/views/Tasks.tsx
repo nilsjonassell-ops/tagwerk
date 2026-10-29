@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState } from 'react'
-import { Archive, Check, CheckCircle2, Mail, NotebookPen, Plus, Repeat, Sparkles, Trash2, Pencil, CalendarClock } from 'lucide-react'
+import { Archive, Check, CheckCircle2, Mail, NotebookPen, Plus, Repeat, Sparkles, Trash2, Pencil, CalendarClock, Target } from 'lucide-react'
 import { addDays, isActive, isDueToday, isOverdue, sortTasks, ymd } from '@shared/analysis'
 import type { Task } from '@shared/types'
 import { useStore } from '@/lib/store'
+import { useFocus } from '@/lib/focus'
 import { dueLabel, fDayLong, parseQuickAdd, PRIORITY_LABEL, projectName, RECURRENCE_LABEL } from '@/lib/format'
 import { addTask, archiveCompleted, deleteTask, newTask, toggleTask } from '@/lib/actions'
 import { Empty, PriorityMark, Segmented, ViewHeader } from '@/components/ui'
@@ -218,6 +219,11 @@ function TaskRow({ t }: { t: Task }) {
         </span>
       </button>
       <div className="row-actions">
+        {!done && (
+          <button className="btn ghost small icon-btn" onClick={() => useFocus.getState().show(true, t.id)} aria-label="Fokus auf diese Aufgabe" title="Fokus auf diese Aufgabe">
+            <Target />
+          </button>
+        )}
         <button className="btn ghost small icon-btn" onClick={() => openDialog({ kind: 'task', id: t.id })} aria-label="Bearbeiten">
           <Pencil />
         </button>

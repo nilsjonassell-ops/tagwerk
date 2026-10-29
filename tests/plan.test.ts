@@ -38,3 +38,17 @@ test('Wochenende wird ausgelassen und Verspätung markiert', () => {
   assert.equal(plan[0].start.getDay(), 1) // Montag
   assert.equal(plan[0].late, true)
 })
+
+import { focusStats } from '../src/shared/analysis.ts'
+
+test('Fokus-Statistik: heute, Woche und Serie', () => {
+  const at = (d: string, m: number) => ({ id: d + m, start: new Date(d).toISOString(), end: new Date(d).toISOString(), minutes: m })
+  const log = [at('2026-10-26T10:00:00', 25), at('2026-10-27T10:00:00', 50), at('2026-10-28T09:00:00', 25), at('2026-10-28T11:00:00', 25), at('2026-10-10T09:00:00', 90)]
+  const s = focusStats(log, new Date('2026-10-28T15:00:00'))
+  assert.equal(s.todayMinutes, 50)
+  assert.equal(s.todaySessions, 2)
+  assert.equal(s.weekMinutes, 125)
+  assert.equal(s.streak, 3)
+  // heute noch nichts: Serie zählt ab gestern
+  assert.equal(focusStats(log, new Date('2026-10-29T08:00:00')).streak, 3)
+})

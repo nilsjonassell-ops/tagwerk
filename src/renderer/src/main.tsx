@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './styles/app.css'
 import './styles/glass.css'
 import './styles/motion.css'
+import './styles/focus.css'
 import { App } from './App'
 import { QuickNote } from './QuickNote'
 
