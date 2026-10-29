@@ -196,6 +196,8 @@ function runCommand(cmd: string) {
       return createNote()
     case 'open-settings':
       return st.openDialog({ kind: 'settings' })
+    case 'open-google-settings':
+      return st.openDialog({ kind: 'settings', section: 'sources' })
     case 'open-search':
       return st.set({ paletteOpen: true })
     case 'open-assistant':

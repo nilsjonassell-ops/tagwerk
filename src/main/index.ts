@@ -505,7 +505,10 @@ function init() {
     log.warn('global shortcut unavailable')
   }
   applyLoginItem(settings)
-  startScheduler((view) => showMain(view))
+  startScheduler(
+    (view) => showMain(view),
+    () => sendCommand('open-google-settings')
+  )
 
   nativeTheme.on('updated', () => {
     if (!isMac && mainWindow) mainWindow.setTitleBarOverlay(overlayColors())

@@ -4,12 +4,15 @@
 import { Notification } from 'electron'
 import { buildBrief, ymd } from '@shared/analysis'
 import { store } from './store'
+import { googleExpiry } from './google'
 
 const notified = new Set<string>()
 let lastBriefDay = ''
 let timer: NodeJS.Timeout | null = null
 
-export function startScheduler(onClick: (view: string) => void) {
+let googleReminderDay = ''
+
+export function startScheduler(onClick: (view: string) => void, onGoogleReminder: () => void = () => onClick('today')) {
   if (timer) clearInterval(timer)
   const tick = () => {
     try {
@@ -18,7 +21,15 @@ export function startScheduler(onClick: (view: string) => void) {
       /* Planer darf die App nie stören */
     }
   }
-  timer = setInterval(tick, 30_000)
+  const googleTick = () => {
+    try {
+      remindGoogle(onGoogleReminder)
+    } catch {
+      /* ignorieren */
+    }
+  }
+  timer = setInterval(() => (tick(), googleTick()), 30_000)
+  setTimeout(googleTick, 8_000)
   setTimeout(tick, 5_000)
 }
 
@@ -64,6 +75,21 @@ function run(onClick: (view: string) => void) {
       show('Dein Tag', body, () => onClick('today'))
     }
   }
+}
+
+/** Erinnert ab einem Tag vor Ablauf einmal täglich daran, Google neu zu verbinden. */
+function remindGoogle(onClick: () => void) {
+  if (!Notification.isSupported()) return
+  const { expiresAt } = googleExpiry()
+  if (!expiresAt) return
+  const now = Date.now()
+  const left = expiresAt - now
+  const today = ymd(new Date())
+  if (left > 24 * 3600_000 || googleReminderDay === today) return
+  googleReminderDay = today
+  const when =
+    left <= 0 ? 'ist abgelaufen' : left < 3 * 3600_000 ? 'läuft in wenigen Stunden ab' : `läuft ${new Date(expiresAt).toDateString() === new Date().toDateString() ? 'heute' : 'morgen'} um ${new Date(expiresAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr ab`
+  show('Google bitte neu verbinden', `Die Anmeldung für Kalender und Gmail ${when}. Ein Klick hier öffnet die Einstellungen – „Neu verbinden“ dauert nur ein paar Sekunden.`, onClick)
 }
 
 function show(title: string, body: string, onClick: () => void) {

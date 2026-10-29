@@ -39,8 +39,11 @@ export function Sidebar() {
   const syncing = useStore((s) => s.googleSync.syncing)
   const syncErr = useStore((s) => s.googleSync.errors)
   const googleProblem = google.expired || !!syncErr.general || !!syncErr.calendar || !!syncErr.gmail
+  const expiringSoon = google.connected && !!google.expiresAt && google.expiresAt - Date.now() < 86400_000
   const sourceLabel = google.expired
     ? 'Google: neu anmelden'
+    : expiringSoon
+      ? 'Google: bald neu verbinden'
     : google.connected
       ? `${syncing ? 'Synchronisiert …' : googleProblem ? 'Google: Fehler' : 'Google verbunden'}${data.sources.demo ? ' + Demo' : ''}`
       : data.sources.demo
@@ -48,7 +51,7 @@ export function Sidebar() {
         : data.sources.icsImports.length
           ? 'Kalender importiert'
           : 'Nur lokale Daten'
-  const dotClass = google.expired || (google.connected && googleProblem) ? 'off' : google.connected ? 'on' : data.sources.demo ? 'demo' : 'on'
+  const dotClass = google.expired || (google.connected && googleProblem) ? 'off' : expiringSoon ? 'demo' : google.connected ? 'on' : data.sources.demo ? 'demo' : 'on'
 
   return (
     <aside className="sidebar" aria-label="Navigation">

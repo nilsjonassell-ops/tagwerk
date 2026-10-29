@@ -298,6 +298,8 @@ export interface GoogleStatus {
   caps: GoogleCapabilities
   /** Anmeldung abgelaufen oder widerrufen – neu verbinden */
   expired: boolean
+  /** Wann die Anmeldung abläuft (ms seit 1970); fehlt, wenn sie nicht abläuft */
+  expiresAt?: number
   encrypted: boolean
 }
 

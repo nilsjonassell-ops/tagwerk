@@ -48,18 +48,19 @@ export function GoogleSettings() {
     await refresh()
   }
 
-  const connect = async () => {
+  const connect = async (override?: typeof opts) => {
+    const renewing = google.connected
     setConnecting(true)
     setConnectErr('')
-    const r = await window.tagwerk.google.connect(opts)
+    const r = await window.tagwerk.google.connect(override ?? opts)
     setConnecting(false)
     useStore.getState().set({ google: r.status })
     if (!r.ok) return setConnectErr(r.error ?? 'Verbindung fehlgeschlagen')
     if (r.error) setConnectErr(r.error)
-    toast(`Mit ${r.status.email} verbunden`)
+    toast(renewing ? 'Google-Anmeldung erneuert' : `Mit ${r.status.email} verbunden`)
     await syncGoogle()
     const st = useStore.getState()
-    if (st.data.sources.demo) {
+    if (st.data.sources.demo && !renewing) {
       const rm = await confirm({
         title: 'Demo-Daten jetzt entfernen?',
         body: 'Deine echten Termine und E-Mails sind jetzt da. Die Beispieldaten kannst du entfernen, damit sie sich nicht vermischen. Eigene Einträge bleiben erhalten.',
@@ -133,6 +134,14 @@ export function GoogleSettings() {
             <span>Gmail</span>
             <b>{capLabel(google.caps.gmailRead, google.caps.gmailWrite, 'lesen, archivieren, Antworten senden')}</b>
           </div>
+          {google.expiresAt && (
+            <div className="kv-line">
+              <span>Anmeldung gültig bis</span>
+              <b className={google.expiresAt - Date.now() < 86400_000 ? 'overdue-text' : ''}>
+                {new Date(google.expiresAt).toLocaleString('de-DE', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+              </b>
+            </div>
+          )}
           <div className="kv-line">
             <span>Zuletzt synchronisiert</span>
             <b>{sync.lastSync ? new Date(sync.lastSync).toLocaleString('de-DE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'noch nicht'}</b>
@@ -142,6 +151,30 @@ export function GoogleSettings() {
               <AlertTriangle /> <span>{syncError}</span>
             </div>
           )}
+          {google.expiresAt && (
+            <div className="row" style={{ gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+              {connecting ? (
+                <>
+                  <span className="row hint">
+                    <Loader2 className="spin" size={14} /> Warte auf deine Bestätigung im Browser …
+                  </span>
+                  <button className="btn small ghost" onClick={cancel}>
+                    Abbrechen
+                  </button>
+                </>
+              ) : (
+                <button
+                  className={`btn small ${google.expiresAt - Date.now() < 86400_000 ? 'primary' : ''}`}
+                  onClick={() => connect({ calendar: google.caps.calendarRead, gmail: google.caps.gmailRead, write: google.caps.calendarWrite || google.caps.gmailWrite })}
+                  disabled={!online}
+                >
+                  <RefreshCw /> Anmeldung jetzt erneuern
+                </button>
+              )}
+              <span className="hint">Im Testmodus gilt eine Anmeldung 7 Tage. Tagwerk erinnert dich einen Tag vorher.</span>
+            </div>
+          )}
+          {connectErr && <div className="error-text" style={{ marginTop: 6 }}>{connectErr}</div>}
           <p className="hint" style={{ margin: '8px 0 0' }}>
             Tagwerk synchronisiert alle 5 Minuten, solange die App läuft. Endgültiges Löschen von E-Mails ist nicht möglich – diese Berechtigung fragt Tagwerk gar nicht erst an.
           </p>
@@ -245,7 +278,7 @@ export function GoogleSettings() {
                     </button>
                   </>
                 ) : (
-                  <button className="btn primary" onClick={connect} disabled={!google.clientConfigured || (!opts.calendar && !opts.gmail) || !online}>
+                  <button className="btn primary" onClick={() => connect()} disabled={!google.clientConfigured || (!opts.calendar && !opts.gmail) || !online}>
                     {google.expired ? 'Neu verbinden' : 'Mit Google verbinden'}
                   </button>
                 )}

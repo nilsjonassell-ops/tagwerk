@@ -52,6 +52,25 @@ interface Account {
   scopes: string[]
   email: string
   expired?: boolean
+  connectedAt?: number
+  /** Ablauf der Anmeldung (Apps im Testmodus: 7 Tage). null = läuft nicht ab */
+  refreshExpiresAt?: number | null
+}
+
+const TESTING_LIFETIME = 7 * 86400_000
+
+/** Ablaufzeitpunkt der Anmeldung; ältere Verbindungen ohne Angabe werden wie Testmodus behandelt. */
+function expiresAt(a: Account | null): number | undefined {
+  if (!a || a.expired) return undefined
+  if (a.refreshExpiresAt === null) return undefined
+  if (typeof a.refreshExpiresAt === 'number') return a.refreshExpiresAt
+  return a.connectedAt ? a.connectedAt + TESTING_LIFETIME : undefined
+}
+
+/** Für den Planer: Ablaufzeitpunkt der aktuellen Google-Anmeldung. */
+export function googleExpiry(): { expiresAt?: number; email?: string } {
+  const a = account()
+  return { expiresAt: expiresAt(a), email: a?.email }
 }
 
 const VAULT_CLIENT = 'google-client'
@@ -85,7 +104,12 @@ function caps(a: Account | null): GoogleCapabilities {
 
 export async function googleStatus(): Promise<GoogleStatus> {
   const c = client()
-  const a = account()
+  let a = account()
+  // Verbindungen aus älteren Versionen kennen ihren Startzeitpunkt nicht: einmalig nachtragen.
+  if (a && !a.expired && a.connectedAt === undefined && a.refreshExpiresAt === undefined) {
+    a = { ...a, connectedAt: Date.now() }
+    await secrets.setJson(VAULT_ACCOUNT, a).catch(() => {})
+  }
   return {
     clientConfigured: !!c,
     clientIdHint: c ? `${c.clientId.slice(0, 12)}…` : undefined,
@@ -93,6 +117,7 @@ export async function googleStatus(): Promise<GoogleStatus> {
     email: a?.email,
     caps: caps(a),
     expired: !!a?.expired,
+    expiresAt: expiresAt(a),
     encrypted: await secrets.encryptionAvailable()
   }
 }
@@ -170,7 +195,14 @@ export async function connect(opts: GoogleConnectOptions): Promise<{ ok: boolean
     if (!tok.refresh_token) throw new GError('unknown', 'Google hat kein Langzeit-Token geliefert. Entferne Tagwerk unter myaccount.google.com → Sicherheit → Drittanbieter-Apps und verbinde neu.')
     const granted = String(tok.scope ?? '').split(/\s+/).filter(Boolean)
     const email = emailFromIdToken(tok.id_token) ?? ''
-    await secrets.setJson(VAULT_ACCOUNT, { refreshToken: tok.refresh_token, scopes: granted, email } satisfies Account)
+    const now = Date.now()
+    await secrets.setJson(VAULT_ACCOUNT, {
+      refreshToken: tok.refresh_token,
+      scopes: granted,
+      email,
+      connectedAt: now,
+      refreshExpiresAt: tok.refresh_token_expires_in ? now + Number(tok.refresh_token_expires_in) * 1000 : null
+    } satisfies Account)
     accessToken = { token: tok.access_token, exp: Date.now() + (Number(tok.expires_in) || 3600) * 1000 }
     threadCache.clear()
     const status = await googleStatus()
@@ -264,6 +296,8 @@ interface TokenResponse {
   refresh_token?: string
   scope?: string
   id_token?: string
+  /** Nur bei zeitlich begrenzten Tokens (z. B. App im Testmodus) */
+  refresh_token_expires_in?: number
 }
 
 async function tokenRequest(params: Record<string, string>): Promise<TokenResponse> {
