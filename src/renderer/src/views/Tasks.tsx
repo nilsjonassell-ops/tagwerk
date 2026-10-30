@@ -1,10 +1,11 @@
 import { useMemo, useRef, useState } from 'react'
-import { Archive, Check, CheckCircle2, Mail, NotebookPen, Plus, Repeat, Sparkles, Trash2, Pencil, CalendarClock, Target } from 'lucide-react'
+import { Archive, Check, CheckCircle2, Clock, Mail, NotebookPen, Plus, Repeat, Sparkles, Trash2, Pencil, CalendarClock, Target } from 'lucide-react'
 import { addDays, isActive, isDueToday, isOverdue, sortTasks, ymd } from '@shared/analysis'
 import type { Task } from '@shared/types'
 import { useStore } from '@/lib/store'
 import { useFocus } from '@/lib/focus'
-import { dueLabel, fDayLong, parseQuickAdd, PRIORITY_LABEL, projectName, RECURRENCE_LABEL } from '@/lib/format'
+import { dueLabel, fDayLong, PRIORITY_LABEL, projectName, RECURRENCE_LABEL } from '@/lib/format'
+import { parseQuickTask } from '@shared/parse-de'
 import { addTask, archiveCompleted, deleteTask, newTask, toggleTask } from '@/lib/actions'
 import { Empty, PriorityMark, Segmented, ViewHeader } from '@/components/ui'
 
@@ -16,12 +17,12 @@ export function TasksView() {
   const [input, setInput] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const now = new Date()
-  const parsed = input.trim() ? parseQuickAdd(input, data, now) : null
+  const parsed = input.trim() ? parseQuickTask(input, data.projects, now) : null
 
   const add = () => {
     if (!parsed?.title) return
     const due = parsed.due ?? (tab === 'today' ? ymd(now) : undefined)
-    addTask(newTask({ title: parsed.title, due, priority: parsed.priority ?? 'medium', projectId: parsed.projectId, recurrence: parsed.recurrence ?? 'none' }))
+    addTask(newTask({ title: parsed.title, due, dueTime: parsed.time, priority: parsed.priority ?? 'medium', projectId: parsed.projectId, recurrence: parsed.recurrence ?? 'none' }))
     setInput('')
   }
 
@@ -67,7 +68,7 @@ export function TasksView() {
                     if (e.key === 'Enter') add()
                     if (e.key === 'Escape') setInput('')
                   }}
-                  placeholder="Neue Aufgabe – z. B. „Angebot prüfen morgen !! #Relaunch“"
+                  placeholder="Neue Aufgabe – z. B. „Zahnarzt anrufen morgen 10 Uhr !hoch“"
                   aria-label="Neue Aufgabe"
                   aria-describedby="quick-add-help"
                 />
@@ -81,13 +82,14 @@ export function TasksView() {
                 {parsed ? (
                   <>
                     {parsed.due && <span className="tag accent">{fDayLong.format(new Date(parsed.due + 'T12:00'))}</span>}
+                    {parsed.time && <span className="tag accent"><Clock /> {parsed.time} Uhr · Erinnerung</span>}
                     {!parsed.due && tab === 'today' && <span className="tag">heute</span>}
                     {parsed.priority && <span className={`tag ${parsed.priority === 'high' ? 'alert' : ''}`}>Priorität {PRIORITY_LABEL[parsed.priority]}</span>}
                     {parsed.projectId && <span className="tag">{projectName(data, parsed.projectId)}</span>}
                     {parsed.recurrence && <span className="tag"><Repeat /> {RECURRENCE_LABEL[parsed.recurrence]}</span>}
                   </>
                 ) : (
-                  <span>Datum: heute, morgen, Freitag, 12.11. · Priorität: ! oder !! · Projekt: #Name · Wiederholung: täglich, werktags …</span>
+                  <span>Datum: heute, morgen, Freitag, in 3 Tagen, 12.11. · Uhrzeit: 10 Uhr, 14:30 · Priorität: !hoch, !mittel, !niedrig · Projekt: #Name · Wiederholung: täglich, werktags …</span>
                 )}
               </div>
             </>
@@ -193,6 +195,7 @@ function TaskRow({ t }: { t: Task }) {
           {dl && !done && (
             <span className={dl.tone === 'overdue' ? 'overdue-text' : dl.tone === 'today' ? 'today-text' : ''}>
               <CalendarClock /> {dl.tone === 'overdue' ? `überfällig, ${dl.text}` : dl.text}
+              {t.dueTime ? ` · ${t.dueTime}` : ''}
             </span>
           )}
           {done && t.completedAt && <span>erledigt {new Date(t.completedAt).toLocaleDateString('de-DE')}</span>}

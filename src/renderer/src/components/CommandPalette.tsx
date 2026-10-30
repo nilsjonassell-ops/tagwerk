@@ -35,6 +35,7 @@ export function CommandPalette() {
       { id: 'c-note', group: 'Aktionen', label: 'Neue Notiz', icon: NotebookPen, run: () => (close(), createNote()) },
       { id: 'c-focus', group: 'Aktionen', label: 'Fokus starten', icon: Target, run: () => (close(), useFocus.getState().show(true)) },
       { id: 'c-plan', group: 'Aktionen', label: 'Aufgaben in freie Zeit einplanen', icon: CalendarDays, run: () => st().openDialog({ kind: 'plan' }) },
+      { id: 'c-review', group: 'Aktionen', label: 'Wochenrückblick anzeigen', icon: CalendarDays, run: () => st().openDialog({ kind: 'review' }) },
       ...(st().settings.claude.enabled
         ? [
             { id: 'c-ai', group: 'Aktionen', label: 'Claude fragen', icon: Sparkles, run: () => (close(), st().setAssistant(true)) },

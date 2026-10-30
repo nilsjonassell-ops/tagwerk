@@ -2,7 +2,10 @@
 // Morgen-Überblick und Hinweis auf eine ablaufende Google-Anmeldung.
 // Ruhezeiten, Fokus-Modus und Ton regelt notify.ts zentral.
 
-import { buildBrief, findConflicts, eventsOnDay, ymd } from '@shared/analysis'
+import { buildBrief, findConflicts, eventsOnDay, weekReview, ymd } from '@shared/analysis'
+import { app } from 'electron'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { store } from './store'
 import { googleExpiry } from './google'
 import { notify } from './notify'
@@ -24,6 +27,23 @@ function inWords(mins: number): string {
   }
   const d = Math.round(mins / (24 * 60))
   return d === 1 ? 'Morgen' : `In ${d} Tagen`
+}
+
+// Kleiner Merkzettel, damit der Wochenrückblick auch nach einem Neustart nur einmal kommt
+const stateFile = () => join(app.getPath('userData'), 'scheduler.json')
+function readState(): { review?: string } {
+  try {
+    return existsSync(stateFile()) ? JSON.parse(readFileSync(stateFile(), 'utf8')) : {}
+  } catch {
+    return {}
+  }
+}
+function writeState(patch: { review?: string }) {
+  try {
+    writeFileSync(stateFile(), JSON.stringify({ ...readState(), ...patch }))
+  } catch {
+    /* nicht kritisch */
+  }
 }
 
 export function startScheduler() {
@@ -80,6 +100,43 @@ function run() {
         notified.add(keyStart)
         notify({ kind: 'event', title: `Jetzt: ${ev.title}`, body: `${when}${where}`, target, event })
       }
+    }
+  }
+
+  // Aufgaben mit Uhrzeit: Pop-up zur eingestellten Zeit
+  for (const t of data.tasks) {
+    if (t.status === 'done' || t.archived || !t.due || !t.dueTime) continue
+    const [h, m] = t.dueTime.split(':').map(Number)
+    const at = new Date(`${t.due}T00:00:00`)
+    at.setHours(h || 0, m || 0, 0, 0)
+    const delta = at.getTime() - now.getTime()
+    const key = `task:${t.id}@${t.due}T${t.dueTime}`
+    if (delta <= 30_000 && delta > -10 * 60_000 && !notified.has(key)) {
+      notified.add(key)
+      const proj = t.projectId ? data.projects.find((p) => p.id === t.projectId)?.name : undefined
+      const prio = t.priority === 'high' ? 'Hohe Priorität' : undefined
+      notify({
+        kind: 'task',
+        title: t.title,
+        body: [`Fällig um ${t.dueTime} Uhr`, prio, proj].filter(Boolean).join(' · '),
+        target: { view: 'command', id: `task:${t.id}` }
+      })
+    }
+  }
+
+  // Wochenrückblick – einmal pro Woche zur eingestellten Zeit (bis zu 6 Std. nachholen)
+  const wr = s.notifications.weeklyReview
+  if (wr?.enabled && now.getDay() === wr.day) {
+    const [h, m] = wr.time.split(':').map(Number)
+    const due = new Date(now)
+    due.setHours(h || 16, m || 0, 0, 0)
+    const week = ymd(now)
+    if (now >= due && now.getTime() - due.getTime() < 6 * 3600_000 && readState().review !== week) {
+      const r = weekReview(data, now)
+      const focus = r.focusMinutes >= 60 ? `${Math.floor(r.focusMinutes / 60)} Std. ${r.focusMinutes % 60 ? `${r.focusMinutes % 60} Min. ` : ''}Fokus` : `${r.focusMinutes} Min. Fokus`
+      const parts = [`${r.done.length} ${r.done.length === 1 ? 'Aufgabe' : 'Aufgaben'} erledigt`, focus, r.waiting.length ? `${r.waiting.length} ${r.waiting.length === 1 ? 'Mail wartet' : 'Mails warten'}` : 'keine Mail wartet']
+      const res = notify({ kind: 'review', title: 'Dein Wochenrückblick ist da', body: parts.join(' · '), target: { view: 'command', id: 'weekly-review' } })
+      if (res.shown || res.reason === 'unsupported') writeState({ review: week })
     }
   }
 

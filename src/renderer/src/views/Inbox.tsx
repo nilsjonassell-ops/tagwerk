@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Archive, CheckSquare, FlaskConical, Inbox as InboxIcon, Mail, MailOpen, Reply, Search, Send, Sparkles, Star, Trash2, X, AlertCircle, Clock, Loader2, Flag } from 'lucide-react'
+import { Archive, CheckSquare, FlaskConical, Inbox as InboxIcon, Mail, MailOpen, Reply, Search, Send, Sparkles, Star, Trash2, X, AlertCircle, Clock, Loader2, Flag, CalendarPlus, CalendarCheck } from 'lucide-react'
 import { groupThreads, type Thread } from '@shared/analysis'
+import { findAppointments, type Appointment } from '@shared/parse-de'
 import { useStore } from '@/lib/store'
 import { hueFor, initials, mailDate, projectName } from '@/lib/format'
 import { archiveThread, deleteThread, markThread, sendReply, setReplyMark, taskFromEmail, toggleStar } from '@/lib/actions'
@@ -320,6 +321,7 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
             <Mail />
           </button>
         </div>
+        <MailAppointments thread={thread} />
         {aiOn && !claude.configured && (
           <div className="hint" style={{ marginTop: 8 }}>
             Zusammenfassen und Entwerfen brauchen Claude.{' '}
@@ -420,5 +422,64 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
         )}
       </div>
     </article>
+  )
+}
+
+/** Erkannte Termine in der letzten eingegangenen Mail – ein Klick legt sie im Kalender an. */
+function MailAppointments({ thread }: { thread: Thread }) {
+  const events = useStore((s) => s.data.events)
+  const openDialog = useStore((s) => s.openDialog)
+  const [hidden, setHidden] = useState(false)
+  const last = [...thread.messages].reverse().find((m) => m.folder !== 'sent')
+  const found = useMemo<Appointment[]>(
+    () => (last ? findAppointments(`${last.subject}. ${last.body}`, new Date(last.date), new Date()) : []),
+    [last?.id] // eslint-disable-line react-hooks/exhaustive-deps
+  )
+  if (!last || hidden || found.length === 0) return null
+  const fmt = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: 'numeric', month: 'short' })
+  const t = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' })
+  const title = thread.subject.replace(/^(re|aw|fwd|wg|antw):\s*/gi, '').trim() || 'Termin'
+  return (
+    <div className="mail-suggest" role="note" aria-label="Erkannte Termine">
+      {found.map((a) => {
+        const exists = events.some((e) => Math.abs(new Date(e.start).getTime() - new Date(a.start).getTime()) < 60_000)
+        return (
+          <div key={a.start} className="ms-row">
+            <span className="ms-icon">{exists ? <CalendarCheck /> : <CalendarPlus />}</span>
+            <span className="ms-text">
+              <b>
+                {fmt.format(new Date(a.start))} · {t.format(new Date(a.start))}–{t.format(new Date(a.end))} Uhr
+              </b>
+              <span>„{a.context}“</span>
+            </span>
+            {exists ? (
+              <span className="tag ok">Im Kalender</span>
+            ) : (
+              <button
+                className="btn small primary"
+                onClick={() =>
+                  openDialog({
+                    kind: 'event',
+                    preset: {
+                      title,
+                      start: a.start,
+                      end: a.end,
+                      projectId: thread.projectId,
+                      // Absender nur in den Notizen – Einladungen verschickt Tagwerk nie ungefragt
+                      notes: `Aus der E-Mail von ${last.from.name || last.from.email}${last.from.email ? ` <${last.from.email}>` : ''}: „${a.context}“`
+                    }
+                  })
+                }
+              >
+                <CalendarPlus /> Termin anlegen
+              </button>
+            )}
+          </div>
+        )
+      })}
+      <button className="ms-close" onClick={() => setHidden(true)} aria-label="Vorschläge ausblenden" title="Ausblenden">
+        <X />
+      </button>
+    </div>
   )
 }

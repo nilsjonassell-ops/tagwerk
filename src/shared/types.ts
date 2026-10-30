@@ -25,6 +25,8 @@ export interface Task {
   priority: Priority
   /** Fälligkeitsdatum als YYYY-MM-DD */
   due?: string
+  /** Uhrzeit HH:MM – zu dieser Zeit erinnert Tagwerk */
+  dueTime?: string
   projectId?: string
   status: TaskStatus
   recurrence: Recurrence
@@ -245,6 +247,8 @@ export interface Settings {
     sound: boolean
     /** Eigene Tagwerk-Pop-ups unten rechts oder Windows-Mitteilungen */
     style: 'popup' | 'windows'
+    /** Wochenrückblick: Wochentag (0 = So … 5 = Fr) und Uhrzeit */
+    weeklyReview: { enabled: boolean; day: number; time: string }
   }
   sidebar: { id: ViewId; visible: boolean }[]
   dashboardCards: { id: DashboardCardId; visible: boolean }[]
@@ -311,7 +315,8 @@ export const DEFAULT_SETTINGS: Settings = {
     vipSenders: [],
     quiet: { enabled: true, from: '22:00', to: '07:00' },
     sound: true,
-    style: 'popup'
+    style: 'popup',
+    weeklyReview: { enabled: true, day: 5, time: '16:00' }
   },
   sidebar: [
     { id: 'today', visible: true },
@@ -451,9 +456,9 @@ export interface GoogleApi {
   connect(opts: GoogleConnectOptions): Promise<{ ok: boolean; error?: string; status: GoogleStatus }>
   cancelConnect(): Promise<void>
   disconnect(): Promise<GoogleStatus>
-  sync(opts?: { only?: 'gmail' }): Promise<GoogleSyncResult>
-  /** Meldet, sobald sich im Gmail-Postfach etwas geändert hat. */
-  onMailChanged(cb: () => void): () => void
+  sync(opts?: { only?: 'gmail' | 'calendar' }): Promise<GoogleSyncResult>
+  /** Meldet, sobald sich in Gmail oder im Kalender etwas geändert hat. */
+  onChanged(cb: (what: 'gmail' | 'calendar') => void): () => void
   createEvent(ev: CalEvent, notify: boolean): Promise<GResult<CalEvent>>
   updateEvent(ev: CalEvent, notify: boolean): Promise<GResult<CalEvent>>
   deleteEvent(remoteId: string, notify: boolean): Promise<GResult<null>>
@@ -462,7 +467,7 @@ export interface GoogleApi {
   send(p: GoogleSendParams): Promise<GResult<Email>>
 }
 
-export type NotifyKind = 'event' | 'mail' | 'brief' | 'focus' | 'system' | 'test' | 'update'
+export type NotifyKind = 'event' | 'mail' | 'brief' | 'focus' | 'system' | 'test' | 'update' | 'task' | 'review'
 
 export interface NotifyRequest {
   title: string
@@ -477,7 +482,7 @@ export interface NotifyRequest {
 }
 
 export interface PopupAction {
-  id: 'open' | 'archive' | 'snooze' | 'install' | 'later' | 'read'
+  id: 'open' | 'archive' | 'snooze' | 'install' | 'later' | 'read' | 'done'
   label: string
   primary?: boolean
 }

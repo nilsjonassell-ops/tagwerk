@@ -38,7 +38,8 @@ export function notify(req: NotifyRequest): { shown: boolean; reason?: string } 
 
   if (s.style === 'windows') return windowsNotification(req, s.sound)
 
-  const id = req.kind === 'update' ? 'update' : req.kind === 'event' && req.target?.id ? `event:${req.target.id}` : `n${++seq}`
+  const id =
+    req.kind === 'update' || req.kind === 'review' ? req.kind : (req.kind === 'event' || req.kind === 'task') && req.target?.id ? `${req.kind}:${req.target.id}` : `n${++seq}`
   requests.set(id, req)
   if (requests.size > 40) requests.delete(requests.keys().next().value!)
   showPopup(toItem(id, req, s.sound))
@@ -73,6 +74,17 @@ function toItem(id: string, req: NotifyRequest, sound: boolean): PopupItem {
         { id: 'install', label: 'Jetzt neu starten', primary: true }
       ]
       break
+    case 'task':
+      meta = 'Aufgabe'
+      actions = [
+        { id: 'snooze', label: 'In 10 Min.' },
+        { id: 'done', label: 'Erledigt', primary: true }
+      ]
+      break
+    case 'review':
+      meta = 'Wochenrückblick'
+      actions = [{ id: 'open', label: 'Rückblick ansehen', primary: true }]
+      break
     case 'brief':
       meta = 'Tagesüberblick'
       actions = [{ id: 'open', label: 'Übersicht öffnen', primary: true }]
@@ -97,7 +109,7 @@ function toItem(id: string, req: NotifyRequest, sound: boolean): PopupItem {
     lines: req.lines?.slice(0, 3).map((l) => String(l).slice(0, 120)),
     meta,
     actions,
-    sticky: req.kind === 'event' || req.kind === 'update',
+    sticky: req.kind === 'event' || req.kind === 'update' || req.kind === 'task' || req.kind === 'review',
     sound: sound && req.kind !== 'update',
     at: Date.now()
   }
@@ -122,7 +134,14 @@ export function handlePopupAction(item: PopupItem, action: PopupAction['id']) {
     case 'install':
       deps.install()
       break
+    case 'done':
+      if (t?.id?.startsWith('task:')) deps.command(`task-done:${t.id.slice(5)}`)
+      break
     case 'snooze': {
+      if (req.kind === 'task') {
+        setTimeout(() => notify(req), 10 * 60_000)
+        break
+      }
       const ev = req.event
       setTimeout(() => {
         if (!ev) return void notify(req)

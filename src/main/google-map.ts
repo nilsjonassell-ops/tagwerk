@@ -8,6 +8,7 @@ import type { CalEvent, Email, Person } from '../shared/types.ts'
 export interface GEvent {
   id: string
   status?: string
+  updated?: string
   summary?: string
   description?: string
   location?: string

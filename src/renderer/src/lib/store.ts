@@ -41,6 +41,7 @@ export type DialogState =
   | { kind: 'extract'; noteId: string }
   | { kind: 'onboarding' }
   | { kind: 'plan' }
+  | { kind: 'review' }
   | null
 
 interface State {
@@ -70,7 +71,7 @@ interface State {
   updateSettings(patch: Partial<Settings>): Promise<void>
   refreshClaude(): Promise<void>
   refreshGoogle(): Promise<GoogleStatus>
-  syncGoogle(opts?: { quiet?: boolean; mailOnly?: boolean }): Promise<void>
+  syncGoogle(opts?: { quiet?: boolean; only?: 'gmail' | 'calendar' }): Promise<void>
   go(view: ViewId, id?: string): void
   select(view: keyof Selection, id?: string): void
   toast(text: string, opts?: { tone?: Toast['tone']; undo?: () => void }): void
@@ -191,14 +192,14 @@ export const useStore = create<State>((set, get) => ({
 
   async syncGoogle(opts) {
     if (get().googleSync.syncing) {
-      // Läuft schon ein Abruf, danach noch einmal den Posteingang holen
-      if (opts?.mailOnly) mailAgain = true
+      // Läuft schon ein Abruf, danach den betroffenen Dienst noch einmal holen
+      if (opts?.only) pendingSync.add(opts.only)
       return
     }
     set({ googleSync: { ...get().googleSync, syncing: true } })
     try {
       const before = get().data.emails.filter((e) => e.source === 'google')
-      const r = await window.tagwerk.google.sync(opts?.mailOnly ? { only: 'gmail' } : undefined)
+      const r = await window.tagwerk.google.sync(opts?.only ? { only: opts.only } : undefined)
       set({ google: r.status })
       if (r.emails) notifyNewMail(before, r.emails, r.status.email, get().settings)
       // Google ist die Quelle der Wahrheit: Google-Datensätze werden je Dienst vollständig ersetzt.
@@ -223,9 +224,10 @@ export const useStore = create<State>((set, get) => ({
     } catch {
       set({ googleSync: { ...get().googleSync, syncing: false, errors: { general: 'Synchronisation fehlgeschlagen.' } } })
     }
-    if (mailAgain) {
-      mailAgain = false
-      void get().syncGoogle({ quiet: true, mailOnly: true })
+    if (pendingSync.size) {
+      const only = pendingSync.size === 1 ? [...pendingSync][0] : undefined
+      pendingSync.clear()
+      void get().syncGoogle({ quiet: true, only })
     }
   },
 
@@ -262,7 +264,7 @@ export const useStore = create<State>((set, get) => ({
   }
 }))
 
-let mailAgain = false
+const pendingSync = new Set<'gmail' | 'calendar'>()
 
 // ---- Bestätigungsdialog als Promise ----
 

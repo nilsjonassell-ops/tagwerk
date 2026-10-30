@@ -52,3 +52,29 @@ test('Fokus-Statistik: heute, Woche und Serie', () => {
   // heute noch nichts: Serie zählt ab gestern
   assert.equal(focusStats(log, new Date('2026-10-29T08:00:00')).streak, 3)
 })
+
+import { weekReview } from '../src/shared/analysis.ts'
+test('Wochenrückblick zählt nur diese Woche', () => {
+  const now = new Date(2026, 9, 30, 16, 0) // Fr
+  const base = { recurrence: 'none' as const, createdAt: '2026-10-01T00:00:00Z', source: 'local' as const, priority: 'medium' as const }
+  const data = {
+    version: 1 as const,
+    tasks: [
+      { ...base, id: 'a', title: 'A', status: 'done' as const, completedAt: new Date(2026, 9, 27, 10).toISOString() },
+      { ...base, id: 'b', title: 'B', status: 'done' as const, completedAt: new Date(2026, 9, 20, 10).toISOString() },
+      { ...base, id: 'c', title: 'C', status: 'open' as const, due: '2026-10-28' },
+      { ...base, id: 'd', title: 'D', status: 'open' as const, due: '2026-11-03' }
+    ],
+    events: [{ id: 'e', title: 'Next', start: new Date(2026, 10, 2, 9).toISOString(), end: new Date(2026, 10, 2, 10).toISOString(), attendees: [], source: 'local' as const }],
+    emails: [], notes: [], projects: [], docs: [], chat: [],
+    focusLog: [{ id: 'f', start: new Date(2026, 9, 29, 9).toISOString(), end: new Date(2026, 9, 29, 9, 50).toISOString(), minutes: 50 }],
+    sources: { demo: false, icsImports: [] }
+  }
+  const r = weekReview(data, now)
+  assert.deepEqual(r.done.map((t) => t.id), ['a'])
+  assert.equal(r.focusMinutes, 50)
+  assert.equal(r.days[3].focus, 50)
+  assert.deepEqual(r.overdue.map((t) => t.id), ['c'])
+  assert.deepEqual(r.nextTasks.map((t) => t.id), ['d'])
+  assert.equal(r.nextEvents.length, 1)
+})

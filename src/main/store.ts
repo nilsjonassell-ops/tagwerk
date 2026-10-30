@@ -71,7 +71,7 @@ function mergeSettings(raw: Partial<Settings>): Settings {
   const s: Settings = {
     ...d,
     ...raw,
-    notifications: { ...d.notifications, ...raw.notifications, quiet: { ...d.notifications.quiet, ...raw.notifications?.quiet } },
+    notifications: { ...d.notifications, ...raw.notifications, quiet: { ...d.notifications.quiet, ...raw.notifications?.quiet }, weeklyReview: { ...d.notifications.weeklyReview, ...raw.notifications?.weeklyReview } },
     workHours: { ...d.workHours, ...raw.workHours },
     claude: { ...d.claude, ...raw.claude },
     retention: { ...d.retention, ...raw.retention },

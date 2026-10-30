@@ -2,11 +2,12 @@ import { UpdateBanner } from '@/components/Updates'
 import { FocusHost } from '@/components/Focus'
 import { useFocus } from '@/lib/focus'
 import { PlanDialog } from '@/components/PlanDialog'
+import { WeeklyReview } from '@/components/WeeklyReview'
 import { useEffect } from 'react'
 import { AlertCircle } from 'lucide-react'
 import type { ViewId } from '@shared/types'
 import { useStore } from '@/lib/store'
-import { archiveThread, createNote, markThread } from '@/lib/actions'
+import { archiveThread, createNote, markThread, toggleTask } from '@/lib/actions'
 import { Sidebar } from '@/components/Sidebar'
 import { AssistantPanel } from '@/components/Assistant'
 import { CommandPalette } from '@/components/CommandPalette'
@@ -51,8 +52,8 @@ export function App() {
   }, [theme])
 
   // Google: beim Start, alle 5 Minuten, bei Rückkehr ins Fenster und wenn wieder online.
-  // Der Posteingang kommt zusätzlich live: Der Hauptprozess prüft jede Sekunde,
-  // ob sich im Postfach etwas geändert hat.
+  // Posteingang und Kalender kommen zusätzlich live: Der Hauptprozess prüft jede
+  // Sekunde, ob sich bei Google etwas geändert hat.
   const googleConnected = useStore((s) => s.google.connected)
   const online = useStore((s) => s.online)
   useEffect(() => {
@@ -65,7 +66,7 @@ export function App() {
       if (!last || Date.now() - new Date(last).getTime() > 2 * 60_000) st().syncGoogle({ quiet: true })
     }
     window.addEventListener('focus', onFocus)
-    const offMail = window.tagwerk.google.onMailChanged(() => st().syncGoogle({ quiet: true, mailOnly: true }))
+    const offMail = window.tagwerk.google.onChanged((what) => st().syncGoogle({ quiet: true, only: what }))
     return () => {
       offMail()
       clearInterval(t)
@@ -199,6 +200,7 @@ export function App() {
       {dialog?.kind === 'extract' && <ExtractTasksDialog noteId={dialog.noteId} />}
       {dialog?.kind === 'onboarding' && <OnboardingDialog />}
       {dialog?.kind === 'plan' && <PlanDialog />}
+      {dialog?.kind === 'review' && <WeeklyReview />}
       <FocusHost />
       <UpdateBanner />
       <ConfirmHost />
@@ -212,7 +214,18 @@ function runCommand(cmd: string) {
   // Schaltflächen aus den Pop-ups unten rechts
   if (cmd.startsWith('mail-archive:')) return void archiveThread(cmd.slice(13))
   if (cmd.startsWith('mail-read:')) return void markThread(cmd.slice(10), { read: true })
+  if (cmd.startsWith('task-done:')) {
+    const t = st.data.tasks.find((x) => x.id === cmd.slice(10))
+    if (t && t.status !== 'done') toggleTask(t.id)
+    return
+  }
+  if (cmd.startsWith('task:')) {
+    st.go('tasks')
+    return st.openDialog({ kind: 'task', id: cmd.slice(5) })
+  }
   switch (cmd) {
+    case 'weekly-review':
+      return st.openDialog({ kind: 'review' })
     case 'open-general-settings':
       return st.openDialog({ kind: 'settings', section: 'general' })
     case 'new-task':

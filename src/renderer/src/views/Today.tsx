@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactElement } from 'react'
-import { Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Inbox, Sparkles, Sun, CheckCircle2, Plus, Settings2 } from 'lucide-react'
+import { Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Inbox, Sparkles, Sun, CheckCircle2, Plus, Settings2, BarChart3 } from 'lucide-react'
 import { buildBrief, eventsOnDay, findConflicts, freeBlocks, groupThreads, isDueToday, isOverdue, sortTasks, eventHasConflict, type BriefItem } from '@shared/analysis'
 import type { CalEvent, DashboardCardId, ViewId, WeatherResult } from '@shared/types'
 import { useStore } from '@/lib/store'
@@ -132,7 +132,7 @@ export function TodayView() {
                 <button className="main-col" style={{ border: 0, background: 'none', padding: 0, textAlign: 'left' }} onClick={() => openDialog({ kind: 'task', id: t.id })}>
                   <span className="title">{t.title}</span>
                   <span className="meta">
-                    {dl && <span className={dl.tone === 'overdue' ? 'overdue-text' : dl.tone === 'today' ? 'today-text' : ''}>{dl.tone === 'overdue' ? `überfällig ${dl.text}` : dl.text}</span>}
+                    {dl && <span className={dl.tone === 'overdue' ? 'overdue-text' : dl.tone === 'today' ? 'today-text' : ''}>{dl.tone === 'overdue' ? `überfällig ${dl.text}` : dl.text}{t.dueTime ? ` · ${t.dueTime}` : ''}</span>}
                     {projectName(data, t.projectId) && <span>{projectName(data, t.projectId)}</span>}
                   </span>
                 </button>
@@ -181,6 +181,9 @@ export function TodayView() {
   return (
     <>
       <ViewHeader title="Heute">
+        <button className="btn ghost small" onClick={() => openDialog({ kind: 'review' })} title="Was diese Woche geschafft wurde">
+          <BarChart3 /> Wochenrückblick
+        </button>
         <button className="btn ghost small" onClick={() => openDialog({ kind: 'settings', section: 'dashboard' })} title="Übersicht anpassen">
           <Settings2 /> Anpassen
         </button>

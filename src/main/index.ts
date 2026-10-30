@@ -545,7 +545,7 @@ function registerIpc() {
   })
   ipcMain.handle('google:cancelConnect', () => google.cancelConnect())
   ipcMain.handle('google:disconnect', () => google.disconnect())
-  ipcMain.handle('google:sync', (_e, o?: { only?: string }) => google.sync(o?.only === 'gmail' ? { only: 'gmail' } : undefined))
+  ipcMain.handle('google:sync', (_e, o?: { only?: string }) => google.sync(o?.only === 'gmail' || o?.only === 'calendar' ? { only: o.only } : undefined))
   ipcMain.handle('google:createEvent', (_e, ev: CalEvent, notify: boolean) => google.createEvent(ev, !!notify))
   ipcMain.handle('google:updateEvent', (_e, ev: CalEvent, notify: boolean) => google.updateEvent(ev, !!notify))
   ipcMain.handle('google:trashThread', (_e, id: string, restore: boolean) => google.trashThread(String(id), !!restore))
@@ -632,7 +632,7 @@ function init() {
     icon: resource('icon.png')
   })
   startScheduler()
-  google.startMailWatch(() => mainWindow?.webContents.send('google:mailChanged'))
+  google.startLiveWatch((what) => mainWindow?.webContents.send('google:changed', what))
 
   nativeTheme.on('updated', () => {
     if (!isMac && mainWindow) mainWindow.setTitleBarOverlay(overlayColors())

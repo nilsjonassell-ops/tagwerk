@@ -305,6 +305,23 @@ function Notifications() {
         <input type="time" className="input" value={n.briefTime} disabled={!n.dailyBrief} onChange={(e) => setN({ briefTime: e.target.value })} />
       </Row>
 
+      <div className="settings-group">Wochenrückblick</div>
+      <Row label="Wochenrückblick" hint="Erledigte Aufgaben, Fokuszeit, offene Mails und was nächste Woche ansteht. Jederzeit auch über „Heute“ → Wochenrückblick.">
+        <Switch label="Wochenrückblick" checked={n.weeklyReview.enabled} onChange={(v) => setN({ weeklyReview: { ...n.weeklyReview, enabled: v } })} />
+      </Row>
+      <Row label="Wann">
+        <div className="row" style={{ gap: 8 }}>
+          <select className="select" style={{ width: 130 }} value={n.weeklyReview.day} disabled={!n.weeklyReview.enabled} onChange={(e) => setN({ weeklyReview: { ...n.weeklyReview, day: Number(e.target.value) } })} aria-label="Wochentag">
+            {[1, 2, 3, 4, 5, 6, 0].map((d) => (
+              <option key={d} value={d}>
+                {['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'][d]}
+              </option>
+            ))}
+          </select>
+          <input type="time" className="input" style={{ width: 110 }} value={n.weeklyReview.time} disabled={!n.weeklyReview.enabled} onChange={(e) => setN({ weeklyReview: { ...n.weeklyReview, time: e.target.value } })} aria-label="Uhrzeit" />
+        </div>
+      </Row>
+
       <div className="settings-group">Ruhe</div>
       <Row label="Ruhezeiten" hint="In dieser Zeit meldet Tagwerk nichts. Der Fokus-Modus schaltet Meldungen zusätzlich stumm (Termine optional).">
         <Switch label="Ruhezeiten" checked={n.quiet.enabled} onChange={(v) => setN({ quiet: { ...n.quiet, enabled: v } })} />

@@ -67,6 +67,10 @@ export function TaskDialog({ id, preset }: { id?: string; preset?: Partial<Task>
             <input type="date" className="input" value={t.due ?? ''} onChange={(e) => set('due', e.target.value || undefined)} />
           </label>
           <label className="field">
+            <span>Uhrzeit</span>
+            <input type="time" className="input" value={t.dueTime ?? ''} disabled={!t.due} onChange={(e) => set('dueTime', e.target.value || undefined)} title="Zu dieser Zeit erinnert dich Tagwerk mit einem Pop-up" />
+          </label>
+          <label className="field">
             <span>Priorität</span>
             <select className="select" value={t.priority} onChange={(e) => set('priority', e.target.value as Priority)}>
               {(['high', 'medium', 'low'] as Priority[]).map((p) => (
@@ -76,16 +80,8 @@ export function TaskDialog({ id, preset }: { id?: string; preset?: Partial<Task>
               ))}
             </select>
           </label>
-          <label className="field">
-            <span>Status</span>
-            <select className="select" value={t.status} onChange={(e) => set('status', e.target.value as TaskStatus)}>
-              <option value="open">Offen</option>
-              <option value="doing">In Arbeit</option>
-              <option value="done">Erledigt</option>
-            </select>
-          </label>
         </div>
-        <div className="grid-2">
+        <div className="grid-3">
           <label className="field">
             <span>Projekt</span>
             <select className="select" value={t.projectId ?? ''} onChange={(e) => set('projectId', e.target.value || undefined)}>
@@ -107,6 +103,14 @@ export function TaskDialog({ id, preset }: { id?: string; preset?: Partial<Task>
               ))}
             </select>
             {!t.due && <span className="hint">Wiederholung braucht ein Fälligkeitsdatum.</span>}
+          </label>
+          <label className="field">
+            <span>Status</span>
+            <select className="select" value={t.status} onChange={(e) => set('status', e.target.value as TaskStatus)}>
+              <option value="open">Offen</option>
+              <option value="doing">In Arbeit</option>
+              <option value="done">Erledigt</option>
+            </select>
           </label>
         </div>
         <label className="field">
@@ -137,9 +141,9 @@ export function EventDialog({ id, preset }: { id?: string; preset?: Partial<CalE
   const [startT, setStartT] = useState(toLocalInput(init.start).time)
   const [endT, setEndT] = useState(toLocalInput(init.end).time)
   const [allDay, setAllDay] = useState(existing?.allDay ?? false)
-  const [location, setLocation] = useState(existing?.location ?? '')
-  const [attendees, setAttendees] = useState((existing?.attendees ?? []).map((a) => (a.email ? `${a.name} <${a.email}>` : a.name)).join(', '))
-  const [notes, setNotes] = useState(existing?.notes ?? '')
+  const [location, setLocation] = useState(existing?.location ?? preset?.location ?? '')
+  const [attendees, setAttendees] = useState((existing?.attendees ?? preset?.attendees ?? []).map((a) => (a.email ? `${a.name} <${a.email}>` : a.name)).join(', '))
+  const [notes, setNotes] = useState(existing?.notes ?? preset?.notes ?? '')
   const [projectId, setProjectId] = useState(existing?.projectId ?? preset?.projectId ?? '')
   const [touched, setTouched] = useState(false)
   // 'std' = Standard aus den Einstellungen, 'none' = keine, sonst Minuten vorher

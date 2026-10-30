@@ -607,3 +607,62 @@ export function mailsToNotify(before: Email[], after: Email[], me: string | unde
   for (const e of [...relevant].sort((a, b) => b.date.localeCompare(a.date))) if (!byThread.has(e.threadId)) byThread.set(e.threadId, e)
   return [...byThread.values()]
 }
+
+// ---------- Wochenrückblick ----------
+
+export interface WeekReview {
+  /** Montag 00:00 dieser Woche */
+  from: string
+  done: Task[]
+  focusMinutes: number
+  focusSessions: number
+  /** Mo–So: Fokusminuten und erledigte Aufgaben je Tag */
+  days: { day: string; focus: number; done: number }[]
+  meetings: number
+  meetingMinutes: number
+  waiting: Thread[]
+  unread: number
+  overdue: Task[]
+  nextEvents: CalEvent[]
+  nextTasks: Task[]
+}
+
+export function weekReview(data: AppData, now: Date): WeekReview {
+  const today = startOfDay(now)
+  const monday = addDays(today, -((today.getDay() + 6) % 7))
+  const nextMonday = addDays(monday, 7)
+  const afterNext = addDays(monday, 14)
+  const inWeek = (iso?: string) => !!iso && new Date(iso) >= monday && new Date(iso) <= now
+  const done = data.tasks.filter((t) => t.status === 'done' && inWeek(t.completedAt)).sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''))
+  const focus = (data.focusLog ?? []).filter((f) => inWeek(f.start))
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = addDays(monday, i)
+    const k = ymd(d)
+    return {
+      day: k,
+      focus: focus.filter((f) => ymd(new Date(f.start)) === k).reduce((a, f) => a + f.minutes, 0),
+      done: done.filter((t) => ymd(new Date(t.completedAt!)) === k).length
+    }
+  })
+  const meetings = data.events.filter((e) => !e.allDay && !e.taskId && new Date(e.start) >= monday && new Date(e.end) <= now)
+  const inbox = groupThreads(data.emails.filter((e) => e.folder === 'inbox'), data.replyMarks)
+  const todayYmd = ymd(today)
+  const nextFrom = ymd(nextMonday)
+  const nextTo = ymd(addDays(nextMonday, 6))
+  return {
+    from: monday.toISOString(),
+    done,
+    focusMinutes: focus.reduce((a, f) => a + f.minutes, 0),
+    focusSessions: focus.length,
+    days,
+    meetings: meetings.length,
+    meetingMinutes: meetings.reduce((a, e) => a + Math.max(0, (new Date(e.end).getTime() - new Date(e.start).getTime()) / 60000), 0),
+    waiting: inbox.filter((t) => t.needsReply),
+    unread: inbox.filter((t) => t.unread).length,
+    overdue: data.tasks.filter((t) => isActive(t) && !!t.due && t.due < todayYmd),
+    nextEvents: data.events
+      .filter((e) => new Date(e.start) >= nextMonday && new Date(e.start) < afterNext)
+      .sort((a, b) => a.start.localeCompare(b.start)),
+    nextTasks: data.tasks.filter((t) => isActive(t) && !!t.due && t.due >= nextFrom && t.due <= nextTo)
+  }
+}

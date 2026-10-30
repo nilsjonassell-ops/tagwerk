@@ -407,7 +407,7 @@ async function pool<T, R>(items: T[], n: number, fn: (x: T) => Promise<R>): Prom
 
 // ---------- Synchronisation ----------
 
-export async function sync(opts?: { only?: 'gmail' }): Promise<GoogleSyncResult> {
+export async function sync(opts?: { only?: 'gmail' | 'calendar' }): Promise<GoogleSyncResult> {
   const syncedAt = new Date().toISOString()
   const a = account()
   if (!a || a.expired) return { ok: false, syncedAt, errors: { general: a?.expired ? 'Google-Anmeldung abgelaufen – bitte neu verbinden.' : 'Google ist nicht verbunden.' }, status: await googleStatus() }
@@ -421,7 +421,7 @@ export async function sync(opts?: { only?: 'gmail' }): Promise<GoogleSyncResult>
     if (r.ok) events = r.value
     else errors.calendar = r.error
   }
-  if (c.gmailRead) {
+  if (c.gmailRead && opts?.only !== 'calendar') {
     const r = await wrap(() => fetchInbox(a.email))
     if (r.ok) emails = r.value
     else errors.gmail = r.error
@@ -434,6 +434,9 @@ export async function sync(opts?: { only?: 'gmail' }): Promise<GoogleSyncResult>
 
 async function fetchEvents(canWrite: boolean): Promise<CalEvent[]> {
   const now = Date.now()
+  // Ab hier beobachtet der Live-Abgleich Änderungen (kleiner Puffer für Uhrabweichungen)
+  const watchFrom = new Date(now - 5000).toISOString()
+  let newest = ''
   const out: CalEvent[] = []
   let pageToken: string | undefined
   let pages = 0
@@ -448,11 +451,14 @@ async function fetchEvents(canWrite: boolean): Promise<CalEvent[]> {
     })
     const r = await api<{ items?: GEvent[]; nextPageToken?: string }>(`${URLS.calendar}/calendars/primary/events?${q}`)
     for (const e of r.items ?? []) {
+      if (e.updated && e.updated > newest) newest = e.updated
       const m = mapGoogleEvent(e, canWrite)
       if (m) out.push(m)
     }
     pageToken = r.nextPageToken
   } while (pageToken && ++pages < 8)
+  calWatchFrom = watchFrom
+  if (newest > calLastChange) calLastChange = newest
   return out
 }
 
@@ -488,6 +494,8 @@ async function fetchInbox(me: string): Promise<Email[]> {
 // Posteingang neu geladen – das hält Tagwerk sekundengenau, ohne Googles Limits.
 
 let syncedHistoryId = ''
+let calWatchFrom = ''
+let calLastChange = ''
 let mailTimer: NodeJS.Timeout | null = null
 
 async function mailboxHistoryId(): Promise<string | undefined> {
@@ -495,24 +503,57 @@ async function mailboxHistoryId(): Promise<string | undefined> {
   return p.historyId
 }
 
-export function startMailWatch(onChange: () => void) {
+/** Neueste Änderung im Kalender seit dem letzten Abruf (eine Quota-Einheit). */
+async function calendarChangedSince(from: string): Promise<string | undefined> {
+  const q = new URLSearchParams({ updatedMin: from, showDeleted: 'true', maxResults: '50', fields: 'items(id,updated)' })
+  const r = await api<{ items?: { id: string; updated?: string }[] }>(`${URLS.calendar}/calendars/primary/events?${q}`)
+  return (r.items ?? []).map((i) => i.updated ?? '').sort().pop() || undefined
+}
+
+/**
+ * Live-Abgleich: Jede Sekunde nur nachsehen, ob sich in Gmail oder im Kalender
+ * etwas geändert hat – geladen wird erst dann, und nur der betroffene Dienst.
+ */
+export function startLiveWatch(onChange: (what: 'gmail' | 'calendar') => void) {
   if (mailTimer) clearTimeout(mailTimer)
   let delay = 1000
-  let lastEmit = 0
+  const lastEmit = { gmail: 0, calendar: 0 }
+  const emit = (what: 'gmail' | 'calendar') => {
+    // höchstens alle 2 s, solange der Abruf noch läuft
+    if (Date.now() - lastEmit[what] < 2000) return
+    lastEmit[what] = Date.now()
+    onChange(what)
+  }
   const tick = async () => {
     try {
       const a = account()
-      if (!a || a.expired || !caps(a).gmailRead || !net.isOnline() || !syncedHistoryId) {
+      if (!a || a.expired || !net.isOnline()) {
         delay = 2000
         return
       }
-      const h = await mailboxHistoryId()
-      delay = 1000
-      // Nur melden, wenn neuer Stand – und höchstens alle 2 s, solange der Abruf noch läuft
-      if (h && h !== syncedHistoryId && Date.now() - lastEmit > 2000) {
-        lastEmit = Date.now()
-        onChange()
+      const c = caps(a)
+      const jobs: Promise<void>[] = []
+      if (c.gmailRead && syncedHistoryId)
+        jobs.push(
+          mailboxHistoryId().then((h) => {
+            if (h && h !== syncedHistoryId) emit('gmail')
+          })
+        )
+      if (c.calendarRead && calWatchFrom)
+        jobs.push(
+          calendarChangedSince(calWatchFrom).then((u) => {
+            if (u && u !== calLastChange) {
+              calLastChange = u
+              emit('calendar')
+            }
+          })
+        )
+      if (!jobs.length) {
+        delay = 2000
+        return
       }
+      await Promise.all(jobs)
+      delay = 1000
     } catch {
       // Netzfehler oder Limit: langsamer werden, bis es wieder klappt
       delay = Math.min(30_000, delay * 2)
