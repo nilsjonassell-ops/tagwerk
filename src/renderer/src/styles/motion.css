@@ -284,13 +284,13 @@
 
 /* ---------- Overlays ---------- */
 .overlay {
-  animation: veil 0.35s var(--ease-out) both;
+  /* nur „backwards“: nach dem Einblenden darf die Ebene kein Backdrop-Root bleiben,
+     sonst kann das Dialog-Glas die App dahinter nicht weichzeichnen */
+  animation: veil 0.35s var(--ease-out) backwards;
 }
 @keyframes veil {
   from {
     opacity: 0;
-    -webkit-backdrop-filter: blur(0);
-    backdrop-filter: blur(0);
   }
 }
 .dialog,

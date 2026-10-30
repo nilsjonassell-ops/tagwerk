@@ -1,0 +1,339 @@
+/* ==========================================================================
+   Tagwerk – „Liquid Glass“
+   Angelehnt an iOS/macOS: durchscheinende Flächen mit starker Unschärfe,
+   heller Lichtkante (Spiegelung), Glanz von oben und schwebenden Paneelen.
+   Wird nach glass.css geladen und verstärkt dessen Werte.
+   ========================================================================== */
+
+:root {
+  --lg-fill: rgba(255, 255, 255, 0.26);
+  --lg-fill-strong: rgba(255, 255, 255, 0.42);
+  --lg-fill-card: rgba(255, 255, 255, 0.34);
+  --lg-blur: saturate(210%) blur(36px);
+  --lg-blur-card: saturate(180%) blur(22px);
+  /* Lichtkante: oben links hell, unten rechts schwächer */
+  --lg-rim: linear-gradient(140deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.35) 30%, rgba(255, 255, 255, 0.08) 55%, rgba(255, 255, 255, 0.55) 100%);
+  /* Glanz: weicher Lichtschein von oben */
+  --lg-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.12) 18%, rgba(255, 255, 255, 0) 45%);
+  --lg-shadow: 0 1px 1px rgba(30, 40, 100, 0.04), 0 18px 50px -14px rgba(40, 40, 130, 0.28);
+  --lg-inner: inset 0 1px 0.5px rgba(255, 255, 255, 0.95), inset 0 -1px 1px rgba(255, 255, 255, 0.35), inset 0 0 0 0.5px rgba(255, 255, 255, 0.45);
+
+  --glass: var(--lg-fill);
+  --glass-strong: rgba(255, 255, 255, 0.55);
+  --raised: var(--lg-fill-card);
+  --canvas: rgba(255, 255, 255, 0.18);
+}
+
+:root[data-theme='dark'] {
+  --lg-fill: rgba(30, 34, 70, 0.32);
+  --lg-fill-strong: rgba(40, 44, 84, 0.5);
+  --lg-fill-card: rgba(255, 255, 255, 0.06);
+  --lg-rim: linear-gradient(140deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.12) 30%, rgba(255, 255, 255, 0.03) 55%, rgba(255, 255, 255, 0.22) 100%);
+  --lg-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 20%, rgba(255, 255, 255, 0) 45%);
+  --lg-shadow: 0 1px 1px rgba(0, 0, 0, 0.2), 0 20px 60px -16px rgba(0, 0, 0, 0.7);
+  --lg-inner: inset 0 1px 0.5px rgba(255, 255, 255, 0.22), inset 0 -1px 1px rgba(255, 255, 255, 0.06), inset 0 0 0 0.5px rgba(255, 255, 255, 0.12);
+  --glass: var(--lg-fill);
+  --glass-strong: rgba(255, 255, 255, 0.12);
+  --raised: var(--lg-fill-card);
+  --canvas: rgba(255, 255, 255, 0.025);
+}
+
+/* ---------- Lebendiger Hintergrund mit schwebenden Lichtkugeln ---------- */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(18% 22% at 30% 30%, rgba(90, 140, 255, 0.55), transparent 70%),
+    radial-gradient(16% 20% at 72% 62%, rgba(255, 110, 180, 0.5), transparent 70%),
+    radial-gradient(14% 18% at 55% 85%, rgba(150, 120, 255, 0.45), transparent 70%);
+  filter: blur(10px);
+  animation: orbs 26s ease-in-out infinite alternate;
+}
+:root[data-theme='dark'] body::after {
+  opacity: 0.75;
+}
+@keyframes orbs {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  33% {
+    transform: translate3d(4%, -3%, 0) scale(1.05);
+  }
+  66% {
+    transform: translate3d(-3%, 4%, 0) scale(0.97);
+  }
+  100% {
+    transform: translate3d(2%, 2%, 0) scale(1.03);
+  }
+}
+
+/* ---------- Glas-Rezept ---------- */
+/* Große Paneele */
+.main,
+.sidebar,
+.assistant {
+  position: relative;
+  background: var(--lg-sheen), var(--lg-fill);
+  -webkit-backdrop-filter: var(--lg-blur);
+  backdrop-filter: var(--lg-blur);
+  box-shadow: var(--lg-inner), var(--lg-shadow);
+}
+/* Lichtkante als feiner Verlaufsrahmen */
+.main::before,
+.sidebar::before,
+.assistant::before,
+.dialog::before,
+.palette::before,
+.focus-setup-main::before,
+.focus-stats::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--lg-rim);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Seitenleiste schwebt jetzt ebenfalls als eigene Glasscheibe */
+.sidebar {
+  margin: 10px 0 10px 10px;
+  border-radius: var(--r-xl);
+  overflow: hidden;
+}
+.app {
+  grid-template-columns: calc(var(--sidebar-w) + 10px) minmax(0, 1fr) auto;
+  column-gap: 10px;
+}
+.main {
+  margin: 10px 10px 10px 0;
+}
+.view-header {
+  border-bottom-color: rgba(255, 255, 255, 0.35);
+}
+:root[data-theme='dark'] .view-header {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Karten: eigenes, dünneres Glas */
+.brief,
+.dash-section > :not(h2):not(.brief),
+.ribbon-track,
+.connect-card,
+.google-box,
+.callout,
+.ai-block,
+.proposal,
+.composer,
+.plan-row,
+.focus-parked-review,
+.focus-park form {
+  background: var(--lg-sheen), var(--lg-fill-card);
+  -webkit-backdrop-filter: var(--lg-blur-card);
+  backdrop-filter: var(--lg-blur-card);
+  box-shadow: var(--lg-inner), 0 10px 30px -12px rgba(40, 40, 130, 0.22);
+}
+:root[data-theme='dark'] .brief,
+:root[data-theme='dark'] .dash-section > :not(h2):not(.brief),
+:root[data-theme='dark'] .ribbon-track,
+:root[data-theme='dark'] .plan-row {
+  box-shadow: var(--lg-inner), 0 12px 32px -14px rgba(0, 0, 0, 0.6);
+}
+.brief:hover,
+.dash-section > :not(h2):not(.brief):hover {
+  box-shadow: var(--lg-inner), 0 24px 50px -16px rgba(60, 50, 160, 0.35);
+}
+
+/* Dialoge, Suche, Fokus: kräftiges Glas */
+.dialog,
+.palette,
+.focus-setup-main,
+.focus-stats {
+  position: relative;
+  background: var(--lg-sheen), rgba(255, 255, 255, 0.6);
+  -webkit-backdrop-filter: saturate(200%) blur(60px);
+  backdrop-filter: saturate(200%) blur(60px);
+  box-shadow: var(--lg-inner), 0 40px 90px -24px rgba(30, 30, 110, 0.4);
+}
+:root[data-theme='dark'] .dialog,
+:root[data-theme='dark'] .palette,
+:root[data-theme='dark'] .focus-setup-main,
+:root[data-theme='dark'] .focus-stats {
+  background: var(--lg-sheen), rgba(28, 32, 64, 0.72);
+  box-shadow: var(--lg-inner), 0 40px 90px -24px rgba(0, 0, 0, 0.75);
+}
+.overlay {
+  /* Keine eigene Unschärfe: sonst kann das Dialog-Glas die App dahinter nicht weichzeichnen */
+  background: rgba(120, 130, 220, 0.1);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.settings-nav {
+  background: rgba(255, 255, 255, 0.14);
+}
+.reader,
+.detail-pane {
+  background: rgba(255, 255, 255, 0.16);
+}
+:root[data-theme='dark'] .settings-nav,
+:root[data-theme='dark'] .reader,
+:root[data-theme='dark'] .detail-pane {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ---------- Bedienelemente als Glaskapseln ---------- */
+.btn {
+  background: var(--lg-sheen), rgba(255, 255, 255, 0.4);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  backdrop-filter: blur(14px) saturate(180%);
+  box-shadow: var(--lg-inner), 0 2px 8px -2px rgba(40, 40, 120, 0.18);
+}
+.btn:hover {
+  background: var(--lg-sheen), rgba(255, 255, 255, 0.66);
+}
+:root[data-theme='dark'] .btn {
+  background: var(--lg-sheen), rgba(255, 255, 255, 0.08);
+  box-shadow: var(--lg-inner), 0 2px 8px -2px rgba(0, 0, 0, 0.4);
+}
+:root[data-theme='dark'] .btn:hover {
+  background: var(--lg-sheen), rgba(255, 255, 255, 0.14);
+}
+.btn.ghost,
+:root[data-theme='dark'] .btn.ghost {
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.btn.ghost:hover {
+  background: rgba(255, 255, 255, 0.35);
+  box-shadow: var(--lg-inner);
+}
+:root[data-theme='dark'] .btn.ghost:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+/* Verlaufsknöpfe mit Glasglanz */
+.btn.primary,
+.chip.on,
+.focus-launch {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.38) 0%, rgba(255, 255, 255, 0.06) 48%, rgba(255, 255, 255, 0) 52%), var(--grad);
+  box-shadow:
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.85),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.25),
+    0 8px 22px -8px rgba(122, 96, 255, 0.7),
+    0 2px 6px -2px rgba(255, 95, 166, 0.45);
+}
+.btn.primary:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.08) 48%, rgba(255, 255, 255, 0) 52%), var(--grad);
+}
+
+.input,
+.select,
+.textarea {
+  background: rgba(255, 255, 255, 0.4);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6), inset 0 1px 3px rgba(40, 52, 110, 0.08);
+}
+:root[data-theme='dark'] .input,
+:root[data-theme='dark'] .select,
+:root[data-theme='dark'] .textarea {
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Segmente wie bei iOS: Glasschiene mit erhabener Kapsel */
+.segmented {
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1px 2px rgba(40, 52, 110, 0.1), inset 0 0 0 0.5px rgba(255, 255, 255, 0.5);
+}
+.segmented [aria-pressed='true'] {
+  background: var(--lg-sheen), rgba(255, 255, 255, 0.85);
+  box-shadow: var(--lg-inner), 0 3px 10px -3px rgba(40, 52, 110, 0.3);
+}
+:root[data-theme='dark'] .segmented [aria-pressed='true'] {
+  background: var(--lg-sheen), rgba(255, 255, 255, 0.16);
+}
+
+/* Schalter: Knopf als Glasperle */
+.switch::after {
+  background: radial-gradient(circle at 35% 30%, #fff 0%, #f4f5ff 45%, #e3e6f7 100%);
+  box-shadow: 0 2px 6px rgba(20, 20, 60, 0.28), inset 0 -1px 1px rgba(0, 0, 0, 0.06);
+}
+.switch {
+  box-shadow: inset 0 1px 2px rgba(20, 20, 60, 0.18);
+}
+
+/* Navigation: Glaslinse hinter dem aktiven Punkt */
+.nav-pill {
+  background: var(--lg-sheen), rgba(255, 255, 255, 0.58);
+  box-shadow: var(--lg-inner), 0 8px 20px -8px rgba(60, 60, 170, 0.4);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  backdrop-filter: blur(10px) saturate(180%);
+}
+:root[data-theme='dark'] .nav-pill {
+  background: var(--lg-sheen), rgba(255, 255, 255, 0.1);
+}
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Kleinteile */
+.tag {
+  background: rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.6);
+}
+:root[data-theme='dark'] .tag {
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.1);
+}
+.tag.attention {
+  background: var(--attention-soft);
+}
+.tag.accent {
+  background: var(--accent-soft);
+}
+.toast {
+  background: var(--lg-sheen), rgba(30, 32, 64, 0.62);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow: inset 0 1px 0.5px rgba(255, 255, 255, 0.3), 0 20px 50px -14px rgba(0, 0, 0, 0.5);
+}
+.update-card,
+.focus-pill,
+.focus-phase {
+  background: var(--lg-sheen), rgba(255, 255, 255, 0.45);
+  box-shadow: var(--lg-inner), var(--lg-shadow);
+}
+:root[data-theme='dark'] .update-card,
+:root[data-theme='dark'] .focus-pill,
+:root[data-theme='dark'] .focus-phase {
+  background: var(--lg-sheen), rgba(40, 44, 84, 0.55);
+}
+.cal-event {
+  box-shadow: inset 3px 0 0 hsl(var(--h) 75% 58%), inset 0 1px 0.5px rgba(255, 255, 255, 0.85), inset 0 0 0 0.5px hsl(var(--h) 70% 80% / 0.8), 0 6px 14px -8px hsl(var(--h) 60% 40% / 0.45);
+}
+.banner {
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  box-shadow: inset 0 1px 0.5px rgba(255, 255, 255, 0.7), inset 0 0 0 0.5px rgba(217, 130, 43, 0.25);
+}
+
+/* Fokus-Ansicht: noch mehr Durchsicht */
+.focus-view {
+  background: rgba(240, 242, 255, 0.32);
+  -webkit-backdrop-filter: saturate(200%) blur(50px);
+  backdrop-filter: saturate(200%) blur(50px);
+}
+:root[data-theme='dark'] .focus-view {
+  background: rgba(8, 10, 26, 0.45);
+}
