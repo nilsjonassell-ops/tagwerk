@@ -95,7 +95,7 @@
       }
     ],
     "appx": {
-      "identityName": "STORE_IDENTITY_NAME",
+      "identityName": "Platzhalter.Tagwerk",
       "publisher": "CN=STORE-PUBLISHER",
       "publisherDisplayName": "Nils Sell",
       "applicationId": "Tagwerk",

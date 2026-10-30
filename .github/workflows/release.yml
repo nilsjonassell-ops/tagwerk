@@ -50,7 +50,7 @@ jobs:
       - name: Store-Paket (MSIX) bauen und anhängen
         shell: bash
         run: |
-          if [ "$(node -p "require('./package.json').build.appx.identityName")" = "STORE_IDENTITY_NAME" ]; then
+          if [ "$(node -p "require('./package.json').build.appx.identityName")" = "Platzhalter.Tagwerk" ]; then
             echo "::notice::Store-Identität noch nicht eingetragen – Store-Paket übersprungen"
             exit 0
           fi
