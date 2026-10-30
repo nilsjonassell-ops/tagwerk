@@ -60,5 +60,6 @@ export async function check(): Promise<UpdateStatus> {
 export function installNow() {
   if (status.state !== 'ready') return
   if (timer) clearInterval(timer)
-  autoUpdater.quitAndInstall(false, true)
+  // still installieren und danach sofort neu starten
+  autoUpdater.quitAndInstall(true, true)
 }

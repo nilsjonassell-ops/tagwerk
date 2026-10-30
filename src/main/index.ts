@@ -51,11 +51,28 @@ function trace(msg: string) {
   }
 }
 
+// Nach einem Update startet der Installer die App neu, während die alte Instanz
+// gerade noch beendet wird – dann kurz warten und die Sperre erneut versuchen.
+const justUpdated = process.argv.includes('--updated')
 const gotLock = app.requestSingleInstanceLock()
-trace(`start lock=${gotLock}`)
-if (!gotLock) {
+trace(`start lock=${gotLock} updated=${justUpdated}`)
+if (!gotLock && justUpdated) {
+  let tries = 0
+  const retry = () => {
+    if (app.requestSingleInstanceLock()) {
+      trace('lock after update')
+      startApp()
+    } else if (++tries < 20) setTimeout(retry, 500)
+    else app.quit()
+  }
+  setTimeout(retry, 500)
+} else if (!gotLock) {
   app.quit()
 } else {
+  startApp()
+}
+
+function startApp() {
   app.on('second-instance', () => {
     trace(`second-instance window=${mainWindow ? (mainWindow.isDestroyed() ? 'destroyed' : mainWindow.isVisible() ? 'visible' : 'hidden') : 'none'}`)
     showMain()
