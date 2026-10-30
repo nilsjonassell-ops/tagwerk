@@ -23,6 +23,15 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npx electron-vite build
+      - name: Versions-Tag anlegen
+        shell: bash
+        run: |
+          V="v$(node -p "require('./package.json').version")"
+          git fetch --tags --quiet
+          if ! git rev-parse "$V" >/dev/null 2>&1; then
+            git tag "$V"
+            git push origin "$V"
+          fi
       - name: Installer bauen und veröffentlichen
         shell: bash
         run: |
