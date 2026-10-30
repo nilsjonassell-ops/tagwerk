@@ -1,7 +1,7 @@
 {
   "name": "tagwerk",
   "productName": "Tagwerk",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Persönliches Produktivitäts-Dashboard: Kalender, E-Mail, Aufgaben, Notizen und Fokus",
   "main": "./out/main/index.js",
   "author": "Nils Sell",
@@ -95,11 +95,11 @@
       }
     ],
     "appx": {
-      "identityName": "Platzhalter.Tagwerk",
-      "publisher": "CN=STORE-PUBLISHER",
+      "identityName": "NilsSell.TagwerkPlaner",
+      "publisher": "CN=D0BC597D-5ADF-4FBF-BB24-8634DC798745",
       "publisherDisplayName": "Nils Sell",
       "applicationId": "Tagwerk",
-      "displayName": "Tagwerk",
+      "displayName": "Tagwerk Planer",
       "languages": [
         "de-DE"
       ],
