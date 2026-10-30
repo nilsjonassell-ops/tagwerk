@@ -12,12 +12,25 @@ export function Intro() {
   const ready = useStore((s) => s.ready)
   const [phase, setPhase] = useState<'play' | 'leave' | 'gone'>(() => (reduced() ? 'gone' : 'play'))
   const [minDone, setMinDone] = useState(false)
+  const [run, setRun] = useState(0)
+
+  // Beim erneuten Öffnen aus dem Infobereich noch einmal abspielen
+  useEffect(
+    () =>
+      window.tagwerk.app.onCommand((cmd) => {
+        if (cmd !== 'replay-intro' || reduced()) return
+        setMinDone(false)
+        setPhase('play')
+        setRun((n) => n + 1)
+      }),
+    []
+  )
 
   useEffect(() => {
     if (phase !== 'play') return
     const t = setTimeout(() => setMinDone(true), MIN_MS)
     return () => clearTimeout(t)
-  }, [phase])
+  }, [phase, run])
 
   useEffect(() => {
     if (phase === 'play' && minDone && ready) setPhase('leave')
@@ -33,7 +46,7 @@ export function Intro() {
   const skip = () => ready && setPhase('leave')
 
   return (
-    <div className={`intro ${phase === 'leave' ? 'leaving' : ''} ${minDone && !ready ? 'waiting' : ''}`} onClick={skip} aria-hidden="true">
+    <div key={run} className={`intro ${phase === 'leave' ? 'leaving' : ''} ${minDone && !ready ? 'waiting' : ''}`} onClick={skip} aria-hidden="true">
       <div className="intro-glow" />
       <div className="intro-stage">
         <svg className="intro-logo" viewBox="0 0 200 200" width="200" height="200">

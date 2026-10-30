@@ -169,6 +169,20 @@ function hardenContents(wc: Electron.WebContents) {
 function showMain(view?: string) {
   if (!mainWindow || mainWindow.isDestroyed()) createMainWindow(false)
   if (!mainWindow) return
+  const win = mainWindow
+  // War das Fenster im Infobereich versteckt, spielt die Startanimation erneut –
+  // kurz vorher anstoßen, damit kein alter Zustand aufblitzt.
+  if (!win.isVisible() && !win.webContents.isLoading()) {
+    win.webContents.send('app:command', 'replay-intro')
+    setTimeout(() => reveal(win, view), 90)
+    return
+  }
+  reveal(win, view)
+}
+
+function reveal(win: BrowserWindow, view?: string) {
+  if (win.isDestroyed()) return
+  mainWindow = win
   if (mainWindow.isMinimized()) mainWindow.restore()
   mainWindow.show()
   // Windows verhindert sonst oft, dass ein Hintergrundprozess sein Fenster nach vorn holt.
