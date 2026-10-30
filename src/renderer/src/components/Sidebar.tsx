@@ -1,5 +1,5 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { CalendarDays, CheckSquare, FolderKanban, Inbox, NotebookPen, Settings as SettingsIcon, Sparkles, Sun, WifiOff } from 'lucide-react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { CalendarDays, CheckSquare, FolderKanban, Inbox, NotebookPen, PanelLeftClose, PanelLeftOpen, Settings as SettingsIcon, Sparkles, Sun, WifiOff } from 'lucide-react'
 import { groupThreads, isDueToday, isOverdue } from '@shared/analysis'
 import type { ViewId } from '@shared/types'
 import { useStore } from '@/lib/store'
@@ -26,6 +26,30 @@ export function Sidebar() {
   const setAssistant = useStore((s) => s.setAssistant)
   const openDialog = useStore((s) => s.openDialog)
   const selection = useStore((s) => s.selection)
+  const collapsed = !!settings.sidebarCollapsed
+
+  // Eingeklappt: beim Überfahren mit der Maus kurz verzögert ausklappen (als Glasscheibe über dem Inhalt)
+  const [peek, setPeek] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const enter = () => {
+    if (!collapsed) return
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => setPeek(true), 140)
+  }
+  const leave = () => {
+    clearTimeout(timer.current)
+    if (peek) timer.current = setTimeout(() => setPeek(false), 260)
+  }
+  useEffect(() => {
+    clearTimeout(timer.current)
+    setPeek(false)
+  }, [collapsed])
+  useEffect(() => () => clearTimeout(timer.current), [])
+  const toggle = () => {
+    clearTimeout(timer.current)
+    setPeek(false)
+    void useStore.getState().updateSettings({ sidebarCollapsed: !collapsed })
+  }
 
   // Gleitende Markierung hinter dem aktiven Menüpunkt
   const navRef = useRef<HTMLElement>(null)
@@ -68,13 +92,30 @@ export function Sidebar() {
   const dotClass = google.expired || (google.connected && googleProblem) ? 'off' : expiringSoon ? 'demo' : google.connected ? 'on' : data.sources.demo ? 'demo' : 'on'
 
   return (
-    <aside className="sidebar" aria-label="Navigation">
+    <aside
+      className={`sidebar ${collapsed ? 'is-rail' : ''} ${peek ? 'peek' : ''}`}
+      aria-label="Navigation"
+      data-collapsed={collapsed ? (peek ? 'peek' : 'rail') : 'open'}
+      onMouseEnter={enter}
+      onMouseLeave={leave}
+      onFocus={enter}
+      onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node) && leave()}
+    >
       <div className="sidebar-top drag">
         <svg className="brand-mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M5 15a7 7 0 0 1 14 0z" />
           <rect x="2" y="16.5" width="20" height="2.2" rx="1.1" />
         </svg>
         <span className="brand">Tagwerk</span>
+        <button
+          className="sb-toggle no-drag"
+          onClick={toggle}
+          title={collapsed ? `Seitenleiste anheften (${modKey()}+B)` : `Seitenleiste einklappen (${modKey()}+B)`}
+          aria-label={collapsed ? 'Seitenleiste anheften' : 'Seitenleiste einklappen'}
+          aria-expanded={!collapsed}
+        >
+          {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+        </button>
       </div>
       <nav className="nav main-nav" ref={navRef}>
         {pill && <span className="nav-pill" aria-hidden="true" style={{ transform: `translateY(${pill.y}px)`, height: pill.h }} />}

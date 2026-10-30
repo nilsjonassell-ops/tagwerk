@@ -1,0 +1,192 @@
+/* ==========================================================================
+   Tagwerk – Seitenleiste ein-/ausklappen
+   Eingeklappt bleibt ein schmaler Glasstreifen mit Symbolen. Beim Überfahren
+   gleitet die volle Leiste über den Inhalt, ohne dass das Hauptfenster springt.
+   Alle Symbole stehen in beiden Zuständen an exakt derselben Stelle.
+   ========================================================================== */
+
+:root {
+  --rail-w: 58px;
+  --sb-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Das Raster animiert die Breite der ersten Spalte – das Hauptfenster wächst mit */
+.app {
+  transition: grid-template-columns 0.5s var(--sb-ease);
+}
+.app.sb-collapsed {
+  grid-template-columns: calc(var(--rail-w) + 10px) minmax(0, 1fr) auto;
+}
+
+/* Feste Breite statt „auto“, damit sie sich weich animieren lässt */
+.sidebar {
+  width: var(--sidebar-w);
+  justify-self: start;
+  z-index: 30;
+  transition:
+    width 0.5s var(--sb-ease),
+    box-shadow 0.35s ease;
+}
+.sidebar.is-rail {
+  width: var(--rail-w);
+}
+.sidebar.is-rail.peek {
+  width: var(--sidebar-w);
+  transition:
+    width 0.38s var(--sb-ease),
+    box-shadow 0.35s ease;
+  box-shadow:
+    var(--lg-inner),
+    0 24px 60px -18px rgba(40, 40, 130, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+:root[data-theme='dark'] .sidebar.is-rail.peek {
+  box-shadow: var(--lg-inner), 0 24px 60px -18px rgba(0, 0, 0, 0.7);
+}
+
+/* Gleiche Symbol-Achse in beiden Zuständen (Mitte bei 28,5 px) */
+.sidebar-top {
+  padding: 0 10px 0 19.5px;
+}
+.focus-launch {
+  padding: 0 10px;
+}
+/* Nichts darf im schmalen Streifen gestaucht werden – sonst wandern die Symbole */
+.sidebar-top > *,
+.sidebar .nav-item > *,
+.sidebar .focus-launch > *,
+.sidebar .source-status > * {
+  flex-shrink: 0;
+}
+.source-status {
+  padding-left: 15px;
+}
+
+/* Texte werden nicht umgebrochen, sondern beim Einklappen weich ausgeblendet */
+.sidebar .nav-item,
+.sidebar .focus-launch,
+.sidebar .source-status,
+.sidebar .sidebar-top,
+.sidebar-section-label {
+  white-space: nowrap;
+}
+.sidebar .label,
+.sidebar .brand,
+.sidebar .focus-launch > span,
+.sidebar .kbd-hint,
+.sidebar-section-label,
+.sidebar .count {
+  transition: opacity 0.28s ease 0.08s;
+}
+.sidebar.is-rail:not(.peek) .label,
+.sidebar.is-rail:not(.peek) .brand,
+.sidebar.is-rail:not(.peek) .focus-launch > span,
+.sidebar.is-rail:not(.peek) .kbd-hint,
+.sidebar.is-rail:not(.peek) .sidebar-section-label {
+  opacity: 0;
+  transition-delay: 0s;
+  transition-duration: 0.14s;
+  pointer-events: none;
+}
+
+/* Zähler werden im Streifen zum kleinen Abzeichen am Symbol */
+.sidebar .nav-item {
+  position: relative;
+}
+.sidebar.is-rail:not(.peek) .nav-item .count {
+  position: absolute;
+  left: 27px;
+  top: 3px;
+  margin: 0;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--grad);
+  box-shadow: 0 2px 6px -2px rgba(110, 90, 255, 0.7);
+}
+.sidebar.is-rail:not(.peek) .nav-item .count.alert {
+  background: linear-gradient(135deg, #ff7a6e, #e5394f);
+}
+
+/* Projekte: im Streifen nur die farbigen Punkte */
+.sidebar-section-label {
+  overflow: hidden;
+}
+
+/* Fokus-Knopf wird im Streifen zur runden Taste */
+.sidebar .focus-launch {
+  overflow: hidden;
+  transition:
+    transform 0.3s var(--ease-spring, ease),
+    filter 0.2s,
+    border-radius 0.4s var(--sb-ease);
+}
+
+/* Laufende Fokus-Sitzung im Streifen nicht abschneiden: nur der Ring */
+.sidebar.is-rail:not(.peek) .focus-pill {
+  padding: 4px;
+  overflow: hidden;
+}
+.sidebar.is-rail:not(.peek) .focus-pill > :not(.focus-pill-main),
+.sidebar.is-rail:not(.peek) .focus-pill-main > :not(svg):not(.ring) {
+  opacity: 0;
+}
+
+/* Umschalter oben rechts */
+.sb-toggle {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    opacity 0.25s ease 0.1s,
+    transform 0.25s var(--ease-spring, ease);
+}
+.sb-toggle svg {
+  width: 17px;
+  height: 17px;
+}
+.sb-toggle:hover {
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--accent);
+}
+.sb-toggle:active {
+  transform: scale(0.9);
+}
+:root[data-theme='dark'] .sb-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.sidebar.is-rail:not(.peek) .sb-toggle {
+  opacity: 0;
+  pointer-events: none;
+  transition-delay: 0s;
+}
+
+/* Auf schmalen Fenstern gibt es den Streifen schon automatisch */
+@media (max-width: 1020px) {
+  .sb-toggle {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app,
+  .sidebar {
+    transition: none !important;
+  }
+}

@@ -648,7 +648,7 @@ export function ShortcutsDialog() {
     [`${m} J`, 'Claude-Assistent ein/aus'],
     [`${m} N`, 'Neue Aufgabe'],
     [`${m} ⇧ N`, 'Neuer Termin'],
-    [`${m} \\`, 'Seitenleiste ein/aus'],
+    [`${m} B`, 'Seitenleiste ein-/ausklappen'],
     [`${m} ,`, 'Einstellungen'],
     [useStore.getState().settings.quickNoteShortcut.replace('CommandOrControl', m).replace(/\+/g, ' '), 'Schnellnotiz – systemweit'],
     ['T · ← →', 'Kalender: heute, zurück, weiter'],

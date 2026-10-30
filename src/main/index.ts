@@ -404,7 +404,7 @@ function buildAppMenu() {
         nav('Projekte', 'projects', '6'),
         { type: 'separator' },
         cmd('Claude-Assistent', 'toggle-assistant', 'CmdOrCtrl+J'),
-        cmd('Seitenleiste ein/aus', 'toggle-sidebar', 'CmdOrCtrl+\\'),
+        cmd('Seitenleiste ein-/ausklappen', 'toggle-sidebar', 'CmdOrCtrl+B'),
         { type: 'separator' },
         { role: 'resetZoom', label: 'Originalgröße' },
         { role: 'zoomIn', label: 'Vergrößern' },

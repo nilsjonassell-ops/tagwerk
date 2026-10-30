@@ -285,6 +285,8 @@ export interface Settings {
   userName: string
   theme: ThemeMode
   launchAtLogin: boolean
+  /** Seitenleiste als schmaler Symbol-Streifen */
+  sidebarCollapsed?: boolean
   closeToTray: boolean
   quickNoteShortcut: string
   notifications: {

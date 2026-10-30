@@ -28,6 +28,7 @@ export function App() {
   const loadError = useStore((s) => s.loadError)
   const view = useStore((s) => s.view)
   const sidebarHidden = useStore((s) => s.sidebarHidden)
+  const sidebarCollapsed = useStore((s) => !!s.settings.sidebarCollapsed)
   const assistantOpen = useStore((s) => s.assistantOpen)
   const paletteOpen = useStore((s) => s.paletteOpen)
   const dialog = useStore((s) => s.dialog)
@@ -127,7 +128,7 @@ export function App() {
       } else if (mod && e.key === ',') {
         runCommand('open-settings')
         e.preventDefault()
-      } else if (mod && e.key === '\\') {
+      } else if (mod && (e.key === '\\' || (!e.shiftKey && !e.altKey && e.key.toLowerCase() === 'b'))) {
         runCommand('toggle-sidebar')
         e.preventDefault()
       } else if (mod && e.key === '/') {
@@ -179,7 +180,7 @@ export function App() {
 
   const platform = window.tagwerk.platform.platform
   return (
-    <div className={`app platform-${platform} ${sidebarHidden ? 'sidebar-hidden' : ''} ${assistantOpen ? 'panel-open' : ''}`}>
+    <div className={`app platform-${platform} ${sidebarHidden ? 'sidebar-hidden' : ''} ${sidebarCollapsed ? 'sb-collapsed' : ''} ${assistantOpen ? 'panel-open' : ''}`}>
       <Sidebar />
       <main className="main" aria-label="Inhalt">
         {view === 'today' && <TodayView />}
@@ -245,7 +246,8 @@ function runCommand(cmd: string) {
     case 'toggle-assistant':
       return st.setAssistant(!st.assistantOpen)
     case 'toggle-sidebar':
-      return st.set({ sidebarHidden: !st.sidebarHidden })
+      // Ein-/Ausklappen (schmaler Symbol-Streifen) statt komplett verstecken
+      return void st.updateSettings({ sidebarCollapsed: !st.settings.sidebarCollapsed })
     case 'focus-open':
     case 'focus-start':
       return useFocus.getState().show(true)
