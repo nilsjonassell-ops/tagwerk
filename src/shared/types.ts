@@ -104,6 +104,61 @@ export interface Note {
   nextSteps?: string
   createdAt: string
   updatedAt: string
+  /** Zuletzt nach OneNote gespeichert */
+  oneNote?: { pageId: string; sectionId: string; webUrl?: string; clientUrl?: string; savedAt: string }
+}
+
+// ---------- OneNote (Microsoft Graph) ----------
+
+export interface OneNoteSection {
+  id: string
+  name: string
+  notebookId: string
+  notebook: string
+  webUrl?: string
+}
+
+export interface OneNotePage {
+  id: string
+  title: string
+  sectionId: string
+  section: string
+  created: string
+  modified: string
+  webUrl?: string
+  clientUrl?: string
+}
+
+export interface MicrosoftStatus {
+  clientConfigured: boolean
+  clientIdHint?: string
+  connected: boolean
+  email?: string
+  expired: boolean
+}
+
+export type MsResult<T> = { ok: true; value: T } | { ok: false; error: string; code?: 'offline' | 'expired' | 'not-connected' | 'not-found' | 'unknown' }
+
+export interface OneNoteSaveRequest {
+  sectionId: string
+  note: Pick<Note, 'title' | 'body' | 'kind' | 'decisions' | 'nextSteps' | 'createdAt'>
+  meta?: { event?: string; project?: string }
+  /** Frühere Fassung dieser Notiz in OneNote, die ersetzt wird */
+  replacePageId?: string
+}
+
+export interface MicrosoftApi {
+  status(): Promise<MicrosoftStatus>
+  setClient(clientId: string): Promise<{ ok: boolean; error?: string }>
+  clearClient(): Promise<void>
+  connect(): Promise<{ ok: boolean; error?: string; status: MicrosoftStatus }>
+  cancelConnect(): Promise<void>
+  disconnect(): Promise<MicrosoftStatus>
+  sections(): Promise<MsResult<OneNoteSection[]>>
+  pages(sectionId?: string): Promise<MsResult<OneNotePage[]>>
+  pageText(pageId: string): Promise<MsResult<string>>
+  savePage(req: OneNoteSaveRequest): Promise<MsResult<OneNotePage>>
+  open(url: string): Promise<void>
 }
 
 export type ProjectStatus = 'on-track' | 'at-risk' | 'paused' | 'done'
@@ -267,6 +322,8 @@ export interface Settings {
   retention: {
     archivedTasksDays: number
   }
+  /** OneNote: zuletzt gewählter Abschnitt zum Speichern */
+  oneNoteSectionId?: string
   weather: {
     enabled: boolean
     city: string
@@ -528,6 +585,7 @@ export interface TagwerkApi {
   }
   ics: { import(): Promise<IcsResult> }
   google: GoogleApi
+  microsoft: MicrosoftApi
   weather: { get(city: string): Promise<WeatherResult> }
   app: {
     notify(req: NotifyRequest): Promise<{ shown: boolean; reason?: string }>

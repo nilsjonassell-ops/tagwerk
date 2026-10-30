@@ -33,6 +33,19 @@ const api: TagwerkApi = {
     send: (req) => ipcRenderer.invoke('claude:send', req)
   },
   ics: { import: () => ipcRenderer.invoke('ics:import') },
+  microsoft: {
+    status: () => ipcRenderer.invoke('microsoft:status'),
+    setClient: (id) => ipcRenderer.invoke('microsoft:setClient', id),
+    clearClient: () => ipcRenderer.invoke('microsoft:clearClient'),
+    connect: () => ipcRenderer.invoke('microsoft:connect'),
+    cancelConnect: () => ipcRenderer.invoke('microsoft:cancelConnect'),
+    disconnect: () => ipcRenderer.invoke('microsoft:disconnect'),
+    sections: () => ipcRenderer.invoke('microsoft:sections'),
+    pages: (sectionId) => ipcRenderer.invoke('microsoft:pages', sectionId),
+    pageText: (id) => ipcRenderer.invoke('microsoft:pageText', id),
+    savePage: (r) => ipcRenderer.invoke('microsoft:savePage', r),
+    open: (url) => ipcRenderer.invoke('microsoft:open', url)
+  },
   google: {
     status: () => ipcRenderer.invoke('google:status'),
     setClient: (c) => ipcRenderer.invoke('google:setClient', c),

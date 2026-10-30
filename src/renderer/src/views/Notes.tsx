@@ -6,7 +6,8 @@ import { useStore } from '@/lib/store'
 import { fDayMed, fTime, mailDate } from '@/lib/format'
 import { addTask, createNote, deleteNote, newTask } from '@/lib/actions'
 import { suggestTasksFromNote } from '@/lib/assistant'
-import { Dialog, Empty, ViewHeader } from '@/components/ui'
+import { Dialog, Empty, Segmented, ViewHeader } from '@/components/ui'
+import { OneNoteBrowser, OneNoteSaveButton } from '@/components/OneNote'
 
 export function NotesView() {
   const data = useStore((s) => s.data)
@@ -14,6 +15,27 @@ export function NotesView() {
   const select = useStore((s) => s.select)
   const [query, setQuery] = useState('')
   const [kind, setKind] = useState<'all' | 'meeting'>('all')
+  // Quelle: eigene Notizen oder OneNote (gemerkt pro Gerät)
+  const [source, setSourceState] = useState<'tagwerk' | 'onenote'>(() => {
+    try {
+      return localStorage.getItem('tagwerk.notes.source') === 'onenote' ? 'onenote' : 'tagwerk'
+    } catch {
+      return 'tagwerk'
+    }
+  })
+  const setSource = (v: 'tagwerk' | 'onenote') => {
+    setSourceState(v)
+    try {
+      localStorage.setItem('tagwerk.notes.source', v)
+    } catch {
+      /* egal */
+    }
+  }
+  useEffect(() => {
+    const on = (e: Event) => setSource((e as CustomEvent).detail === 'onenote' ? 'onenote' : 'tagwerk')
+    window.addEventListener('tagwerk:notes-source', on)
+    return () => window.removeEventListener('tagwerk:notes-source', on)
+  }, [])
 
   const notes = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -27,14 +49,26 @@ export function NotesView() {
   return (
     <>
       <ViewHeader title="Notizen">
-        <button className="btn small" onClick={() => createNote({ kind: 'meeting', title: '' })}>
+        <Segmented
+          label="Quelle"
+          value={source}
+          onChange={setSource}
+          options={[
+            { id: 'tagwerk', label: 'Tagwerk' },
+            { id: 'onenote', label: 'OneNote' }
+          ]}
+        />
+        <button className="btn small" onClick={() => (setSource('tagwerk'), createNote({ kind: 'meeting', title: '' }))}>
           <Users /> Meetingnotiz
         </button>
-        <button className="btn small" onClick={() => createNote()}>
+        <button className="btn small" onClick={() => (setSource('tagwerk'), createNote())}>
           <Plus /> Notiz
         </button>
       </ViewHeader>
       <div className="view-body" style={{ overflow: 'hidden' }}>
+        {source === 'onenote' ? (
+          <OneNoteBrowser />
+        ) : (
         <div className="split two">
           <div className="list-pane">
             <div className="search-box" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -78,6 +112,7 @@ export function NotesView() {
             </div>
           )}
         </div>
+        )}
       </div>
     </>
   )
@@ -96,7 +131,8 @@ function NoteEditor({ note }: { note: Note }) {
     if (draft === note) return
     setSaved(false)
     const t = setTimeout(() => {
-      mutate((d) => ({ ...d, notes: d.notes.map((n) => (n.id === draft.id ? { ...draft, updatedAt: new Date().toISOString() } : n)) }))
+      // oneNote-Verknüpfung kommt aus dem Speicher, nicht aus dem Entwurf
+      mutate((d) => ({ ...d, notes: d.notes.map((n) => (n.id === draft.id ? { ...draft, oneNote: n.oneNote, updatedAt: new Date().toISOString() } : n)) }))
       setSaved(true)
     }, 500)
     return () => clearTimeout(t)
@@ -144,6 +180,7 @@ function NoteEditor({ note }: { note: Note }) {
           <span className="saved-hint" aria-live="polite">
             {saved ? 'Gespeichert' : 'Speichert …'}
           </span>
+          <OneNoteSaveButton note={{ ...draft, oneNote: note.oneNote }} />
           <button className="btn small" onClick={() => openDialog({ kind: 'extract', noteId: draft.id })} title="Aufgaben aus dieser Notiz vorschlagen">
             <ListChecks /> Aufgaben vorschlagen
           </button>

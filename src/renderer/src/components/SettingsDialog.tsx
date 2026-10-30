@@ -8,6 +8,7 @@ import { CLAUDE_MODELS, type DashboardCardId, type Settings } from '@shared/type
 import { confirm, useStore } from '@/lib/store'
 import { VIEW_META } from './Sidebar'
 import { GoogleSettings } from './GoogleSettings'
+import { OneNoteSettings } from './OneNoteSettings'
 import { Dialog, Segmented, Switch } from './ui'
 import { isMac, modKey } from '@/lib/format'
 
@@ -400,6 +401,8 @@ function Sources() {
       </div>
 
       <GoogleSettings />
+
+      <OneNoteSettings />
 
       <div className="source-row">
         <div className="icon"><CalendarPlus /></div>

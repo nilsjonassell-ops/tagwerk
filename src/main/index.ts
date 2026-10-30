@@ -18,7 +18,7 @@ import { join } from 'node:path'
 import { uptime } from 'node:os'
 import { randomUUID } from 'node:crypto'
 import { eventsOnDay, hm } from '@shared/analysis'
-import type { AppData, CalEvent, ClaudeRequest, GoogleConnectOptions, GoogleSendParams, Note, Settings, FocusSignal, NotifyRequest } from '@shared/types'
+import type { OneNoteSaveRequest, AppData, CalEvent, ClaudeRequest, GoogleConnectOptions, GoogleSendParams, Note, Settings, FocusSignal, NotifyRequest } from '@shared/types'
 import { store } from './store'
 import { secrets } from './secrets'
 import { sendToClaude, verifyKey } from './claude'
@@ -30,6 +30,7 @@ import { initPopup } from './popup'
 import { focusState, focusSummary, initFocus, setFocus } from './focus'
 import { startScheduler } from './scheduler'
 import * as google from './google'
+import * as microsoft from './microsoft'
 import { log } from './log'
 
 const isMac = process.platform === 'darwin'
@@ -538,6 +539,41 @@ function registerIpc() {
     }
   })
 
+  ipcMain.handle('microsoft:status', () => microsoft.msStatus())
+  ipcMain.handle('microsoft:setClient', (_e, id: string) => microsoft.setClient(String(id ?? '')))
+  ipcMain.handle('microsoft:clearClient', () => microsoft.clearClient())
+  ipcMain.handle('microsoft:connect', async () => {
+    const r = await microsoft.connect()
+    showMain()
+    return r
+  })
+  ipcMain.handle('microsoft:cancelConnect', () => microsoft.cancelConnect())
+  ipcMain.handle('microsoft:disconnect', () => microsoft.disconnect())
+  ipcMain.handle('microsoft:sections', () => microsoft.sections())
+  ipcMain.handle('microsoft:pages', (_e, sectionId?: string) => microsoft.pages(sectionId ? String(sectionId) : undefined))
+  ipcMain.handle('microsoft:pageText', (_e, id: string) => microsoft.pageText(String(id)))
+  ipcMain.handle('microsoft:savePage', (_e, r: OneNoteSaveRequest) => {
+    const n = r?.note ?? ({} as OneNoteSaveRequest['note'])
+    const str = (v: unknown, max: number) => (typeof v === 'string' ? v.slice(0, max) : undefined)
+    return microsoft.savePage({
+      sectionId: String(r?.sectionId ?? ''),
+      note: {
+        title: str(n.title, 300) ?? '',
+        body: str(n.body, 200_000) ?? '',
+        kind: n.kind === 'meeting' ? 'meeting' : 'note',
+        decisions: str(n.decisions, 50_000),
+        nextSteps: str(n.nextSteps, 50_000),
+        createdAt: str(n.createdAt, 40) ?? new Date().toISOString()
+      },
+      meta: { event: str(r?.meta?.event, 200), project: str(r?.meta?.project, 200) },
+      replacePageId: r?.replacePageId ? String(r.replacePageId) : undefined
+    })
+  })
+  // OneNote-Seite in der Desktop-App (onenote:) oder im Browser öffnen – nur diese Ziele
+  ipcMain.handle('microsoft:open', (_e, url: string) => {
+    const u = String(url ?? '')
+    if (/^onenote:https:\/\//i.test(u) || /^https:\/\/([a-z0-9-]+\.)*(onenote\.com|onedrive\.live\.com|live\.com|sharepoint\.com|office\.com)\//i.test(u)) shell.openExternal(u)
+  })
   ipcMain.handle('google:status', () => google.googleStatus())
   ipcMain.handle('google:setClient', (_e, c: { clientId: string; clientSecret: string }) => google.setClient({ clientId: String(c?.clientId ?? ''), clientSecret: String(c?.clientSecret ?? '') }))
   ipcMain.handle('google:importClientFile', () => google.importClientFile())
