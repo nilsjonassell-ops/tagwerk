@@ -34,8 +34,11 @@ export function TodayView() {
   const remaining = todays.filter((e) => !e.allDay && new Date(e.end) > now)
   const tasks = useMemo(() => sortTasks(data.tasks.filter((t) => isOverdue(t, now) || isDueToday(t, now))), [data.tasks, now])
   const threads = useMemo(
-    () => groupThreads(data.emails.filter((e) => e.folder === 'inbox')).filter((t) => (t.important && (t.needsReply || t.unread)) || (t.unread && t.needsReply)),
-    [data.emails]
+    () =>
+      groupThreads(data.emails.filter((e) => e.folder === 'inbox'), data.replyMarks).filter(
+        (t) => t.replyManual || (t.needsReply && (t.important || t.unread)) || (t.important && t.unread && !data.replyMarks?.[t.id])
+      ),
+    [data.emails, data.replyMarks]
   )
   const visible = (id: DashboardCardId) => settings.dashboardCards.find((c) => c.id === id)?.visible
   const order = settings.dashboardCards.filter((c) => c.visible && c.id !== 'weather' && c.id !== 'focus').map((c) => c.id)

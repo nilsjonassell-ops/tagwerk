@@ -1,7 +1,7 @@
 // Reine Logik ohne UI- oder Electron-Abhängigkeiten: Konflikte, freie Zeit,
 // Fälligkeiten, Wiederholungen, Tagesbriefing und Aufgaben-Erkennung.
 
-import type { AppData, CalEvent, Email, FocusEntry, Note, Priority, Recurrence, Task } from './types.ts'
+import type { AppData, CalEvent, Email, FocusEntry, Note, Priority, Recurrence, ReplyMark, Task } from './types.ts'
 
 const MIN = 60_000
 
@@ -198,12 +198,26 @@ export interface Thread {
   unread: boolean
   important: boolean
   needsReply: boolean
+  /** „Antwort offen“ wurde von Hand gesetzt */
+  replyManual: boolean
+  starred: boolean
   participants: string[]
   projectId?: string
   folder: Email['folder']
 }
 
-export function groupThreads(emails: Email[]): Thread[] {
+/** „Antwort offen“: automatisch erkannt, von Hand überschreibbar. Eine Antwort von mir beendet beides. */
+function replyState(msgs: Email[], inbound: Email[], mark?: ReplyMark): { needsReply: boolean; replyManual: boolean } {
+  const lastIn = inbound[inbound.length - 1]
+  if (!lastIn) return { needsReply: false, replyManual: false }
+  const answered = lastIn.replied || msgs[msgs.length - 1].folder === 'sent'
+  if (answered) return { needsReply: false, replyManual: false }
+  if (mark?.on) return { needsReply: true, replyManual: true }
+  if (mark && !mark.on && mark.msgId === lastIn.id) return { needsReply: false, replyManual: false }
+  return { needsReply: lastIn.needsReply, replyManual: false }
+}
+
+export function groupThreads(emails: Email[], marks?: Record<string, ReplyMark>): Thread[] {
   const map = new Map<string, Email[]>()
   for (const e of emails) {
     const arr = map.get(e.threadId) ?? []
@@ -222,7 +236,8 @@ export function groupThreads(emails: Email[]): Thread[] {
       latest,
       unread: msgs.some((m) => !m.read),
       important: msgs.some((m) => m.important),
-      needsReply: inbound.length > 0 && inbound[inbound.length - 1].needsReply && !inbound[inbound.length - 1].replied,
+      ...replyState(msgs, inbound, marks?.[id]),
+      starred: msgs.some((m) => m.starred),
       participants: [...new Set(msgs.map((m) => m.from.name))],
       projectId: msgs.find((m) => m.projectId)?.projectId,
       folder: inbound.length ? inbound[inbound.length - 1].folder : latest.folder
@@ -275,8 +290,8 @@ export function buildBrief(
   for (const t of dueHigh.slice(0, 2)) {
     items.push({ tone: 'attention', text: `Heute fällig: „${t.title}“.`, target: { view: 'tasks', id: t.id } })
   }
-  const threads = groupThreads(data.emails.filter((e) => e.folder === 'inbox'))
-  const waiting = threads.filter((t) => t.important && t.needsReply)
+  const threads = groupThreads(data.emails.filter((e) => e.folder === 'inbox'), data.replyMarks)
+  const waiting = threads.filter((t) => t.needsReply && (t.important || t.replyManual))
   if (waiting.length) {
     items.push({
       tone: 'attention',

@@ -70,7 +70,7 @@ interface State {
   updateSettings(patch: Partial<Settings>): Promise<void>
   refreshClaude(): Promise<void>
   refreshGoogle(): Promise<GoogleStatus>
-  syncGoogle(opts?: { quiet?: boolean }): Promise<void>
+  syncGoogle(opts?: { quiet?: boolean; mailOnly?: boolean }): Promise<void>
   go(view: ViewId, id?: string): void
   select(view: keyof Selection, id?: string): void
   toast(text: string, opts?: { tone?: Toast['tone']; undo?: () => void }): void
@@ -192,11 +192,15 @@ export const useStore = create<State>((set, get) => ({
   },
 
   async syncGoogle(opts) {
-    if (get().googleSync.syncing) return
+    if (get().googleSync.syncing) {
+      // Läuft schon ein Abruf, danach noch einmal den Posteingang holen
+      if (opts?.mailOnly) mailAgain = true
+      return
+    }
     set({ googleSync: { ...get().googleSync, syncing: true } })
     try {
       const before = get().data.emails.filter((e) => e.source === 'google')
-      const r = await window.tagwerk.google.sync()
+      const r = await window.tagwerk.google.sync(opts?.mailOnly ? { only: 'gmail' } : undefined)
       set({ google: r.status })
       if (r.emails) notifyNewMail(before, r.emails, r.status.email, get().settings)
       // Google ist die Quelle der Wahrheit: Google-Datensätze werden je Dienst vollständig ersetzt.
@@ -220,6 +224,10 @@ export const useStore = create<State>((set, get) => ({
       if (err && !opts?.quiet) get().toast(err, { tone: 'error' })
     } catch {
       set({ googleSync: { ...get().googleSync, syncing: false, errors: { general: 'Synchronisation fehlgeschlagen.' } } })
+    }
+    if (mailAgain) {
+      mailAgain = false
+      void get().syncGoogle({ quiet: true, mailOnly: true })
     }
   },
 
@@ -255,6 +263,8 @@ export const useStore = create<State>((set, get) => ({
     set(partial)
   }
 }))
+
+let mailAgain = false
 
 // ---- Bestätigungsdialog als Promise ----
 

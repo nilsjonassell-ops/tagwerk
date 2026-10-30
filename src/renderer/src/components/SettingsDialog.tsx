@@ -608,6 +608,8 @@ export function ShortcutsDialog() {
     ['Leertaste', 'Fokus: Pause / Weiter'],
     ['E', 'Posteingang: archivieren'],
     ['Entf', 'Posteingang: löschen (Papierkorb)'],
+    ['S', 'Posteingang: merken (Stern)'],
+    ['A', 'Posteingang: Antwort offen an/aus'],
     [`${m} Enter`, 'Antwort senden (mit Bestätigung)']
   ]
   return (

@@ -41,7 +41,12 @@ const api: TagwerkApi = {
     connect: (o) => ipcRenderer.invoke('google:connect', o),
     cancelConnect: () => ipcRenderer.invoke('google:cancelConnect'),
     disconnect: () => ipcRenderer.invoke('google:disconnect'),
-    sync: () => ipcRenderer.invoke('google:sync'),
+    sync: (o) => ipcRenderer.invoke('google:sync', o),
+    onMailChanged: (cb) => {
+      const h = () => cb()
+      ipcRenderer.on('google:mailChanged', h)
+      return () => ipcRenderer.removeListener('google:mailChanged', h)
+    },
     createEvent: (ev, notify) => ipcRenderer.invoke('google:createEvent', ev, notify),
     updateEvent: (ev, notify) => ipcRenderer.invoke('google:updateEvent', ev, notify),
     deleteEvent: (id, notify) => ipcRenderer.invoke('google:deleteEvent', id, notify),

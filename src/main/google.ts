@@ -407,7 +407,7 @@ async function pool<T, R>(items: T[], n: number, fn: (x: T) => Promise<R>): Prom
 
 // ---------- Synchronisation ----------
 
-export async function sync(): Promise<GoogleSyncResult> {
+export async function sync(opts?: { only?: 'gmail' }): Promise<GoogleSyncResult> {
   const syncedAt = new Date().toISOString()
   const a = account()
   if (!a || a.expired) return { ok: false, syncedAt, errors: { general: a?.expired ? 'Google-Anmeldung abgelaufen – bitte neu verbinden.' : 'Google ist nicht verbunden.' }, status: await googleStatus() }
@@ -416,7 +416,7 @@ export async function sync(): Promise<GoogleSyncResult> {
   let events: CalEvent[] | undefined
   let emails: Email[] | undefined
 
-  if (c.calendarRead) {
+  if (c.calendarRead && opts?.only !== 'gmail') {
     const r = await wrap(() => fetchEvents(c.calendarWrite))
     if (r.ok) events = r.value
     else errors.calendar = r.error
@@ -462,6 +462,9 @@ async function fetchInbox(me: string): Promise<Email[]> {
   const hidden = (store.getSettings().gmailHiddenCategories ?? []).filter((c) => allowed.has(c))
   const q = new URLSearchParams({ labelIds: 'INBOX', maxResults: '40' })
   if (hidden.length) q.set('q', hidden.map((c) => `-category:${c}`).join(' '))
+  // Stand des Postfachs merken, bevor gelesen wird – so geht nichts verloren,
+  // was während des Abrufs eintrifft.
+  const h = await mailboxHistoryId().catch(() => undefined)
   const list = await api<{ threads?: { id: string; historyId?: string }[] }>(`${URLS.gmail}/users/me/threads?${q}`)
   const threads = list.threads ?? []
   const results = await pool(threads, 6, async (t) => {
@@ -475,7 +478,49 @@ async function fetchInbox(me: string): Promise<Email[]> {
   // Nicht mehr im Posteingang → aus dem Cache entfernen
   const ids = new Set(threads.map((t) => t.id))
   for (const k of threadCache.keys()) if (!ids.has(k)) threadCache.delete(k)
+  if (h) syncedHistoryId = h
   return results.flat()
+}
+
+// ---------- Live-Abgleich des Posteingangs ----------
+// Jede Sekunde nur den Stand des Postfachs abfragen (users.getProfile kostet
+// eine einzige Quota-Einheit). Erst wenn sich etwas geändert hat, wird der
+// Posteingang neu geladen – das hält Tagwerk sekundengenau, ohne Googles Limits.
+
+let syncedHistoryId = ''
+let mailTimer: NodeJS.Timeout | null = null
+
+async function mailboxHistoryId(): Promise<string | undefined> {
+  const p = await api<{ historyId?: string }>(`${URLS.gmail}/users/me/profile`)
+  return p.historyId
+}
+
+export function startMailWatch(onChange: () => void) {
+  if (mailTimer) clearTimeout(mailTimer)
+  let delay = 1000
+  let lastEmit = 0
+  const tick = async () => {
+    try {
+      const a = account()
+      if (!a || a.expired || !caps(a).gmailRead || !net.isOnline() || !syncedHistoryId) {
+        delay = 2000
+        return
+      }
+      const h = await mailboxHistoryId()
+      delay = 1000
+      // Nur melden, wenn neuer Stand – und höchstens alle 2 s, solange der Abruf noch läuft
+      if (h && h !== syncedHistoryId && Date.now() - lastEmit > 2000) {
+        lastEmit = Date.now()
+        onChange()
+      }
+    } catch {
+      // Netzfehler oder Limit: langsamer werden, bis es wieder klappt
+      delay = Math.min(30_000, delay * 2)
+    } finally {
+      mailTimer = setTimeout(tick, delay)
+    }
+  }
+  mailTimer = setTimeout(tick, delay)
 }
 
 // ---------- Schreibaktionen ----------

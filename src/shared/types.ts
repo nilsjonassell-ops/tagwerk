@@ -74,6 +74,8 @@ export interface Email {
   important: boolean
   /** Erwartet eine Antwort von mir */
   needsReply: boolean
+  /** Gemerkt (in Gmail: Stern) */
+  starred?: boolean
   replied: boolean
   folder: MailFolder
   projectId?: string
@@ -188,6 +190,13 @@ export interface FocusSignal {
   allowMeetingAlerts: boolean
 }
 
+export interface ReplyMark {
+  /** true = muss beantwortet werden, false = nicht mehr nötig */
+  on: boolean
+  /** Letzte eingegangene Nachricht beim Setzen – „nicht nötig“ gilt nur bis zur nächsten */
+  msgId: string
+}
+
 export interface AppData {
   version: 1
   tasks: Task[]
@@ -198,6 +207,8 @@ export interface AppData {
   docs: DocRef[]
   chat: ChatMessage[]
   focusLog?: FocusEntry[]
+  /** Von Hand gesetztes „Antwort offen“ je Unterhaltung (überlebt den Gmail-Abgleich) */
+  replyMarks?: Record<string, ReplyMark>
   sources: {
     demo: boolean
     icsImports: IcsImport[]
@@ -435,7 +446,9 @@ export interface GoogleApi {
   connect(opts: GoogleConnectOptions): Promise<{ ok: boolean; error?: string; status: GoogleStatus }>
   cancelConnect(): Promise<void>
   disconnect(): Promise<GoogleStatus>
-  sync(): Promise<GoogleSyncResult>
+  sync(opts?: { only?: 'gmail' }): Promise<GoogleSyncResult>
+  /** Meldet, sobald sich im Gmail-Postfach etwas geändert hat. */
+  onMailChanged(cb: () => void): () => void
   createEvent(ev: CalEvent, notify: boolean): Promise<GResult<CalEvent>>
   updateEvent(ev: CalEvent, notify: boolean): Promise<GResult<CalEvent>>
   deleteEvent(remoteId: string, notify: boolean): Promise<GResult<null>>

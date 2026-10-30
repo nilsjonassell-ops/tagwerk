@@ -50,7 +50,9 @@ export function App() {
     return () => mq.removeEventListener('change', apply)
   }, [theme])
 
-  // Google: beim Start, alle 5 Minuten, bei Rückkehr ins Fenster und wenn wieder online
+  // Google: beim Start, alle 5 Minuten, bei Rückkehr ins Fenster und wenn wieder online.
+  // Der Posteingang kommt zusätzlich live: Der Hauptprozess prüft jede Sekunde,
+  // ob sich im Postfach etwas geändert hat.
   const googleConnected = useStore((s) => s.google.connected)
   const online = useStore((s) => s.online)
   useEffect(() => {
@@ -63,7 +65,9 @@ export function App() {
       if (!last || Date.now() - new Date(last).getTime() > 2 * 60_000) st().syncGoogle({ quiet: true })
     }
     window.addEventListener('focus', onFocus)
+    const offMail = window.tagwerk.google.onMailChanged(() => st().syncGoogle({ quiet: true, mailOnly: true }))
     return () => {
+      offMail()
       clearInterval(t)
       window.removeEventListener('focus', onFocus)
     }

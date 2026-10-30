@@ -2,7 +2,7 @@
 // wichtige Termine ändert, läuft über eine ausdrückliche Bestätigung.
 
 import { nextDue, ymd } from '@shared/analysis'
-import type { CalEvent, Email, Note, Proposal, Task } from '@shared/types'
+import type { AppData, CalEvent, Email, Note, Proposal, Task } from '@shared/types'
 import { confirm, confirmWithOption, uid, useStore } from './store'
 import { fDayMed, fTime } from './format'
 
@@ -192,6 +192,41 @@ const threadOf = (threadId: string) => S().data.emails.filter((m) => m.threadId 
 const isGoogleThread = (threadId: string) => threadOf(threadId).some((m) => m.source === 'google')
 const remoteThread = (threadId: string) => threadOf(threadId).find((m) => m.remoteThreadId)?.remoteThreadId
 
+const withoutMark = (marks: AppData['replyMarks'], threadId: string) => {
+  if (!marks?.[threadId]) return marks
+  const { [threadId]: _drop, ...rest } = marks
+  return rest
+}
+
+/** Merken (Favorit). Bei Gmail wird der Stern mitgesetzt. */
+export async function toggleStar(threadId: string) {
+  const msgs = threadOf(threadId)
+  if (!msgs.length) return
+  const on = !msgs.some((m) => m.starred)
+  const prev = S().data
+  const google = isGoogleThread(threadId)
+  if (google && !S().google.caps.gmailWrite) return S().toast('Tagwerk hat nur Lesezugriff auf Gmail.', { tone: 'error' })
+  S().mutate((d) => ({ ...d, emails: d.emails.map((m) => (m.threadId === threadId ? { ...m, starred: on } : m)) }))
+  if (google) {
+    const r = await window.tagwerk.google.modifyThread(remoteThread(threadId)!, on ? ['STARRED'] : [], on ? [] : ['STARRED'])
+    if (!r.ok) {
+      S().replaceData(prev)
+      return googleFail('Nicht gemerkt', r.error)
+    }
+  }
+  S().toast(on ? 'Gemerkt' : 'Nicht mehr gemerkt')
+}
+
+/** „Antwort offen“ von Hand setzen oder entfernen – erscheint dann (nicht) in der Übersicht. */
+export function setReplyMark(threadId: string, on: boolean) {
+  const msgs = threadOf(threadId).filter((m) => m.folder !== 'sent').sort((a, b) => a.date.localeCompare(b.date))
+  const last = msgs[msgs.length - 1]
+  if (!last) return
+  const prev = S().data
+  S().mutate((d) => ({ ...d, replyMarks: { ...(d.replyMarks ?? {}), [threadId]: { on, msgId: last.id } } }))
+  S().toast(on ? 'Als „Antwort offen“ markiert – steht jetzt in der Übersicht' : 'Aus „Antwort offen“ entfernt', { undo: () => S().replaceData(prev) })
+}
+
 /** Gelesen/ungelesen. Bei Gmail wird der Status auch bei Google gesetzt (falls erlaubt). */
 export async function markThread(threadId: string, patch: Partial<Email>) {
   const prev = S().data
@@ -305,7 +340,8 @@ export async function sendReply(threadId: string, body: string): Promise<boolean
     S().mutate(
       (d) => ({
         ...d,
-        emails: [...d.emails.map((m) => (m.threadId === threadId && m.folder !== 'sent' ? { ...m, replied: true, read: true, needsReply: false } : m)), { ...r.value, threadId }]
+        emails: [...d.emails.map((m) => (m.threadId === threadId && m.folder !== 'sent' ? { ...m, replied: true, read: true, needsReply: false } : m)), { ...r.value, threadId }],
+        replyMarks: withoutMark(d.replyMarks, threadId)
       }),
       { toast: `Antwort an ${last.from.name} gesendet` }
     )

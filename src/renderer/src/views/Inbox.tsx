@@ -1,19 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Archive, CheckSquare, FlaskConical, Inbox as InboxIcon, Mail, MailOpen, Reply, Search, Send, Sparkles, Star, Trash2, X, AlertCircle, Clock, Loader2 } from 'lucide-react'
+import { Archive, CheckSquare, FlaskConical, Inbox as InboxIcon, Mail, MailOpen, Reply, Search, Send, Sparkles, Star, Trash2, X, AlertCircle, Clock, Loader2, Flag } from 'lucide-react'
 import { groupThreads, type Thread } from '@shared/analysis'
 import { useStore } from '@/lib/store'
 import { hueFor, initials, mailDate, projectName } from '@/lib/format'
-import { archiveThread, deleteThread, markThread, sendReply, taskFromEmail } from '@/lib/actions'
+import { archiveThread, deleteThread, markThread, sendReply, setReplyMark, taskFromEmail, toggleStar } from '@/lib/actions'
 import { draftReply, summarizeThread } from '@/lib/assistant'
 import { AccountStatus, Empty, ViewHeader } from '@/components/ui'
 
-type Filter = 'important' | 'unread' | 'reply' | 'all' | 'sent' | 'archive'
+type Filter = 'important' | 'starred' | 'unread' | 'reply' | 'all' | 'sent' | 'archive'
 
 const FILTERS: { id: Filter; label: string; icon: typeof Mail }[] = [
-  { id: 'important', label: 'Wichtig', icon: Star },
+  { id: 'all', label: 'Alle', icon: InboxIcon },
+  { id: 'important', label: 'Wichtig', icon: AlertCircle },
+  { id: 'starred', label: 'Gemerkt', icon: Star },
   { id: 'unread', label: 'Ungelesen', icon: Mail },
   { id: 'reply', label: 'Antwort offen', icon: Clock },
-  { id: 'all', label: 'Alle', icon: InboxIcon },
   { id: 'sent', label: 'Gesendet', icon: Send },
   { id: 'archive', label: 'Archiv', icon: Archive }
 ]
@@ -28,11 +29,12 @@ export function InboxView() {
   const [query, setQuery] = useState('')
   const [projectFilter, setProjectFilter] = useState<string>('')
 
-  const allThreads = useMemo(() => groupThreads(data.emails), [data.emails])
+  const allThreads = useMemo(() => groupThreads(data.emails, data.replyMarks), [data.emails, data.replyMarks])
   const counts = useMemo(() => {
     const inbox = allThreads.filter((t) => t.folder === 'inbox')
     return {
       important: inbox.filter((t) => t.important).length,
+      starred: allThreads.filter((t) => t.starred && t.folder !== 'sent').length,
       unread: inbox.filter((t) => t.unread).length,
       reply: inbox.filter((t) => t.needsReply).length,
       all: inbox.length
@@ -46,6 +48,7 @@ export function InboxView() {
       const ok =
         filter === 'sent' ? inSent
         : filter === 'archive' ? t.folder === 'archive'
+        : filter === 'starred' ? t.starred && t.folder !== 'sent'
         : t.folder === 'inbox' && (filter === 'all' || (filter === 'important' && t.important) || (filter === 'unread' && t.unread) || (filter === 'reply' && t.needsReply))
       if (!ok) return false
       if (projectFilter && t.projectId !== projectFilter) return false
@@ -77,6 +80,10 @@ export function InboxView() {
         const n = threads[Math.max(0, idx - 1)]
         if (n) select('inbox', n.id)
         e.preventDefault()
+      } else if (e.key === 's' && selected) {
+        toggleStar(selected.id)
+      } else if (e.key === 'a' && selected && selected.folder === 'inbox') {
+        setReplyMark(selected.id, !selected.needsReply)
       } else if (e.key === 'e' && selected && selected.folder === 'inbox') {
         archiveThread(selected.id)
       } else if ((e.key === 'Delete' || e.key === '#') && selected) {
@@ -167,27 +174,54 @@ export function InboxView() {
 }
 
 function ThreadRow({ t, selected, onClick }: { t: Thread; selected: boolean; onClick: () => void }) {
+  const google = useStore((s) => s.google)
+  const isGmail = t.messages.some((m) => m.source === 'google')
+  const canModify = !isGmail || google.caps.gmailWrite
+  const sender = t.latest.folder === 'sent' ? [...t.messages].reverse().find((m) => m.folder !== 'sent')?.from.name ?? 'Ich' : t.latest.from.name || t.latest.from.email
+  const act = (e: React.MouseEvent, fn: () => void) => {
+    e.stopPropagation()
+    fn()
+  }
   return (
-    <button role="option" aria-selected={selected} className={`thread-row ${t.unread ? 'unread' : ''} ${selected ? 'selected' : ''}`} onClick={onClick}>
-      <span className="dot-col">{t.unread && <span className="unread-dot" aria-label="ungelesen" />}</span>
-      <span className="body">
-        <span className="top">
-          <span className="from">
-            {t.participants.join(', ')}
-            {t.messages.length > 1 ? ` (${t.messages.length})` : ''}
-          </span>
-          <span className="date">{mailDate(t.latest.date)}</span>
+    <div
+      role="option"
+      tabIndex={-1}
+      aria-selected={selected}
+      className={`thread-row mail-card ${t.unread ? 'unread' : ''} ${selected ? 'selected' : ''} ${t.needsReply ? 'needs-reply' : ''}`}
+      onClick={onClick}
+    >
+      <span className="mc-top">
+        {t.unread && <span className="unread-dot" aria-label="ungelesen" />}
+        <span className="mc-from">
+          {sender}
+          {t.messages.length > 1 && <span className="mc-count">{t.messages.length}</span>}
         </span>
-        <span className="subject">{t.subject}</span>
-        <span className="preview">{t.latest.body.replace(/\s+/g, ' ').slice(0, 160)}</span>
-        {(t.important || t.needsReply) && (
-          <span className="flags">
-            {t.important && <span className="tag accent">Wichtig</span>}
-            {t.needsReply && <span className="tag attention">Antwort offen</span>}
-          </span>
-        )}
+        <span className="mc-marks">
+          {t.needsReply && <Flag className="mc-flag" aria-label="Antwort offen" />}
+          {t.starred && <Star className="mc-star" aria-label="Gemerkt" />}
+        </span>
+        <span className="mc-date">{mailDate(t.latest.date)}</span>
       </span>
-    </button>
+      <span className="mc-subject">{t.subject}</span>
+      <span className="mc-preview">{t.latest.body.replace(/\s+/g, ' ').slice(0, 180)}</span>
+
+      <span className="mc-actions" role="toolbar" aria-label="Schnellaktionen">
+        <button className={`mc-btn ${t.needsReply ? 'on reply' : ''}`} onClick={(e) => act(e, () => setReplyMark(t.id, !t.needsReply))} title={t.needsReply ? 'Aus „Antwort offen“ entfernen (A)' : 'Muss beantwortet werden – in der Übersicht zeigen (A)'} aria-pressed={t.needsReply}>
+          <Flag />
+        </button>
+        <button className={`mc-btn ${t.starred ? 'on star' : ''}`} onClick={(e) => act(e, () => toggleStar(t.id))} disabled={!canModify} title={t.starred ? 'Nicht mehr merken (S)' : 'Merken (S)'} aria-pressed={t.starred}>
+          <Star />
+        </button>
+        {t.folder === 'inbox' && (
+          <button className="mc-btn" onClick={(e) => act(e, () => archiveThread(t.id))} disabled={!canModify} title="Archivieren (E)">
+            <Archive />
+          </button>
+        )}
+        <button className="mc-btn danger" onClick={(e) => act(e, () => void deleteThread(t.id))} disabled={!canModify} title="Löschen (Entf)">
+          <Trash2 />
+        </button>
+      </span>
+    </div>
   )
 }
 
@@ -242,7 +276,8 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
         <h2 className="selectable">{thread.subject}</h2>
         <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
           {thread.important && <span className="tag accent">Wichtig</span>}
-          {thread.needsReply && <span className="tag attention">Antwort offen</span>}
+          {thread.starred && <span className="tag star">Gemerkt</span>}
+          {thread.needsReply && <span className="tag attention">Antwort offen{thread.replyManual ? ' · von dir markiert' : ''}</span>}
           {lastInbound?.replied && <span className="tag ok">Beantwortet</span>}
           {proj && <span className="tag">{proj}</span>}
           <span className="hint">{thread.messages.length} {thread.messages.length === 1 ? 'Nachricht' : 'Nachrichten'}</span>
@@ -265,6 +300,14 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
             <CheckSquare /> Aufgabe
           </button>
           <div style={{ flex: 1 }} />
+          {thread.folder !== 'sent' && (
+            <button className={`btn small ghost icon-btn ${thread.needsReply ? 'is-on-reply' : ''}`} onClick={() => setReplyMark(thread.id, !thread.needsReply)} title={thread.needsReply ? 'Aus „Antwort offen“ entfernen (A)' : 'Als „Antwort offen“ markieren (A)'} aria-label="Antwort offen umschalten" aria-pressed={thread.needsReply}>
+              <Flag />
+            </button>
+          )}
+          <button className={`btn small ghost icon-btn ${thread.starred ? 'is-on-star' : ''}`} onClick={() => toggleStar(thread.id)} title={readOnlyHint ?? (thread.starred ? 'Nicht mehr merken (S)' : 'Merken (S)')} aria-label="Merken umschalten" aria-pressed={thread.starred} disabled={!canModify}>
+            <Star />
+          </button>
           {thread.folder === 'inbox' && (
             <button className="btn small ghost" onClick={() => archiveThread(thread.id)} title={readOnlyHint ?? 'Archivieren (E)'} disabled={!canModify}>
               <Archive /> Archivieren
