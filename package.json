@@ -1,7 +1,7 @@
 {
   "name": "tagwerk",
   "productName": "Tagwerk",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Persönliches Produktivitäts-Dashboard: Kalender, E-Mail, Aufgaben, Notizen und Fokus",
   "main": "./out/main/index.js",
   "author": "Nils Sell",
