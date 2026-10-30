@@ -32,6 +32,10 @@ jobs:
             git tag "$V"
             git push origin "$V"
           fi
+          # Release vorab anlegen, damit electron-builder nicht mehrere gleichzeitig erzeugt
+          gh release view "$V" >/dev/null 2>&1 || gh release create "$V" --title "${V#v}" --notes "Tagwerk ${V#v}" --verify-tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Installer bauen und veröffentlichen
         shell: bash
         run: |
