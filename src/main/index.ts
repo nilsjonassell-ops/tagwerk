@@ -152,7 +152,7 @@ function createMainWindow(startHidden: boolean) {
     saveBounds()
     if (!quitting && store.getSettings().closeToTray && tray) {
       e.preventDefault()
-      mainWindow?.hide()
+      hideToTray()
       if (!hintedTray && Notification.isSupported()) {
         hintedTray = true
         new Notification({
@@ -189,12 +189,17 @@ function showMain(view?: string) {
   const win = mainWindow
   // War das Fenster im Infobereich versteckt, spielt die Startanimation erneut –
   // kurz vorher anstoßen, damit kein alter Zustand aufblitzt.
-  if (!win.isVisible() && !win.webContents.isLoading()) {
-    win.webContents.send('app:command', 'replay-intro')
-    setTimeout(() => reveal(win, view), 90)
-    return
-  }
+  if (!win.isVisible() && !win.webContents.isLoading()) win.webContents.send('app:command', 'replay-intro')
   reveal(win, view)
+}
+
+/** In den Infobereich: erst das Anfangsbild der Startanimation zeichnen, dann verstecken.
+ *  So zeigt Windows beim nächsten Öffnen sofort die Animation statt des alten Dashboards. */
+function hideToTray() {
+  const win = mainWindow
+  if (!win || win.isDestroyed()) return
+  win.webContents.send('app:command', 'arm-intro')
+  setTimeout(() => !win.isDestroyed() && win.hide(), 140)
 }
 
 function reveal(win: BrowserWindow, view?: string) {
@@ -308,7 +313,7 @@ const truncate = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '
 function createTray() {
   try {
     tray = new Tray(trayIcon())
-    tray.on('click', () => (isMac ? tray?.popUpContextMenu() : mainWindow?.isVisible() && mainWindow.isFocused() ? mainWindow.hide() : showMain()))
+    tray.on('click', () => (isMac ? tray?.popUpContextMenu() : mainWindow?.isVisible() && mainWindow.isFocused() ? hideToTray() : showMain()))
     buildTrayMenu()
     setInterval(buildTrayMenu, 60_000)
   } catch (err) {

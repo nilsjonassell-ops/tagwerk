@@ -323,3 +323,10 @@
     display: none;
   }
 }
+
+/* Vorbereitet, aber angehalten: alles steht auf dem ersten Bild */
+.intro.armed,
+.intro.armed *,
+.intro.armed::before {
+  animation-play-state: paused !important;
+}

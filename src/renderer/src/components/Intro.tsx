@@ -2,7 +2,7 @@
 // Umlaufring zeichnet sich, der Horizont zieht sich auf, die Sonne geht auf,
 // Strahlen drehen sich ein – danach öffnet sich die App darunter.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore } from '@/lib/store'
 
 const MIN_MS = 2300
@@ -10,18 +10,29 @@ const RAYS = 12
 
 export function Intro() {
   const ready = useStore((s) => s.ready)
-  const [phase, setPhase] = useState<'play' | 'leave' | 'gone'>(() => (reduced() ? 'gone' : 'play'))
+  // armed = erstes Bild der Animation steht schon da, läuft aber noch nicht
+  const [phase, setPhase] = useState<'armed' | 'play' | 'leave' | 'gone'>(() => (reduced() ? 'gone' : 'play'))
   const [minDone, setMinDone] = useState(false)
   const [run, setRun] = useState(0)
+  const phaseRef = useRef(phase)
+  phaseRef.current = phase
 
   // Beim erneuten Öffnen aus dem Infobereich noch einmal abspielen
   useEffect(
     () =>
       window.tagwerk.app.onCommand((cmd) => {
-        if (cmd !== 'replay-intro' || reduced()) return
-        setMinDone(false)
-        setPhase('play')
-        setRun((n) => n + 1)
+        if (reduced()) return
+        if (cmd === 'arm-intro') {
+          // Vor dem Verstecken: Anfangsbild zeigen, damit beim nächsten Öffnen
+          // nicht kurz das alte Dashboard aufblitzt.
+          setMinDone(false)
+          setPhase('armed')
+          setRun((n) => n + 1)
+        } else if (cmd === 'replay-intro') {
+          setMinDone(false)
+          if (phaseRef.current !== 'armed') setRun((n) => n + 1)
+          setPhase('play')
+        }
       }),
     []
   )
@@ -43,10 +54,10 @@ export function Intro() {
   }, [phase])
 
   if (phase === 'gone') return null
-  const skip = () => ready && setPhase('leave')
+  const skip = () => ready && phase === 'play' && setPhase('leave')
 
   return (
-    <div key={run} className={`intro ${phase === 'leave' ? 'leaving' : ''} ${minDone && !ready ? 'waiting' : ''}`} onClick={skip} aria-hidden="true">
+    <div key={run} className={`intro ${phase === 'armed' ? 'armed' : ''} ${phase === 'leave' ? 'leaving' : ''} ${minDone && !ready ? 'waiting' : ''}`} onClick={skip} aria-hidden="true">
       <div className="intro-glow" />
       <div className="intro-stage">
         <svg className="intro-logo" viewBox="0 0 200 200" width="200" height="200">
