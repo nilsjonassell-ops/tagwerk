@@ -1,0 +1,325 @@
+/* ==========================================================================
+   Tagwerk – Startanimation
+   Nur Transform, Opacity und Stroke-Offset: läuft flüssig auf der GPU.
+   ========================================================================== */
+
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: var(--base);
+  overflow: hidden;
+  cursor: default;
+}
+.intro::before {
+  /* derselbe Farbverlauf wie in der App, etwas kräftiger */
+  content: '';
+  position: absolute;
+  inset: -15%;
+  background:
+    radial-gradient(55% 60% at 6% 10%, var(--mesh-1), transparent 72%),
+    radial-gradient(50% 58% at 96% 4%, var(--mesh-2), transparent 72%),
+    radial-gradient(58% 60% at 82% 100%, var(--mesh-3), transparent 74%),
+    radial-gradient(50% 56% at 14% 96%, var(--mesh-4), transparent 72%),
+    var(--base);
+  animation: intro-bg 2.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes intro-bg {
+  from {
+    transform: scale(1.18) rotate(-4deg);
+    opacity: 0.4;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.intro-glow {
+  position: absolute;
+  width: 560px;
+  height: 560px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.75), rgba(185, 166, 255, 0.25) 45%, transparent 70%);
+  animation: intro-glow 2.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+:root[data-theme='dark'] .intro-glow {
+  background: radial-gradient(circle, rgba(139, 109, 255, 0.35), rgba(255, 111, 174, 0.12) 45%, transparent 70%);
+}
+@keyframes intro-glow {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.intro-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  transition:
+    transform 0.75s cubic-bezier(0.65, 0, 0.35, 1),
+    opacity 0.6s ease,
+    filter 0.6s ease;
+}
+
+/* Logo */
+.intro-logo {
+  overflow: visible;
+  width: 196px;
+  height: 196px;
+  filter: drop-shadow(0 18px 40px rgba(120, 90, 255, 0.35));
+  animation: intro-float 3.2s ease-in-out 1.6s infinite alternate;
+}
+@keyframes intro-float {
+  to {
+    transform: translateY(-4px);
+  }
+}
+
+/* Umlaufring: zeichnet sich und dreht sich dabei */
+.i-orbit {
+  transform-origin: 100px 100px;
+  animation: i-orbit-spin 2.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes i-orbit-spin {
+  from {
+    transform: rotate(-200deg) scale(0.86);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  to {
+    transform: rotate(0deg) scale(1);
+    opacity: 1;
+  }
+}
+.i-orbit-line {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: i-draw 1.5s cubic-bezier(0.65, 0, 0.35, 1) 0.1s forwards;
+}
+@keyframes i-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.i-orbit-dot {
+  transform-origin: 100px 100px;
+  opacity: 0;
+  animation:
+    i-dot-in 0.3s ease 1.4s forwards,
+    i-dot-spin 7s linear 1.4s infinite;
+}
+@keyframes i-dot-in {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes i-dot-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Horizont zieht sich von der Mitte auf, kurzer Lichtblitz */
+.i-horizon {
+  transform-origin: 100px 134px;
+  transform: scaleX(0);
+  animation: i-horizon 0.8s cubic-bezier(0.34, 1.36, 0.64, 1) 0.25s forwards;
+}
+@keyframes i-horizon {
+  to {
+    transform: scaleX(1);
+  }
+}
+.i-horizon-flash {
+  transform-origin: 100px 134px;
+  opacity: 0;
+  animation: i-flash 0.9s ease 0.85s;
+}
+@keyframes i-flash {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.2);
+  }
+  30% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1);
+  }
+}
+
+/* Sonne geht auf */
+.i-sun {
+  transform: translateY(64px);
+  animation: i-sun 1.15s cubic-bezier(0.22, 1, 0.36, 1) 0.45s forwards;
+}
+@keyframes i-sun {
+  to {
+    transform: translateY(0);
+  }
+}
+.i-shine {
+  stroke-dasharray: 60;
+  stroke-dashoffset: 60;
+  animation: i-shine 0.9s ease 1.2s forwards;
+}
+@keyframes i-shine {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.i-halo {
+  transform-origin: 100px 118px;
+  opacity: 0;
+  animation: i-halo 1.4s ease 0.7s forwards;
+}
+@keyframes i-halo {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Strahlen: drehen sich ein und laufen dann ganz langsam weiter */
+.i-rays {
+  transform-origin: 100px 118px;
+  animation:
+    i-rays-in 1.5s cubic-bezier(0.22, 1, 0.36, 1) 0.7s both,
+    i-rays-turn 24s linear 2.2s infinite;
+}
+@keyframes i-rays-in {
+  from {
+    transform: rotate(-90deg) scale(0.7);
+  }
+  to {
+    transform: rotate(0deg) scale(1);
+  }
+}
+@keyframes i-rays-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.i-ray {
+  opacity: 0;
+  animation: i-ray 0.5s ease forwards;
+}
+@keyframes i-ray {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Schriftzug */
+.intro-word {
+  display: flex;
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: 740;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+.intro-word span {
+  display: inline-block;
+  background: linear-gradient(120deg, var(--ink) 10%, #6b6dff 55%, #ff5fa6 100%);
+  background-size: 700% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  opacity: 0;
+  transform: translateY(18px) rotate(6deg);
+  filter: blur(6px);
+  animation: i-letter 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.intro-word span:nth-child(1) { background-position: 0% 50%; }
+.intro-word span:nth-child(2) { background-position: 16% 50%; }
+.intro-word span:nth-child(3) { background-position: 33% 50%; }
+.intro-word span:nth-child(4) { background-position: 50% 50%; }
+.intro-word span:nth-child(5) { background-position: 66% 50%; }
+.intro-word span:nth-child(6) { background-position: 83% 50%; }
+.intro-word span:nth-child(7) { background-position: 100% 50%; }
+@keyframes i-letter {
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+.intro-tag {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
+  opacity: 0;
+  animation: i-tag 0.8s ease 1.55s forwards;
+}
+@keyframes i-tag {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Falls die Daten noch laden: sanftes Atmen statt Stillstand */
+.intro.waiting .intro-glow {
+  animation: intro-breathe 1.8s ease-in-out infinite alternate;
+}
+@keyframes intro-breathe {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.08);
+  }
+}
+
+/* Übergang in die App: Logo zoomt weich nach vorn, Fläche wird durchsichtig */
+.intro.leaving {
+  animation: intro-out 0.75s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+  pointer-events: none;
+}
+.intro.leaving .intro-stage {
+  transform: scale(1.35);
+  opacity: 0;
+  filter: blur(10px);
+}
+@keyframes intro-out {
+  0% {
+    opacity: 1;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro {
+    display: none;
+  }
+}
