@@ -20,7 +20,8 @@ jobs:
         run: |
           set -o pipefail
           npx electron-builder --win appx --x64 --publish never 2>&1 | tee store.log || {
-            tail -n 40 store.log | sed 's/^/::error::/'
+            # GitHub zeigt nur 10 Annotationen pro Schritt – daher alles in eine
+            echo "::error::$(tail -n 30 store.log | sed ':a;N;$!ba;s/\n/%0A/g')"
             exit 1
           }
           F=$(ls release/*.appx | head -1)
