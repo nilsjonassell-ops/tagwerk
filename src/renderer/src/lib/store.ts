@@ -1,7 +1,7 @@
 import { create } from 'zustand'
-import { applyRetention } from '@shared/analysis'
+import { applyRetention, mailsToNotify } from '@shared/analysis'
 import { createDemoData, emptyData } from '@shared/demo'
-import { DEFAULT_SETTINGS, type AppData, type GoogleStatus, type Settings, type ViewId } from '@shared/types'
+import { DEFAULT_SETTINGS, type AppData, type Email, type GoogleStatus, type Settings, type ViewId } from '@shared/types'
 
 export const EMPTY_GOOGLE: GoogleStatus = {
   clientConfigured: false,
@@ -94,6 +94,34 @@ function scheduleSave(data: AppData) {
 
 export const uid = (p: string) => `${p}-${crypto.randomUUID()}`
 
+/** Neue E-Mails seit dem letzten Abgleich melden – gebündelt, je nach Einstellung nur wichtige. */
+function notifyNewMail(before: Email[], after: Email[], me: string | undefined, settings: Settings) {
+  const mode = settings.notifications.mail
+  const list = mailsToNotify(before, after, me, mode, settings.notifications.vipSenders)
+  if (!list.length) return
+  const label = mode === 'all' ? 'neue' : 'neue wichtige'
+  if (list.length === 1) {
+    const m = list[0]
+    const preview = m.body.replace(/\s+/g, ' ').trim().slice(0, 110)
+    void window.tagwerk.app.notify({
+      kind: 'mail',
+      title: `${m.from.name || m.from.email}${m.needsReply ? ' · wartet auf Antwort' : ''}`,
+      body: `${m.subject || '(ohne Betreff)'}${preview ? `\n${preview}` : ''}`,
+      target: { view: 'inbox', id: m.threadId }
+    })
+  } else {
+    void window.tagwerk.app.notify({
+      kind: 'mail',
+      title: `${list.length} ${label} E-Mails`,
+      body: list
+        .slice(0, 3)
+        .map((m) => `${m.from.name || m.from.email}: ${m.subject || '(ohne Betreff)'}`)
+        .join('\n') + (list.length > 3 ? `\n+ ${list.length - 3} weitere` : ''),
+      target: { view: 'inbox' }
+    })
+  }
+}
+
 export const useStore = create<State>((set, get) => ({
   ready: false,
   data: emptyData(),
@@ -167,8 +195,10 @@ export const useStore = create<State>((set, get) => ({
     if (get().googleSync.syncing) return
     set({ googleSync: { ...get().googleSync, syncing: true } })
     try {
+      const before = get().data.emails.filter((e) => e.source === 'google')
       const r = await window.tagwerk.google.sync()
       set({ google: r.status })
+      if (r.emails) notifyNewMail(before, r.emails, r.status.email, get().settings)
       // Google ist die Quelle der Wahrheit: Google-Datensätze werden je Dienst vollständig ersetzt.
       get().mutate((d) => {
         let next = d

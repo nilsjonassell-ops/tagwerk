@@ -407,3 +407,16 @@ body::after {
 :root[data-theme='dark'] .settings-nav .nav-item[aria-current='page'] {
   color: #fff;
 }
+
+/* Zwischenüberschriften in den Einstellungen */
+.settings-group {
+  margin: 22px 0 4px;
+  font-size: var(--fs-xs);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.switch:disabled {
+  opacity: 0.45;
+}

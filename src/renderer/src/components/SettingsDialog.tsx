@@ -8,7 +8,7 @@ import { CLAUDE_MODELS, type DashboardCardId, type Settings } from '@shared/type
 import { confirm, useStore } from '@/lib/store'
 import { VIEW_META } from './Sidebar'
 import { GoogleSettings } from './GoogleSettings'
-import { Dialog, Switch } from './ui'
+import { Dialog, Segmented, Switch } from './ui'
 import { isMac, modKey } from '@/lib/format'
 
 type Section = 'general' | 'dashboard' | 'calendar' | 'notifications' | 'sources' | 'claude' | 'privacy'
@@ -219,30 +219,86 @@ function CalendarSettings() {
 function Notifications() {
   const [s, set] = useSettings()
   const n = s.notifications
+  const setN = (patch: Partial<typeof n>) => set({ notifications: { ...n, ...patch } })
+  const [vip, setVip] = useState(n.vipSenders.join(', '))
+  const [test, setTest] = useState<string>('')
+  const sendTest = async () => {
+    const r = await window.tagwerk.app.notify({ kind: 'test', title: 'Tagwerk', body: 'So sehen Benachrichtigungen aus. Ein Klick öffnet die Übersicht.', target: { view: 'today' } })
+    setTest(r.shown ? 'Gesendet – schau unten rechts.' : 'Windows hat die Benachrichtigung nicht angezeigt. Prüfe unter Windows-Einstellungen → System → Benachrichtigungen, ob Tagwerk erlaubt ist.')
+  }
   return (
     <>
       <h3>Benachrichtigungen</h3>
-      <p>Systembenachrichtigungen erscheinen auch, wenn das Fenster geschlossen ist und Tagwerk im Hintergrund läuft.</p>
-      <Row label="Vor Terminen erinnern">
-        <Switch label="Vor Terminen erinnern" checked={n.events} onChange={(v) => set({ notifications: { ...n, events: v } })} />
+      <p>Erscheinen auch, wenn das Fenster geschlossen ist und Tagwerk im Infobereich läuft. Ein Klick öffnet direkt den passenden Termin, die Mail oder die Übersicht.</p>
+
+      <div className="settings-group">Termine</div>
+      <Row label="Vor Terminen erinnern" hint="Mit Uhrzeit, Ort und Warnung bei Überschneidungen.">
+        <Switch label="Vor Terminen erinnern" checked={n.events} onChange={(v) => setN({ events: v })} />
       </Row>
       <Row label="Vorlaufzeit">
-        <select className="select" value={n.leadMinutes} disabled={!n.events} onChange={(e) => set({ notifications: { ...n, leadMinutes: Number(e.target.value) } })}>
-          {[5, 10, 15, 30].map((m) => (
+        <select className="select" value={n.leadMinutes} disabled={!n.events} onChange={(e) => setN({ leadMinutes: Number(e.target.value) })}>
+          {[5, 10, 15, 30, 60].map((m) => (
             <option key={m} value={m}>
-              {m} Minuten vorher
+              {m === 60 ? '1 Stunde' : `${m} Minuten`} vorher
             </option>
           ))}
         </select>
       </Row>
-      <Row label="Morgendlicher Überblick" hint="Kurzer Hinweis auf Konflikte, Überfälliges und wartende E-Mails.">
-        <Switch label="Morgendlicher Überblick" checked={n.dailyBrief} onChange={(v) => set({ notifications: { ...n, dailyBrief: v } })} />
+      <Row label="Auch zum Beginn erinnern" hint="Zweiter Hinweis, wenn der Termin anfängt.">
+        <Switch label="Auch zum Beginn erinnern" checked={n.eventsAtStart} disabled={!n.events} onChange={(v) => setN({ eventsAtStart: v })} />
+      </Row>
+
+      <div className="settings-group">E-Mails</div>
+      <Row label="Neue E-Mails melden" hint="„Wichtige“: von Gmail als wichtig markiert, wartet auf deine Antwort oder kommt von einem deiner wichtigen Absender. Mehrere neue Mails kommen gebündelt in einer Meldung.">
+        <Segmented
+          label="Neue E-Mails melden"
+          value={n.mail}
+          onChange={(v) => setN({ mail: v })}
+          options={[
+            { id: 'off', label: 'Aus' },
+            { id: 'important', label: 'Wichtige' },
+            { id: 'all', label: 'Alle' }
+          ]}
+        />
+      </Row>
+      <Row label="Wichtige Absender" hint="Werden immer gemeldet. Komma-getrennt, z. B. „chef@firma.de, @uni.de“ (ganze Domain).">
+        <input
+          className="input"
+          value={vip}
+          disabled={n.mail === 'off'}
+          placeholder="name@beispiel.de, @firma.de"
+          spellCheck={false}
+          onChange={(e) => setVip(e.target.value)}
+          onBlur={() => setN({ vipSenders: vip.split(/[,;\s]+/).map((x) => x.trim()).filter((x) => /@/.test(x)) })}
+          aria-label="Wichtige Absender"
+        />
+      </Row>
+
+      <div className="settings-group">Tagesüberblick</div>
+      <Row label="Morgendlicher Überblick" hint="Konflikte, Überfälliges und wartende E-Mails auf einen Blick.">
+        <Switch label="Morgendlicher Überblick" checked={n.dailyBrief} onChange={(v) => setN({ dailyBrief: v })} />
       </Row>
       <Row label="Uhrzeit">
-        <input type="time" className="input" value={n.briefTime} disabled={!n.dailyBrief} onChange={(e) => set({ notifications: { ...n, briefTime: e.target.value } })} />
+        <input type="time" className="input" value={n.briefTime} disabled={!n.dailyBrief} onChange={(e) => setN({ briefTime: e.target.value })} />
       </Row>
-      <Row label="Test">
-        <button className="btn small" onClick={() => window.tagwerk.app.notify('Tagwerk', 'So sehen Benachrichtigungen aus.')}>
+
+      <div className="settings-group">Ruhe</div>
+      <Row label="Ruhezeiten" hint="In dieser Zeit meldet Tagwerk nichts. Der Fokus-Modus schaltet Meldungen zusätzlich stumm (Termine optional).">
+        <Switch label="Ruhezeiten" checked={n.quiet.enabled} onChange={(v) => setN({ quiet: { ...n.quiet, enabled: v } })} />
+      </Row>
+      <Row label="Von – bis">
+        <div className="row" style={{ gap: 8 }}>
+          <input type="time" className="input" style={{ width: 110 }} value={n.quiet.from} disabled={!n.quiet.enabled} onChange={(e) => setN({ quiet: { ...n.quiet, from: e.target.value } })} aria-label="Ruhezeit von" />
+          <span className="hint">bis</span>
+          <input type="time" className="input" style={{ width: 110 }} value={n.quiet.to} disabled={!n.quiet.enabled} onChange={(e) => setN({ quiet: { ...n.quiet, to: e.target.value } })} aria-label="Ruhezeit bis" />
+        </div>
+      </Row>
+      <Row label="Ton" hint="Windows-Signalton bei Benachrichtigungen.">
+        <Switch label="Ton" checked={n.sound} onChange={(v) => setN({ sound: v })} />
+      </Row>
+
+      <Row label="Test" hint={test || undefined}>
+        <button className="btn small" onClick={sendTest}>
           Testbenachrichtigung senden
         </button>
       </Row>

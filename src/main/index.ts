@@ -17,13 +17,14 @@ import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { eventsOnDay, hm } from '@shared/analysis'
-import type { AppData, CalEvent, ClaudeRequest, GoogleConnectOptions, GoogleSendParams, Note, Settings, FocusSignal } from '@shared/types'
+import type { AppData, CalEvent, ClaudeRequest, GoogleConnectOptions, GoogleSendParams, Note, Settings, FocusSignal, NotifyRequest } from '@shared/types'
 import { store } from './store'
 import { secrets } from './secrets'
 import { sendToClaude, verifyKey } from './claude'
 import { parseIcs } from './ics'
 import { getWeather } from './weather'
 import { check as checkUpdate, initUpdater, installNow, updateStatus } from './updater'
+import { initNotify, notify } from './notify'
 import { focusState, focusSummary, initFocus, setFocus } from './focus'
 import { startScheduler } from './scheduler'
 import * as google from './google'
@@ -215,6 +216,12 @@ function reveal(win: BrowserWindow, view?: string) {
   }
   mainWindow.focus()
   if (view) mainWindow.webContents.send('app:navigate', view)
+}
+
+/** Klick auf eine Benachrichtigung: Fenster zeigen und das Ziel öffnen */
+function openTarget(t: { view: string; id?: string }) {
+  showMain()
+  setTimeout(() => mainWindow?.webContents.send('app:open', t), 150)
 }
 
 function sendCommand(cmd: string) {
@@ -549,8 +556,11 @@ function registerIpc() {
 
   ipcMain.handle('weather:get', (_e, city: string) => getWeather(String(city ?? '')))
 
-  ipcMain.handle('app:notify', (_e, title: string, body: string) => {
-    if (Notification.isSupported()) new Notification({ title: String(title), body: String(body) }).show()
+  ipcMain.handle('app:notify', (_e, req: NotifyRequest) => {
+    if (!req || typeof req !== 'object') return { shown: false }
+    const kinds = ['event', 'mail', 'brief', 'focus', 'system', 'test'] as const
+    const kind = kinds.includes(req.kind as (typeof kinds)[number]) ? req.kind : 'system'
+    return notify({ title: String(req.title ?? ''), body: String(req.body ?? ''), kind, target: req.target })
   })
 
   ipcMain.handle('quicknote:save', (_e, text: string) => {
@@ -601,10 +611,8 @@ function init() {
     log.warn('global shortcut unavailable')
   }
   applyLoginItem(settings)
-  startScheduler(
-    (view) => showMain(view),
-    () => sendCommand('open-google-settings')
-  )
+  initNotify({ open: openTarget, icon: resource('icon.png') })
+  startScheduler()
 
   nativeTheme.on('updated', () => {
     if (!isMac && mainWindow) mainWindow.setTitleBarOverlay(overlayColors())

@@ -51,8 +51,9 @@ const api: TagwerkApi = {
   },
   weather: { get: (city) => ipcRenderer.invoke('weather:get', city) },
   app: {
-    notify: (title, body) => ipcRenderer.invoke('app:notify', title, body),
+    notify: (req) => ipcRenderer.invoke('app:notify', req),
     onNavigate: (cb) => on('app:navigate', cb),
+    onOpen: (cb) => on('app:open', cb),
     onCommand: (cb) => on('app:command', cb)
   },
   updates: {

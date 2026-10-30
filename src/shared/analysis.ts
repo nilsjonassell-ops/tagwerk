@@ -559,3 +559,36 @@ export function focusStats(log: FocusEntry[] | undefined, now: Date): FocusStats
     last7
   }
 }
+
+// ---------- Benachrichtigungen ----------
+
+const hhmmToMin = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number)
+  return (h || 0) * 60 + (m || 0)
+}
+
+/** Liegt die Uhrzeit in den Ruhezeiten (auch über Mitternacht, z. B. 22:00–07:00)? */
+export function inQuietHours(now: Date, quiet: { enabled: boolean; from: string; to: string }): boolean {
+  if (!quiet.enabled) return false
+  const t = now.getHours() * 60 + now.getMinutes()
+  const a = hhmmToMin(quiet.from)
+  const b = hhmmToMin(quiet.to)
+  if (a === b) return false
+  return a < b ? t >= a && t < b : t >= a || t < b
+}
+
+/** Welche neu eingetroffenen Mails gemeldet werden sollen – je Unterhaltung die neueste. */
+export function mailsToNotify(before: Email[], after: Email[], me: string | undefined, mode: 'off' | 'important' | 'all', vipSenders: string[]): Email[] {
+  if (mode === 'off' || before.length === 0) return []
+  const known = new Set(before.map((e) => e.remoteId ?? e.id))
+  const vip = vipSenders.map((v) => v.trim().toLowerCase()).filter(Boolean)
+  const isVip = (addr: string) => {
+    const a = addr.toLowerCase()
+    return vip.some((v) => (v.startsWith('@') ? a.endsWith(v) : a === v))
+  }
+  const fresh = after.filter((e) => !known.has(e.remoteId ?? e.id) && e.folder === 'inbox' && !e.read && e.from.email.toLowerCase() !== (me ?? '').toLowerCase())
+  const relevant = mode === 'all' ? fresh : fresh.filter((e) => e.important || e.needsReply || isVip(e.from.email))
+  const byThread = new Map<string, Email>()
+  for (const e of [...relevant].sort((a, b) => b.date.localeCompare(a.date))) if (!byThread.has(e.threadId)) byThread.set(e.threadId, e)
+  return [...byThread.values()]
+}

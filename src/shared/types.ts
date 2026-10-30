@@ -220,8 +220,16 @@ export interface Settings {
   notifications: {
     events: boolean
     leadMinutes: number
+    /** Zusätzlich zum Beginn eines Termins erinnern */
+    eventsAtStart: boolean
     dailyBrief: boolean
     briefTime: string
+    /** Neue E-Mails melden: aus, nur wichtige oder alle */
+    mail: 'off' | 'important' | 'all'
+    /** Absender (E-Mail oder @domain), die immer gemeldet werden */
+    vipSenders: string[]
+    quiet: { enabled: boolean; from: string; to: string }
+    sound: boolean
   }
   sidebar: { id: ViewId; visible: boolean }[]
   dashboardCards: { id: DashboardCardId; visible: boolean }[]
@@ -278,7 +286,17 @@ export const DEFAULT_SETTINGS: Settings = {
   launchAtLogin: false,
   closeToTray: true,
   quickNoteShortcut: 'CommandOrControl+Shift+Space',
-  notifications: { events: true, leadMinutes: 10, dailyBrief: true, briefTime: '08:00' },
+  notifications: {
+    events: true,
+    leadMinutes: 10,
+    eventsAtStart: false,
+    dailyBrief: true,
+    briefTime: '08:00',
+    mail: 'important',
+    vipSenders: [],
+    quiet: { enabled: true, from: '22:00', to: '07:00' },
+    sound: true
+  },
   sidebar: [
     { id: 'today', visible: true },
     { id: 'calendar', visible: true },
@@ -426,6 +444,16 @@ export interface GoogleApi {
   send(p: GoogleSendParams): Promise<GResult<Email>>
 }
 
+export type NotifyKind = 'event' | 'mail' | 'brief' | 'focus' | 'system' | 'test'
+
+export interface NotifyRequest {
+  title: string
+  body: string
+  kind: NotifyKind
+  /** Was ein Klick öffnet */
+  target?: { view: string; id?: string }
+}
+
 export interface PlatformInfo {
   platform: 'win32' | 'darwin' | 'linux'
   version: string
@@ -454,8 +482,9 @@ export interface TagwerkApi {
   google: GoogleApi
   weather: { get(city: string): Promise<WeatherResult> }
   app: {
-    notify(title: string, body: string): Promise<void>
+    notify(req: NotifyRequest): Promise<{ shown: boolean; reason?: string }>
     onNavigate(cb: (view: string) => void): () => void
+    onOpen(cb: (target: { view: string; id?: string }) => void): () => void
     onCommand(cb: (cmd: string) => void): () => void
   }
   updates: {

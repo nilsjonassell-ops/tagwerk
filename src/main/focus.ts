@@ -2,7 +2,8 @@
 // zum Ende der Phase (auch wenn das Fenster versteckt ist) und Stummschalten
 // der übrigen Erinnerungen.
 
-import { BrowserWindow, Notification } from 'electron'
+import { BrowserWindow } from 'electron'
+import { notify } from './notify'
 import type { FocusSignal } from '@shared/types'
 
 let current: FocusSignal | null = null
@@ -10,12 +11,11 @@ let endTimer: NodeJS.Timeout | null = null
 let ticker: NodeJS.Timeout | null = null
 let getWindow: () => BrowserWindow | null = () => null
 let onChange: () => void = () => {}
-let onOpen: () => void = () => {}
 
 export function initFocus(opts: { window: () => BrowserWindow | null; changed: () => void; open: () => void }) {
   getWindow = opts.window
   onChange = opts.changed
-  onOpen = opts.open
+  void opts.open
 }
 
 export function focusState(): FocusSignal | null {
@@ -43,13 +43,11 @@ export function setFocus(s: FocusSignal) {
 }
 
 function notifyEnd(s: FocusSignal) {
-  if (!Notification.isSupported()) return
-  const n =
+  notify(
     s.phase === 'focus'
-      ? new Notification({ title: 'Fokuszeit geschafft', body: s.label ? `„${s.label}“ – Zeit für eine kurze Pause.` : 'Zeit für eine kurze Pause.', silent: false })
-      : new Notification({ title: 'Pause vorbei', body: 'Bereit für die nächste Fokusrunde?', silent: false })
-  n.on('click', onOpen)
-  n.show()
+      ? { kind: 'focus', title: 'Fokuszeit geschafft', body: s.label ? `„${s.label}“ – Zeit für eine kurze Pause.` : 'Zeit für eine kurze Pause.', target: { view: 'command', id: 'focus-open' } }
+      : { kind: 'focus', title: 'Pause vorbei', body: 'Bereit für die nächste Fokusrunde?', target: { view: 'command', id: 'focus-open' } }
+  )
 }
 
 function updateProgress() {

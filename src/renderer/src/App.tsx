@@ -84,6 +84,11 @@ export function App() {
   useEffect(() => {
     const st = useStore.getState
     const offNav = window.tagwerk.app.onNavigate((v) => VIEWS.includes(v as ViewId) && st().go(v as ViewId))
+    // Klick auf eine Benachrichtigung: passende Ansicht und Eintrag öffnen
+    const offOpen = window.tagwerk.app.onOpen((t) => {
+      if (t.view === 'command' && t.id) return runCommand(t.id)
+      if (VIEWS.includes(t.view as ViewId)) st().go(t.view as ViewId, t.id)
+    })
     const offCmd = window.tagwerk.app.onCommand(runCommand)
     const offNote = window.tagwerk.data.onExternalNote((note) => {
       st().set({ data: { ...st().data, notes: [note, ...st().data.notes.filter((n) => n.id !== note.id)] } })
@@ -91,6 +96,7 @@ export function App() {
     })
     return () => {
       offNav()
+      offOpen()
       offCmd()
       offNote()
     }
@@ -218,6 +224,7 @@ function runCommand(cmd: string) {
       return st.setAssistant(!st.assistantOpen)
     case 'toggle-sidebar':
       return st.set({ sidebarHidden: !st.sidebarHidden })
+    case 'focus-open':
     case 'focus-start':
       return useFocus.getState().show(true)
     case 'show-shortcuts':
