@@ -1,4 +1,4 @@
-import { VersionRow } from '@/components/Updates'
+import { useUpdateStatus, VersionRow } from '@/components/Updates'
 import { useState, type ReactNode } from 'react'
 import {
   ArrowDown, ArrowUp, Bell, CalendarDays, CalendarPlus, CloudSun, Database, Eye, EyeOff, FlaskConical, KeyRound, LayoutDashboard, Mail, Monitor, Shield, Sparkles, Trash2, Loader2, Check, Download
@@ -78,6 +78,7 @@ function useSettings(): [Settings, (p: Partial<Settings>) => void] {
 
 function General() {
   const [s, set] = useSettings()
+  const updates = useUpdateStatus()
   const [shortcut, setShortcut] = useState(s.quickNoteShortcut)
   const [scError, setScError] = useState('')
   const saveShortcut = async () => {
@@ -101,9 +102,15 @@ function General() {
           <option value="dark">Dunkel</option>
         </select>
       </Row>
-      <Row label="Beim Anmelden starten" hint="Tagwerk startet unauffällig im Hintergrund. Gilt für die installierte App.">
-        <Switch label="Beim Anmelden starten" checked={s.launchAtLogin} onChange={(v) => set({ launchAtLogin: v })} />
-      </Row>
+      {updates?.state === 'store' ? (
+        <Row label="Beim Anmelden starten" hint="Bei der Store-Version schaltest du das in Windows ein: Einstellungen → Apps → Autostart → Tagwerk. Tagwerk startet dann unauffällig im Hintergrund.">
+          <span className="hint">in Windows</span>
+        </Row>
+      ) : (
+        <Row label="Beim Anmelden starten" hint="Tagwerk startet unauffällig im Hintergrund. Gilt für die installierte App.">
+          <Switch label="Beim Anmelden starten" checked={s.launchAtLogin} onChange={(v) => set({ launchAtLogin: v })} />
+        </Row>
+      )}
       <Row label={isMac() ? 'In der Menüleiste weiterlaufen' : 'Im Infobereich weiterlaufen'} hint="Beim Schließen des Fensters bleibt Tagwerk für Erinnerungen und Schnellnotizen aktiv.">
         <Switch label="Im Hintergrund weiterlaufen" checked={s.closeToTray} onChange={(v) => set({ closeToTray: v })} />
       </Row>

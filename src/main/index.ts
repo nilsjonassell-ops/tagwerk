@@ -15,6 +15,7 @@ import {
 } from 'electron'
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { uptime } from 'node:os'
 import { randomUUID } from 'node:crypto'
 import { eventsOnDay, hm } from '@shared/analysis'
 import type { AppData, CalEvent, ClaudeRequest, GoogleConnectOptions, GoogleSendParams, Note, Settings, FocusSignal, NotifyRequest } from '@shared/types'
@@ -42,7 +43,9 @@ let quitting = false
 let hintedTray = false
 
 app.setName('Tagwerk')
-if (isWin) app.setAppUserModelId('de.nilssell.tagwerk')
+// Aus dem Microsoft Store: Windows vergibt die App-Kennung selbst (Taskleiste, Mitteilungen)
+const isStore = !!process.windowsStore
+if (isWin && !isStore) app.setAppUserModelId('de.nilssell.tagwerk')
 
 // Startprotokoll (nur Ereignisse, keine Inhalte) – hilft bei Startproblemen.
 function trace(msg: string) {
@@ -438,6 +441,8 @@ function registerQuickNoteShortcut(accel: string): boolean {
 
 function applyLoginItem(s: Settings) {
   if (!app.isPackaged) return // im Entwicklungsmodus nicht den Autostart verändern
+  // Store-Apps: Autostart schaltet man in Windows unter Einstellungen → Apps → Autostart
+  if (isStore) return
   app.setLoginItemSettings({ openAtLogin: s.launchAtLogin, args: ['--hidden'] })
 }
 
@@ -615,7 +620,8 @@ function init() {
   })
   initFocus({ window: () => mainWindow, changed: () => buildTrayMenu(), open: () => (showMain(), mainWindow?.webContents.send('focus:action', 'open')) })
 
-  const startHidden = process.argv.includes('--hidden')
+  // Store-Autostart kann keine Parameter übergeben – kurz nach dem Hochfahren still starten
+  const startHidden = process.argv.includes('--hidden') || (isStore && uptime() < 240)
   createMainWindow(startHidden && !!tray)
 
   if (!registerQuickNoteShortcut(settings.quickNoteShortcut)) {

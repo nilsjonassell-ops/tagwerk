@@ -54,6 +54,8 @@ export function VersionRow() {
   const text =
     s.state === 'dev'
       ? 'Entwicklungsversion – Updates gibt es in der installierten App.'
+      : s.state === 'store'
+        ? 'Aus dem Microsoft Store – Updates kommen automatisch über den Store.'
       : s.state === 'checking'
         ? 'Suche nach Updates …'
         : s.state === 'downloading'
@@ -71,7 +73,7 @@ export function VersionRow() {
         <b>Version {s.current}</b>
         <span>{text}</span>
       </div>
-      {s.state === 'ready' ? (
+      {s.state === 'store' ? null : s.state === 'ready' ? (
         <button className="btn small primary" onClick={() => window.tagwerk.updates.install()}>
           <RefreshCw /> Neu starten
         </button>

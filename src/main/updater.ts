@@ -29,6 +29,11 @@ export function initUpdater(window: () => BrowserWindow | null, ready?: (version
     status = { state: 'dev', current: app.getVersion() }
     return
   }
+  // Store-Version: Updates liefert der Microsoft Store
+  if (process.windowsStore) {
+    status = { state: 'store', current: app.getVersion() }
+    return
+  }
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
   autoUpdater.logger = null
@@ -50,7 +55,7 @@ export function initUpdater(window: () => BrowserWindow | null, ready?: (version
 }
 
 export async function check(): Promise<UpdateStatus> {
-  if (!app.isPackaged) return status
+  if (!app.isPackaged || process.windowsStore) return status
   if (status.state === 'downloading' || status.state === 'ready') return status
   try {
     await autoUpdater.checkForUpdates()

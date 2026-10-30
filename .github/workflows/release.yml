@@ -47,3 +47,21 @@ jobs:
           }
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Store-Paket (MSIX) bauen und anhängen
+        shell: bash
+        run: |
+          if [ "$(node -p "require('./package.json').build.appx.identityName")" = "STORE_IDENTITY_NAME" ]; then
+            echo "::notice::Store-Identität noch nicht eingetragen – Store-Paket übersprungen"
+            exit 0
+          fi
+          set -o pipefail
+          V="v$(node -p "require('./package.json').version")"
+          npx electron-builder --win appx --x64 --publish never 2>&1 | tee store.log || {
+            tail -n 40 store.log | sed 's/^/::error::/'
+            exit 1
+          }
+          F=$(ls release/*.appx | head -1)
+          gh release upload "$V" "$F" --clobber
+          echo "::notice::Store-Paket $(basename "$F") ($(du -h "$F" | cut -f1)) am Release $V angehängt"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,29 @@
+# Probelauf: baut das Store-Paket (MSIX) ohne es zu veröffentlichen.
+name: Store-Paket testen
+
+on:
+  workflow_dispatch:
+
+jobs:
+  appx:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx electron-vite build
+      - name: MSIX bauen
+        shell: bash
+        run: |
+          set -o pipefail
+          npx electron-builder --win appx --x64 --publish never 2>&1 | tee store.log || {
+            tail -n 40 store.log | sed 's/^/::error::/'
+            exit 1
+          }
+          F=$(ls release/*.appx | head -1)
+          echo "::notice::Gebaut: $(basename "$F") ($(du -h "$F" | cut -f1))"
+          # Manifest zur Kontrolle ausgeben
+          mkdir x && cd x && unzip -q -o "../$F" AppxManifest.xml && sed 's/^/::notice::/' AppxManifest.xml | head -60

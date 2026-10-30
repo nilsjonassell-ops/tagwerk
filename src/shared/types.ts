@@ -162,7 +162,7 @@ export interface IcsImport {
 }
 
 export interface UpdateStatus {
-  state: 'dev' | 'idle' | 'checking' | 'current' | 'downloading' | 'ready' | 'error'
+  state: 'dev' | 'store' | 'idle' | 'checking' | 'current' | 'downloading' | 'ready' | 'error'
   current: string
   version?: string
   percent?: number

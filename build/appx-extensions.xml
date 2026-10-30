@@ -1,0 +1,3 @@
+        <desktop:Extension Category="windows.startupTask" Executable="app\Tagwerk.exe" EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="TagwerkStartup" Enabled="false" DisplayName="Tagwerk" />
+        </desktop:Extension>
