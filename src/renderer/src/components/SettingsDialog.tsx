@@ -223,16 +223,39 @@ function Notifications() {
   const [vip, setVip] = useState(n.vipSenders.join(', '))
   const [test, setTest] = useState<string>('')
   const sendTest = async () => {
-    const r = await window.tagwerk.app.notify({ kind: 'test', title: 'Tagwerk', body: 'So sehen Benachrichtigungen aus. Ein Klick öffnet die Übersicht.', target: { view: 'today' } })
-    setTest(r.shown ? 'Gesendet – schau unten rechts.' : 'Windows hat die Benachrichtigung nicht angezeigt. Prüfe unter Windows-Einstellungen → System → Benachrichtigungen, ob Tagwerk erlaubt ist.')
+    const r = await window.tagwerk.app.notify({
+      kind: 'test',
+      title: 'So sehen Benachrichtigungen aus',
+      body: 'Neue E-Mails, Termine und Erinnerungen erscheinen hier unten rechts – auch wenn Tagwerk im Hintergrund läuft.',
+      target: { view: 'command', id: 'open-settings' }
+    })
+    setTest(
+      r.shown
+        ? 'Gesendet – schau unten rechts auf deinen Bildschirm.'
+        : r.reason === 'focus'
+          ? 'Der Fokus-Modus hält Benachrichtigungen gerade zurück.'
+          : 'Windows hat die Benachrichtigung nicht angezeigt. Prüfe unter Windows-Einstellungen → System → Benachrichtigungen, ob Tagwerk erlaubt ist.'
+    )
   }
   return (
     <>
       <h3>Benachrichtigungen</h3>
-      <p>Erscheinen auch, wenn das Fenster geschlossen ist und Tagwerk im Infobereich läuft. Ein Klick öffnet direkt den passenden Termin, die Mail oder die Übersicht.</p>
+      <p>Erscheinen unten rechts auf dem Bildschirm – auch wenn das Fenster geschlossen ist und Tagwerk im Infobereich läuft. Ein Klick öffnet direkt den passenden Termin, die Mail oder die Übersicht.</p>
+
+      <Row label="Darstellung" hint="Tagwerk-Pop-ups haben Schaltflächen zum Öffnen, Archivieren oder später Erinnern. Termine bleiben stehen, bis du sie wegklickst.">
+        <Segmented
+          label="Darstellung"
+          value={n.style}
+          onChange={(v) => setN({ style: v })}
+          options={[
+            { id: 'popup', label: 'Tagwerk-Pop-up' },
+            { id: 'windows', label: 'Windows' }
+          ]}
+        />
+      </Row>
 
       <div className="settings-group">Termine</div>
-      <Row label="Vor Terminen erinnern" hint="Mit Uhrzeit, Ort und Warnung bei Überschneidungen.">
+      <Row label="Vor Terminen erinnern" hint="Mit Uhrzeit, Ort und Warnung bei Überschneidungen. Für einzelne Termine stellst du die Erinnerung direkt im Termin ein.">
         <Switch label="Vor Terminen erinnern" checked={n.events} onChange={(v) => setN({ events: v })} />
       </Row>
       <Row label="Vorlaufzeit">
@@ -293,7 +316,7 @@ function Notifications() {
           <input type="time" className="input" style={{ width: 110 }} value={n.quiet.to} disabled={!n.quiet.enabled} onChange={(e) => setN({ quiet: { ...n.quiet, to: e.target.value } })} aria-label="Ruhezeit bis" />
         </div>
       </Row>
-      <Row label="Ton" hint="Windows-Signalton bei Benachrichtigungen.">
+      <Row label="Ton" hint="Leiser Hinweiston bei neuen Benachrichtigungen.">
         <Switch label="Ton" checked={n.sound} onChange={(v) => setN({ sound: v })} />
       </Row>
 

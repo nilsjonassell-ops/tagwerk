@@ -18,6 +18,7 @@ export interface GEvent {
   organizer?: { email?: string; displayName?: string; self?: boolean }
   guestsCanModify?: boolean
   extendedProperties?: { private?: Record<string, string> }
+  reminders?: { useDefault?: boolean; overrides?: { method?: string; minutes?: number }[] }
 }
 
 function localMidnight(date: string): string {
@@ -53,8 +54,16 @@ export function mapGoogleEvent(e: GEvent, canWrite: boolean): CalEvent | null {
     webLink: e.htmlLink,
     source: 'google',
     readOnly: !canWrite || (foreign && !e.guestsCanModify) || undefined,
-    taskId: e.extendedProperties?.private?.tagwerkTaskId || undefined
+    taskId: e.extendedProperties?.private?.tagwerkTaskId || undefined,
+    reminderMinutes: reminderFromGoogle(e.reminders)
   }
+}
+
+/** Google-Erinnerungen → Minuten. Standard bleibt „undefined“ (dann gilt die Tagwerk-Einstellung). */
+export function reminderFromGoogle(r: GEvent['reminders']): number | null | undefined {
+  if (!r || r.useDefault !== false) return undefined
+  const mins = (r.overrides ?? []).filter((o) => o.method !== 'email' && typeof o.minutes === 'number').map((o) => o.minutes!)
+  return mins.length ? Math.min(...mins) : null
 }
 
 /** Tagwerk-Termin → Google-Event-Body. Teilnehmende nur bei neuen Terminen. */
@@ -78,6 +87,9 @@ export function toGoogleEvent(ev: CalEvent, opts: { includeAttendees: boolean })
     body.start = { dateTime: ev.start }
     body.end = { dateTime: ev.end }
   }
+  // Erinnerung auch in Google setzen – dann meldet sich auch das Handy
+  body.reminders =
+    ev.reminderMinutes === undefined ? { useDefault: true } : { useDefault: false, overrides: ev.reminderMinutes === null ? [] : [{ method: 'popup', minutes: ev.reminderMinutes }] }
   if (ev.taskId) body.extendedProperties = { private: { tagwerkTaskId: ev.taskId } }
   if (opts.includeAttendees) body.attendees = ev.attendees.filter((a) => /@/.test(a.email)).map((a) => ({ email: a.email, displayName: a.name }))
   return body

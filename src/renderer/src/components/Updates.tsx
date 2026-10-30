@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Download, Loader2, RefreshCw, Sparkles, X } from 'lucide-react'
 import type { UpdateStatus } from '@shared/types'
+import { useStore } from '@/lib/store'
 
 export function useUpdateStatus() {
   const [s, setS] = useState<UpdateStatus | null>(null)
@@ -13,25 +14,35 @@ export function useUpdateStatus() {
   return s
 }
 
+/** Hinweis in der App – nur bei Windows-Mitteilungen; sonst übernimmt das Pop-up unten rechts. */
 export function UpdateBanner() {
   const s = useUpdateStatus()
+  const style = useStore((st) => st.settings.notifications.style)
   const [later, setLater] = useState<string | null>(null)
-  if (!s || s.state !== 'ready' || later === s.version) return null
+  if (!s || s.state !== 'ready' || later === s.version || style === 'popup') return null
   return (
     <div className="update-card" role="status">
-      <div className="update-icon">
-        <Sparkles />
-      </div>
-      <div className="update-text">
-        <b>Tagwerk {s.version} ist bereit</b>
-        <span>Ein Neustart dauert nur ein paar Sekunden. Deine Daten bleiben erhalten.</span>
-      </div>
-      <button className="btn small primary" onClick={() => window.tagwerk.updates.install()}>
-        <RefreshCw /> Jetzt neu starten
-      </button>
-      <button className="btn small ghost icon-btn" onClick={() => setLater(s.version ?? '')} aria-label="Später" title="Später – wird beim Beenden installiert">
+      <button className="update-close" onClick={() => setLater(s.version ?? '')} aria-label="Schließen" title="Später – wird beim Beenden installiert">
         <X />
       </button>
+      <div className="update-head">
+        <div className="update-icon">
+          <Sparkles />
+        </div>
+        <div className="update-text">
+          <span className="update-meta">Update</span>
+          <b>Tagwerk {s.version} ist bereit</b>
+          <span>Der Neustart dauert nur ein paar Sekunden. Deine Daten bleiben erhalten.</span>
+        </div>
+      </div>
+      <div className="update-actions">
+        <button className="btn small" onClick={() => setLater(s.version ?? '')}>
+          Später
+        </button>
+        <button className="btn small primary" onClick={() => window.tagwerk.updates.install()}>
+          <RefreshCw /> Jetzt neu starten
+        </button>
+      </div>
     </div>
   )
 }

@@ -61,6 +61,12 @@ const api: TagwerkApi = {
     onOpen: (cb) => on('app:open', cb),
     onCommand: (cb) => on('app:command', cb)
   },
+  popup: {
+    onItems: (cb) => on('popup:items', cb),
+    ready: () => ipcRenderer.send('popup:ready'),
+    size: (h) => ipcRenderer.send('popup:size', h),
+    action: (id, action) => ipcRenderer.send('popup:action', id, action)
+  },
   updates: {
     status: () => ipcRenderer.invoke('update:status'),
     check: () => ipcRenderer.invoke('update:check'),

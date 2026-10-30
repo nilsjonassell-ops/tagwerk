@@ -58,6 +58,8 @@ export interface CalEvent {
   organizer?: Person
   /** Zeitblock für diese Aufgabe (vom Planer angelegt) */
   taskId?: string
+  /** Erinnerung: Minuten vorher (0 = zum Beginn), null = keine, fehlt = Standard aus den Einstellungen */
+  reminderMinutes?: number | null
 }
 
 export type MailFolder = 'inbox' | 'sent' | 'archive'
@@ -241,6 +243,8 @@ export interface Settings {
     vipSenders: string[]
     quiet: { enabled: boolean; from: string; to: string }
     sound: boolean
+    /** Eigene Tagwerk-Pop-ups unten rechts oder Windows-Mitteilungen */
+    style: 'popup' | 'windows'
   }
   sidebar: { id: ViewId; visible: boolean }[]
   dashboardCards: { id: DashboardCardId; visible: boolean }[]
@@ -306,7 +310,8 @@ export const DEFAULT_SETTINGS: Settings = {
     mail: 'important',
     vipSenders: [],
     quiet: { enabled: true, from: '22:00', to: '07:00' },
-    sound: true
+    sound: true,
+    style: 'popup'
   },
   sidebar: [
     { id: 'today', visible: true },
@@ -457,7 +462,7 @@ export interface GoogleApi {
   send(p: GoogleSendParams): Promise<GResult<Email>>
 }
 
-export type NotifyKind = 'event' | 'mail' | 'brief' | 'focus' | 'system' | 'test'
+export type NotifyKind = 'event' | 'mail' | 'brief' | 'focus' | 'system' | 'test' | 'update'
 
 export interface NotifyRequest {
   title: string
@@ -465,6 +470,31 @@ export interface NotifyRequest {
   kind: NotifyKind
   /** Was ein Klick öffnet */
   target?: { view: string; id?: string }
+  /** Bei Terminen: für „Später erinnern“ */
+  event?: { title: string; start: string; end: string; location?: string }
+  /** Mehrere Mails in einer Meldung (eine Zeile je Mail) */
+  lines?: string[]
+}
+
+export interface PopupAction {
+  id: 'open' | 'archive' | 'snooze' | 'install' | 'later' | 'read'
+  label: string
+  primary?: boolean
+}
+
+export interface PopupItem {
+  id: string
+  kind: NotifyKind
+  title: string
+  body: string
+  lines?: string[]
+  /** Zusatzzeile oben, z. B. „Termin · 14:30–15:00“ */
+  meta?: string
+  actions: PopupAction[]
+  /** Bleibt stehen, bis man es wegklickt (Termine, Updates) */
+  sticky: boolean
+  sound: boolean
+  at: number
 }
 
 export interface PlatformInfo {
@@ -499,6 +529,12 @@ export interface TagwerkApi {
     onNavigate(cb: (view: string) => void): () => void
     onOpen(cb: (target: { view: string; id?: string }) => void): () => void
     onCommand(cb: (cmd: string) => void): () => void
+  }
+  popup: {
+    onItems(cb: (items: PopupItem[]) => void): () => void
+    ready(): void
+    size(height: number): void
+    action(id: string, action: PopupAction['id'] | 'dismiss'): void
   }
   updates: {
     status(): Promise<UpdateStatus>

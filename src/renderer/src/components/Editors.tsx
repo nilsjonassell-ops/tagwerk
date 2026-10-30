@@ -142,6 +142,10 @@ export function EventDialog({ id, preset }: { id?: string; preset?: Partial<CalE
   const [notes, setNotes] = useState(existing?.notes ?? '')
   const [projectId, setProjectId] = useState(existing?.projectId ?? preset?.projectId ?? '')
   const [touched, setTouched] = useState(false)
+  // 'std' = Standard aus den Einstellungen, 'none' = keine, sonst Minuten vorher
+  const [reminder, setReminder] = useState<string>(
+    existing?.reminderMinutes === undefined ? 'std' : existing.reminderMinutes === null ? 'none' : String(existing.reminderMinutes)
+  )
   const google = useStore((s) => s.google)
   const isGoogle = existing?.source === 'google'
   const [target, setTarget] = useState<'google' | 'local'>(google.caps.calendarWrite ? 'google' : 'local')
@@ -165,6 +169,7 @@ export function EventDialog({ id, preset }: { id?: string; preset?: Partial<CalE
     attendees: isGoogle ? existing!.attendees : parseAttendees(attendees),
     notes: notes.trim() || undefined,
     projectId: projectId || undefined,
+    reminderMinutes: reminder === 'std' ? undefined : reminder === 'none' ? null : Number(reminder),
     source: existing?.source ?? 'local'
   }
   const clashes = useMemo(() => {
@@ -307,6 +312,23 @@ export function EventDialog({ id, preset }: { id?: string; preset?: Partial<CalE
           )}
         </label>
         <div className="grid-2">
+          <label className="field">
+            <span>Erinnerung</span>
+            <select className="select" value={reminder} onChange={(e) => setReminder(e.target.value)} disabled={allDay}>
+              <option value="std">
+                Standard{settings.notifications.events ? ` (${settings.notifications.leadMinutes} Min. vorher)` : ' (aus)'}
+              </option>
+              <option value="none">Keine Erinnerung</option>
+              <option value="0">Zum Beginn</option>
+              <option value="5">5 Minuten vorher</option>
+              <option value="10">10 Minuten vorher</option>
+              <option value="15">15 Minuten vorher</option>
+              <option value="30">30 Minuten vorher</option>
+              <option value="60">1 Stunde vorher</option>
+              <option value="120">2 Stunden vorher</option>
+              <option value="1440">1 Tag vorher</option>
+            </select>
+          </label>
           <label className="field">
             <span>Projekt</span>
             <select className="select" value={projectId} onChange={(e) => setProjectId(e.target.value)}>

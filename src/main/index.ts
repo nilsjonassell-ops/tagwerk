@@ -24,7 +24,8 @@ import { sendToClaude, verifyKey } from './claude'
 import { parseIcs } from './ics'
 import { getWeather } from './weather'
 import { check as checkUpdate, initUpdater, installNow, updateStatus } from './updater'
-import { initNotify, notify } from './notify'
+import { handlePopupAction, initNotify, notify } from './notify'
+import { initPopup } from './popup'
 import { focusState, focusSummary, initFocus, setFocus } from './focus'
 import { startScheduler } from './scheduler'
 import * as google from './google'
@@ -560,7 +561,9 @@ function registerIpc() {
     if (!req || typeof req !== 'object') return { shown: false }
     const kinds = ['event', 'mail', 'brief', 'focus', 'system', 'test'] as const
     const kind = kinds.includes(req.kind as (typeof kinds)[number]) ? req.kind : 'system'
-    return notify({ title: String(req.title ?? ''), body: String(req.body ?? ''), kind, target: req.target })
+    const lines = Array.isArray(req.lines) ? req.lines.slice(0, 5).map((l) => String(l)) : undefined
+    const target = req.target && typeof req.target === 'object' ? { view: String(req.target.view), id: req.target.id ? String(req.target.id) : undefined } : undefined
+    return notify({ title: String(req.title ?? ''), body: String(req.body ?? ''), kind, target, lines })
   })
 
   ipcMain.handle('quicknote:save', (_e, text: string) => {
@@ -601,7 +604,15 @@ function init() {
   registerIpc()
   buildAppMenu()
   createTray()
-  initUpdater(() => mainWindow)
+  initUpdater(() => mainWindow, (v) =>
+    notify({ kind: 'update', title: `Tagwerk ${v} ist bereit`, body: 'Der Neustart dauert nur ein paar Sekunden. Deine Daten bleiben erhalten.' })
+  )
+  initPopup({
+    preload: join(__dirname, '../preload/index.js'),
+    load,
+    harden: hardenContents,
+    onAction: handlePopupAction
+  })
   initFocus({ window: () => mainWindow, changed: () => buildTrayMenu(), open: () => (showMain(), mainWindow?.webContents.send('focus:action', 'open')) })
 
   const startHidden = process.argv.includes('--hidden')
@@ -611,7 +622,15 @@ function init() {
     log.warn('global shortcut unavailable')
   }
   applyLoginItem(settings)
-  initNotify({ open: openTarget, icon: resource('icon.png') })
+  initNotify({
+    open: openTarget,
+    command: (cmd) => mainWindow?.webContents.send('app:command', cmd),
+    install: () => {
+      quitting = true
+      installNow()
+    },
+    icon: resource('icon.png')
+  })
   startScheduler()
   google.startMailWatch(() => mainWindow?.webContents.send('google:mailChanged'))
 

@@ -113,10 +113,8 @@ function notifyNewMail(before: Email[], after: Email[], me: string | undefined, 
     void window.tagwerk.app.notify({
       kind: 'mail',
       title: `${list.length} ${label} E-Mails`,
-      body: list
-        .slice(0, 3)
-        .map((m) => `${m.from.name || m.from.email}: ${m.subject || '(ohne Betreff)'}`)
-        .join('\n') + (list.length > 3 ? `\n+ ${list.length - 3} weitere` : ''),
+      body: list.length > 3 ? `+ ${list.length - 3} weitere` : '',
+      lines: list.slice(0, 3).map((m) => `${m.from.name || m.from.email}: ${m.subject || '(ohne Betreff)'}`),
       target: { view: 'inbox' }
     })
   }

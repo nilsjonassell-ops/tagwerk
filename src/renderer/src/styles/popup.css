@@ -1,0 +1,371 @@
+/* ==========================================================================
+   Tagwerk – Pop-ups unten rechts (eigenes, durchsichtiges Fenster)
+   ========================================================================== */
+
+html.popup-root,
+html.popup-root body,
+html.popup-root #root {
+  background: transparent !important;
+  overflow: hidden;
+  height: auto;
+  min-height: 0;
+}
+html.popup-root body::before,
+html.popup-root body::after {
+  display: none !important;
+}
+
+.pop-wrap {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 10px;
+  /* Platz für den Schatten rundherum */
+  padding: 18px 16px 16px 16px;
+  width: 404px;
+  box-sizing: border-box;
+}
+
+.pop-card {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 14px 14px 14px 14px;
+  border-radius: 20px;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(247, 246, 255, 0.97) 55%, rgba(255, 245, 251, 0.97));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 1),
+    0 0 0 1px rgba(90, 90, 160, 0.1),
+    0 2px 6px rgba(30, 40, 90, 0.08),
+    0 14px 34px -12px rgba(60, 50, 150, 0.38);
+  color: #1b2030;
+  font-family: 'Inter Variable', Inter, system-ui, sans-serif;
+  animation: pop-in 0.55s cubic-bezier(0.34, 1.3, 0.64, 1) both;
+  transition:
+    opacity 0.24s ease,
+    transform 0.24s ease;
+  cursor: default;
+  user-select: none;
+}
+.pop-card.clickable {
+  cursor: pointer;
+}
+.pop-card.leaving {
+  opacity: 0;
+  transform: translateX(40px) scale(0.97);
+}
+/* Feiner Farbsaum oben wie in der App */
+.pop-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, #4d7cff, #8b6dff 52%, #ff6fae);
+  opacity: 0.85;
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateX(60px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+:root[data-theme='dark'] .pop-card {
+  background: linear-gradient(135deg, rgba(34, 36, 56, 0.98), rgba(30, 30, 50, 0.98));
+  color: #eef0fa;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 2px 6px rgba(0, 0, 0, 0.3),
+    0 16px 36px -12px rgba(0, 0, 0, 0.7);
+}
+
+.pop-icon {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(135deg, #4d7cff, #8b6dff 55%, #ff6fae);
+  box-shadow: 0 6px 14px -6px rgba(110, 90, 255, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.pop-icon svg {
+  width: 19px;
+  height: 19px;
+}
+.kind-event .pop-icon {
+  background: linear-gradient(135deg, #ff9a5a, #ff6fae);
+  box-shadow: 0 6px 14px -6px rgba(255, 110, 120, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.pop-main {
+  flex: 1;
+  min-width: 0;
+  padding-right: 18px;
+}
+.pop-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #6c7290;
+  margin-bottom: 2px;
+}
+.pop-meta .pop-dot {
+  opacity: 0.6;
+}
+:root[data-theme='dark'] .pop-meta {
+  color: #9aa0c0;
+}
+.pop-title {
+  font-size: 14.5px;
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pop-body {
+  margin-top: 3px;
+  font-size: 13px;
+  line-height: 1.42;
+  color: #4b5170;
+  white-space: pre-line;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+:root[data-theme='dark'] .pop-body {
+  color: #b7bcd6;
+}
+.pop-lines {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+}
+.pop-lines li {
+  font-size: 12.5px;
+  color: #4b5170;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 10px;
+  position: relative;
+}
+.pop-lines li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #8b6dff;
+}
+:root[data-theme='dark'] .pop-lines li {
+  color: #b7bcd6;
+}
+
+/* Schaltflächen: gleich breit, Text passt immer hinein */
+.pop-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 11px;
+}
+.pop-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #2a3050;
+  background: rgba(90, 100, 170, 0.09);
+  box-shadow: inset 0 0 0 1px rgba(90, 100, 170, 0.1);
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    transform 0.2s cubic-bezier(0.34, 1.4, 0.64, 1),
+    filter 0.18s ease;
+}
+.pop-btn:hover {
+  background: rgba(90, 100, 170, 0.15);
+}
+.pop-btn:active {
+  transform: scale(0.96);
+}
+.pop-btn.primary {
+  color: #fff;
+  background: linear-gradient(135deg, #4d7cff, #8b6dff 60%, #c56cf0);
+  box-shadow: 0 6px 14px -8px rgba(100, 90, 255, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+.pop-btn.primary:hover {
+  filter: brightness(1.07);
+}
+:root[data-theme='dark'] .pop-btn {
+  color: #e6e8f6;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.pop-close {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #8a8fab;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
+}
+.pop-close svg {
+  width: 15px;
+  height: 15px;
+}
+.pop-close:hover {
+  background: rgba(90, 100, 170, 0.12);
+  color: #2a3050;
+}
+
+/* Restzeit als feine Linie unten – hält an, solange die Maus darüber ist */
+.pop-life {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  transform-origin: left center;
+  background: linear-gradient(90deg, #4d7cff, #8b6dff, #ff6fae);
+  opacity: 0.55;
+  animation-name: pop-life;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+.pop-wrap:hover .pop-life {
+  animation-play-state: paused;
+}
+@keyframes pop-life {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pop-card {
+    animation: none;
+  }
+}
+
+/* Die Restzeit darf bei „Bewegung reduzieren“ nicht auf 0 fallen */
+@media (prefers-reduced-motion: reduce) {
+  .pop-wrap .pop-life {
+    animation-duration: 9000ms !important;
+  }
+}
+.pop-more {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #7b6dff;
+}
+
+/* ---------- Update-Hinweis in der App (bei Windows-Mitteilungen) ---------- */
+.update-card {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  width: 360px;
+  max-width: calc(100vw - 44px);
+  padding: 16px;
+  overflow: hidden;
+}
+.update-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, #4d7cff, #8b6dff 52%, #ff6fae);
+}
+.update-head {
+  display: flex;
+  gap: 12px;
+  padding-right: 22px;
+}
+.update-text {
+  gap: 2px;
+}
+.update-text b {
+  font-size: 14.5px;
+  letter-spacing: -0.01em;
+}
+.update-text span {
+  line-height: 1.42;
+}
+.update-text .update-meta {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+.update-actions {
+  display: flex;
+  gap: 8px;
+}
+.update-actions .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: center;
+  white-space: nowrap;
+  height: 34px;
+}
+.update-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.update-close:hover {
+  background: var(--sunken);
+  color: var(--ink);
+}
+.update-close svg {
+  width: 15px;
+  height: 15px;
+}

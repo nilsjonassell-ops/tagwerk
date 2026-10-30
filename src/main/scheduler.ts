@@ -14,6 +14,18 @@ let googleReminderDay = ''
 
 const hm = (iso: string) => new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
 
+/** „In 10 Min.“, „In 1 Std. 30 Min.“, „Morgen um 9:00“ */
+function inWords(mins: number): string {
+  if (mins < 60) return `In ${mins} Min.`
+  if (mins < 24 * 60) {
+    const h = Math.floor(mins / 60)
+    const m = mins % 60
+    return `In ${h} Std.${m ? ` ${m} Min.` : ''}`
+  }
+  const d = Math.round(mins / (24 * 60))
+  return d === 1 ? 'Morgen' : `In ${d} Tagen`
+}
+
 export function startScheduler() {
   if (timer) clearInterval(timer)
   const tick = () => {
@@ -34,32 +46,39 @@ function run() {
   if (!data) return
   const now = new Date()
 
-  if (s.notifications.events) {
-    const lead = s.notifications.leadMinutes * 60_000
+  {
     const today = eventsOnDay(data.events, now).filter((e) => !e.allDay)
     const conflicts = findConflicts(today, s.transitionBufferMinutes)
     for (const ev of data.events) {
       if (ev.allDay) continue
+      // Eigene Erinnerung am Termin hat Vorrang; sonst gilt die Standard-Vorlaufzeit
+      const own = ev.reminderMinutes
+      if (own === null) continue
+      if (own === undefined && !s.notifications.events) continue
+      const leadMin = own ?? s.notifications.leadMinutes
       const start = new Date(ev.start).getTime()
       const delta = start - now.getTime()
       const when = `${hm(ev.start)}–${hm(ev.end)} Uhr`
       const where = ev.location ? ` · ${ev.location}` : ''
+      const event = { title: ev.title, start: ev.start, end: ev.end, location: ev.location }
+      const target = { view: 'calendar', id: ev.id }
 
       // Vorab-Erinnerung
-      const keyLead = `${ev.id}@${ev.start}#lead`
-      if (delta > 60_000 && delta <= lead && !notified.has(keyLead)) {
+      const keyLead = `${ev.id}@${ev.start}#lead${leadMin}`
+      if (leadMin > 0 && delta > 30_000 && delta <= leadMin * 60_000 && !notified.has(keyLead)) {
         notified.add(keyLead)
         const mins = Math.max(1, Math.round(delta / 60_000))
         const c = conflicts.find((x) => x.a.id === ev.id || x.b.id === ev.id)
         const clash = c ? (c.kind === 'overlap' ? ' · ⚠ überschneidet sich mit einem anderen Termin' : ` · ⚠ nur ${c.gapMinutes} Min. Puffer`) : ''
-        notify({ kind: 'event', title: `In ${mins} Min.: ${ev.title}`, body: `${when}${where}${clash}`, target: { view: 'calendar', id: ev.id } })
+        notify({ kind: 'event', title: `${inWords(mins)}: ${ev.title}`, body: `${when}${where}${clash}`, target, event })
       }
 
-      // Zum Beginn (optional)
+      // Zum Beginn: wenn am Termin „zum Beginn“ gewählt ist oder global eingeschaltet
       const keyStart = `${ev.id}@${ev.start}#start`
-      if (s.notifications.eventsAtStart && delta <= 0 && delta > -120_000 && !notified.has(keyStart)) {
+      const atStart = own === 0 || (own === undefined && s.notifications.eventsAtStart)
+      if (atStart && delta <= 30_000 && delta > -120_000 && !notified.has(keyStart)) {
         notified.add(keyStart)
-        notify({ kind: 'event', title: `Jetzt: ${ev.title}`, body: `${when}${where}`, target: { view: 'calendar', id: ev.id } })
+        notify({ kind: 'event', title: `Jetzt: ${ev.title}`, body: `${when}${where}`, target, event })
       }
     }
   }

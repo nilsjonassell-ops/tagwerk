@@ -10,6 +10,7 @@ import { log } from './log'
 let status: UpdateStatus = { state: 'idle', current: app.getVersion() }
 let getWindow: () => BrowserWindow | null = () => null
 let timer: NodeJS.Timeout | null = null
+let onReady: (version: string) => void = () => {}
 
 function emit(next: Partial<UpdateStatus>) {
   status = { ...status, ...next, current: app.getVersion() }
@@ -21,8 +22,9 @@ export function updateStatus(): UpdateStatus {
   return status
 }
 
-export function initUpdater(window: () => BrowserWindow | null) {
+export function initUpdater(window: () => BrowserWindow | null, ready?: (version: string) => void) {
   getWindow = window
+  if (ready) onReady = ready
   if (!app.isPackaged) {
     status = { state: 'dev', current: app.getVersion() }
     return
@@ -37,6 +39,7 @@ export function initUpdater(window: () => BrowserWindow | null) {
   autoUpdater.on('update-downloaded', (i) => {
     log.info('update downloaded', { version: i.version })
     emit({ state: 'ready', version: i.version })
+    onReady(i.version)
   })
   autoUpdater.on('error', (err) => {
     log.warn('update failed', { name: err?.name })

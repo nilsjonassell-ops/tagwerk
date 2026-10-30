@@ -134,12 +134,12 @@ export function stopAmbient(immediate = false) {
 }
 
 /** Kurzer, freundlicher Gong – aufsteigend zum Fokusende, absteigend zum Pausenende. */
-export function chime(kind: 'focus-end' | 'break-end' | 'start') {
+export function chime(kind: 'focus-end' | 'break-end' | 'start' | 'notify') {
   try {
     const c = audio()
-    const notes = kind === 'focus-end' ? [659.25, 987.77, 1318.5] : kind === 'break-end' ? [1046.5, 783.99] : [783.99]
+    const notes = kind === 'focus-end' ? [659.25, 987.77, 1318.5] : kind === 'break-end' ? [1046.5, 783.99] : kind === 'notify' ? [880, 1318.5] : [783.99]
     const out = c.createGain()
-    out.gain.value = 0.18
+    out.gain.value = kind === 'notify' ? 0.11 : 0.18
     out.connect(c.destination)
     notes.forEach((f, i) => {
       const t = c.currentTime + i * 0.18

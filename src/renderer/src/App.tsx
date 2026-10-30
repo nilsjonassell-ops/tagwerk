@@ -6,7 +6,7 @@ import { useEffect } from 'react'
 import { AlertCircle } from 'lucide-react'
 import type { ViewId } from '@shared/types'
 import { useStore } from '@/lib/store'
-import { createNote } from '@/lib/actions'
+import { archiveThread, createNote, markThread } from '@/lib/actions'
 import { Sidebar } from '@/components/Sidebar'
 import { AssistantPanel } from '@/components/Assistant'
 import { CommandPalette } from '@/components/CommandPalette'
@@ -209,7 +209,12 @@ export function App() {
 
 function runCommand(cmd: string) {
   const st = useStore.getState()
+  // Schaltflächen aus den Pop-ups unten rechts
+  if (cmd.startsWith('mail-archive:')) return void archiveThread(cmd.slice(13))
+  if (cmd.startsWith('mail-read:')) return void markThread(cmd.slice(10), { read: true })
   switch (cmd) {
+    case 'open-general-settings':
+      return st.openDialog({ kind: 'settings', section: 'general' })
     case 'new-task':
       return st.openDialog({ kind: 'task' })
     case 'new-event':
