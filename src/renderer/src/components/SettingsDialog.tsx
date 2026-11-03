@@ -3,7 +3,7 @@ import { useState, type ReactNode } from 'react'
 import { useAccounts } from '@/lib/accounts'
 import {
   ArrowDown, ArrowUp, Bell, CalendarDays, CalendarPlus, CloudSun, Database, Eye, EyeOff, FlaskConical, KeyRound, LayoutDashboard, Monitor, Shield, Sparkles, Trash2, Loader2, Check, Download,
-  X
+  X, Palette, ListChecks
 } from 'lucide-react'
 import { createDemoData, removeDemo } from '@shared/demo'
 import { CLAUDE_MODELS, type DashboardCardId, type Settings, type Source, type SuggestionKind } from '@shared/types'
@@ -13,16 +13,19 @@ import { GoogleSettings } from './GoogleSettings'
 import { MicrosoftSettings } from './OneNoteSettings'
 import { ICloudSettings } from './ICloudSettings'
 import { Dialog, Segmented, Select, Switch } from './ui'
+import { AccentPicker, ModeCards } from './AppearancePicker'
 import { isMac, modKey } from '@/lib/format'
 
-type Section = 'general' | 'dashboard' | 'calendar' | 'notifications' | 'sources' | 'claude' | 'privacy'
+type Section = 'appearance' | 'general' | 'dashboard' | 'calendar' | 'notifications' | 'sources' | 'suggestions' | 'claude' | 'privacy'
 
 const SECTIONS: { id: Section; label: string; icon: typeof Monitor }[] = [
+  { id: 'appearance', label: 'Darstellung', icon: Palette },
   { id: 'general', label: 'Allgemein', icon: Monitor },
   { id: 'dashboard', label: 'Übersicht', icon: LayoutDashboard },
   { id: 'calendar', label: 'Kalender', icon: CalendarDays },
   { id: 'notifications', label: 'Benachrichtigungen', icon: Bell },
-  { id: 'sources', label: 'Datenquellen', icon: Database },
+  { id: 'sources', label: 'Konten', icon: Database },
+  { id: 'suggestions', label: 'Mail-Vorschläge', icon: ListChecks },
   { id: 'claude', label: 'Claude', icon: Sparkles },
   { id: 'privacy', label: 'Datenschutz', icon: Shield }
 ]
@@ -37,7 +40,7 @@ const CARD_LABEL: Record<DashboardCardId, string> = {
 }
 
 export function SettingsDialog({ section }: { section?: string }) {
-  const [active, setActive] = useState<Section>((section as Section) ?? 'general')
+  const [active, setActive] = useState<Section>(SECTIONS.some((x) => x.id === section) ? (section as Section) : 'appearance')
   const close = () => useStore.getState().openDialog(null)
   return (
     <Dialog title="Einstellungen" onClose={close} wide bodyClass="settings">
@@ -50,11 +53,13 @@ export function SettingsDialog({ section }: { section?: string }) {
         ))}
       </nav>
       <div className="settings-content">
+        {active === 'appearance' && <Appearance />}
         {active === 'general' && <General />}
         {active === 'dashboard' && <Dashboard />}
         {active === 'calendar' && <CalendarSettings />}
         {active === 'notifications' && <Notifications />}
         {active === 'sources' && <Sources />}
+        {active === 'suggestions' && <MailInsightsSettings />}
         {active === 'claude' && <ClaudeSettings />}
         {active === 'privacy' && <Privacy />}
       </div>
@@ -99,9 +104,6 @@ function General() {
       <Row label="Dein Name" hint="Für die Begrüßung und Antwortentwürfe.">
         <input className="input" value={s.userName} onChange={(e) => set({ userName: e.target.value })} placeholder="Vorname" />
       </Row>
-      <Row label="Erscheinungsbild">
-        <Select<Settings['theme']> aria-label="Erscheinungsbild" value={s.theme} onChange={(v) => set({ theme: v })} options={[{ value: 'system', label: 'Wie System' }, { value: 'light', label: 'Hell' }, { value: 'dark', label: 'Dunkel' }]} />
-      </Row>
       {updates?.state === 'store' ? (
         <Row label="Beim Anmelden starten" hint="Bei der Store-Version schaltest du das in Windows ein: Einstellungen → Apps → Autostart → Tagwerk. Tagwerk startet dann unauffällig im Hintergrund.">
           <span className="hint">in Windows</span>
@@ -125,7 +127,6 @@ function General() {
       >
         <input className="input" value={shortcut} onChange={(e) => setShortcut(e.target.value)} onBlur={saveShortcut} onKeyDown={(e) => e.key === 'Enter' && saveShortcut()} aria-label="Tastenkombination für Schnellnotiz" />
       </Row>
-      <MailInsightsSettings />
       <VersionRow />
     </>
   )
@@ -158,14 +159,25 @@ function OrderList<T extends { id: string; visible: boolean }>({ items, label, o
   )
 }
 
-function Dashboard() {
+function Appearance() {
   const [s, set] = useSettings()
   return (
     <>
-      <h3>Tagesübersicht</h3>
-      <p>Reihenfolge und Sichtbarkeit der Bereiche auf „Heute“.</p>
-      <OrderList items={s.dashboardCards} label={(id) => CARD_LABEL[id as DashboardCardId]} onChange={(dashboardCards) => set({ dashboardCards })} />
-      <h3>Seitenleiste</h3>
+      <h3>Darstellung</h3>
+      <div className="setting stacked">
+        <div className="label">
+          <b>Modus</b>
+          <span>„Wie Windows“ folgt der hellen oder dunklen Einstellung von Windows.</span>
+        </div>
+        <ModeCards value={s.theme} onChange={(theme) => set({ theme })} />
+      </div>
+      <Row label="Akzentfarbe" hint="Für Knöpfe, Auswahl und Hervorhebungen. Alle Farben sind auf gute Lesbarkeit geprüft.">
+        <AccentPicker value={s.accent} onChange={(accent) => set({ accent })} />
+      </Row>
+      <Row label="Animationen" hint="„Wie Windows“ folgt „Animationseffekte“ in den Windows-Einstellungen. „Reduziert“ schaltet Bewegungen und Transparenz ab.">
+        <Segmented label="Animationen" value={s.motion} onChange={(motion) => set({ motion })} options={[{ id: 'system', label: 'Wie Windows' }, { id: 'reduced', label: 'Reduziert' }]} />
+      </Row>
+      <h3 style={{ marginTop: 28 }}>Seitenleiste</h3>
       <p>Welche Bereiche in der Navigation erscheinen. Ausgeblendete bleiben über die Suche ({modKey()}+K) erreichbar.</p>
       <OrderList
         items={s.sidebar}
@@ -175,6 +187,17 @@ function Dashboard() {
           set({ sidebar })
         }}
       />
+    </>
+  )
+}
+
+function Dashboard() {
+  const [s, set] = useSettings()
+  return (
+    <>
+      <h3>Tagesübersicht</h3>
+      <p>Reihenfolge und Sichtbarkeit der Bereiche auf „Heute“.</p>
+      <OrderList items={s.dashboardCards} label={(id) => CARD_LABEL[id as DashboardCardId]} onChange={(dashboardCards) => set({ dashboardCards })} />
     </>
   )
 }
@@ -765,7 +788,7 @@ function MailInsightsSettings() {
   const cloudOn = useAccounts((st) => st.cloud.available && st.cloud.enabled)
   return (
     <>
-      <div className="settings-group">Vorschläge aus E-Mails</div>
+      <h3>Mail-Vorschläge</h3>
       <Row label="Mails auswerten" hint="Tagwerk erkennt lokal auf diesem PC Termine, Fristen, Aufgaben und Infos in deinen Mails und schlägt sie im Posteingang unter „Aus Mails übernehmen“ vor. Ohne KI, ohne Server – angelegt wird nur, was du bestätigst.">
         <Switch label="Mails auswerten" checked={mi.enabled} onChange={(v) => setMi({ enabled: v })} />
       </Row>

@@ -144,7 +144,7 @@ function SuggestionsList() {
               <ListChecks /> {picking ? 'Auswahl beenden' : 'Mehrere übernehmen'}
             </button>
           )}
-          <button className="btn small ghost" onClick={() => openDialog({ kind: 'settings', section: 'general' })} title="Welche Konten und Arten geprüft werden">
+          <button className="btn small ghost" onClick={() => openDialog({ kind: 'settings', section: 'suggestions' })} title="Welche Konten und Arten geprüft werden">
             Einstellungen
           </button>
         </div>

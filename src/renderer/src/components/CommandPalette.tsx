@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CalendarDays, CheckSquare, FolderKanban, Mail, NotebookPen, Plus, Search, Settings, Sparkles, Moon, Keyboard, CalendarPlus, Target } from 'lucide-react'
+import { CalendarDays, CheckSquare, FolderKanban, Mail, NotebookPen, Plus, Search, Settings, Sparkles, Moon, Keyboard, CalendarPlus, Target, Palette } from 'lucide-react'
+import { ACCENTS } from '@shared/appearance'
 import { search, type SearchHit } from '@shared/analysis'
 import { useFocus } from '@/lib/focus'
 import type { ViewId } from '@shared/types'
@@ -50,11 +51,18 @@ export function CommandPalette() {
         icon: Moon,
         run: () => (close(), st().updateSettings({ theme: st().resolvedTheme === 'dark' ? 'light' : 'dark' }))
       },
+      ...([
+        ['system', 'Design: Wie Windows'],
+        ['light', 'Design: Hell'],
+        ['dark', 'Design: Dunkel']
+      ] as const).map(([theme, label]) => ({ id: `c-theme-${theme}`, group: 'Darstellung', label, side: settings.theme === theme ? 'aktiv' : undefined, icon: Palette, run: () => (close(), st().updateSettings({ theme })) })),
+      ...ACCENTS.map((a) => ({ id: `c-accent-${a.id}`, group: 'Darstellung', label: `Akzent: ${a.label}`, side: settings.accent === a.id ? 'aktiv' : undefined, icon: Palette, run: () => (close(), st().updateSettings({ accent: a.id })) })),
+      { id: 'c-appearance', group: 'Darstellung', label: 'Darstellung anpassen …', icon: Palette, run: () => st().openDialog({ kind: 'settings', section: 'appearance' }) },
       { id: 'c-settings', group: 'Einstellungen', label: 'Einstellungen öffnen', icon: Settings, run: () => st().openDialog({ kind: 'settings' }) },
       { id: 'c-keys', group: 'Einstellungen', label: 'Tastenkürzel anzeigen', icon: Keyboard, run: () => st().openDialog({ kind: 'shortcuts' }) }
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [settings.theme]
+    [settings.theme, settings.accent]
   )
 
   const items: Item[] = useMemo(() => {
