@@ -24,12 +24,13 @@ Tagwerk soll wie ein hochwertiges, ruhiges Markenprodukt wirken: ein einheitlich
 - Menüs (`TakeOverMenu`, `FollowUpMenu`, `SnoozeMenu`) hängen absolut positioniert im Elternelement → werden bei Animationen/Scroll/`overflow` abgeschnitten oder verrutschen.
 - `Dialog` in `components/ui.tsx` mit Fokusfalle ist vorhanden und wird erweitert.
 - Keine Akzentfarben-Einstellung; „Erscheinungsbild“ ist ein natives Select in „Allgemein“.
+- Sichtbar ist heute das Glas-Design aus `glass.css`/`liquid.css` (Blau-Violett-Pink-Verlauf mit animierten Lichtkugeln, Akzent #3f6bff), nicht das Petrol aus `app.css`. `glass.css` enthält außerdem Funktionsstile (freie Zeit im Kalender, Ziehen, Einplanen, Update-Hinweis), die erhalten bleiben müssen.
 
 ## 3. Gestaltungswerte (`styles/tokens.css`)
 
 **Stufe 1 – Grundwerte**
 - Neutrale Skala, leicht grün-grau (wie heute), je 12 Stufen für Hell und Dunkel (`--n-1 … --n-12`).
-- 7 Akzentfamilien mit je drei Tönen (Basis, weich, Linie) pro Modus: `petrol` (Standard, entspricht dem heutigen #1c5f68 / #74b6bd), `indigo`, `blue`, `green`, `amber`, `rose`, `graphite`.
+- 7 Akzentfamilien mit je drei Tönen (Basis, weich, Linie) pro Modus: `indigo` (Standard, entspricht dem heute sichtbaren Blau #3f6bff aus `glass.css`), `petrol` (entspricht #1c5f68 / #74b6bd aus `app.css`), `blue`, `green`, `amber`, `rose`, `graphite`.
 - Statusfarben `alert`, `attention`, `ok` wie heute.
 
 **Stufe 2 – Bedeutungswerte**
@@ -51,6 +52,10 @@ Tagwerk soll wie ein hochwertiges, ruhiges Markenprodukt wirken: ein einheitlich
 - UI: Inter Variable (bereits gebündelt), `font-variant-numeric: tabular-nums` für Uhrzeiten, Zähler, Timer.
 - Display: Instrument Serif nur für große Überschriften (Datum im Dashboard, Begrüßung).
 - Instrument Sans wird entfernt (Import und Abhängigkeit).
+
+**Hintergrund**
+- Tagwerks Markenzeichen bleibt: schwebende Seitenleiste und Hauptfläche auf einem Verlaufshintergrund. Der Verlauf ist statisch, gedämpft und aus der Akzentfarbe abgeleitet (`--wash-1`, `--wash-2`); die animierten Lichtkugeln entfallen.
+- Seitenleiste und Hauptfläche sind `--surface-1` (deckend bzw. 92 % Deckkraft ohne Unschärfe), Karten darin `--raised` mit Haarlinie.
 
 **Glas-Regel**
 - `backdrop-filter` nur auf `--surface-2` und dem Dialog-Overlay.
@@ -90,7 +95,7 @@ Reiter-Reihenfolge: **Darstellung** (neu) · Allgemein · Übersicht · Kalender
 - Befehlspalette (Strg+K): Einträge „Design: System/Hell/Dunkel“ und „Akzent: <Farbe>“.
 
 **Daten**
-- `Settings.accent: AccentId` (Standard `'petrol'`), `Settings.motion: 'system' | 'reduced'` (Standard `'system'`).
+- `Settings.accent: AccentId` (Standard `'indigo'`), `Settings.motion: 'system' | 'reduced'` (Standard `'system'`).
 - `AccentId = 'petrol' | 'indigo' | 'blue' | 'green' | 'amber' | 'rose' | 'graphite'`.
 - Beide in `DEFAULT_SETTINGS`, `mergeSettings` (unbekannte Werte → Standard) und `SYNCED_SETTINGS` (wie `theme`).
 - Anwendung im Renderer an derselben Stelle wie heute `data-theme` (auch im Pop-up-Fenster).
