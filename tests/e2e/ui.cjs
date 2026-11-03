@@ -241,6 +241,77 @@ const tests = {
     await p.context().close()
   },
 
+  async settingsLayout(b, url) {
+    for (const viewport of [{ width: 1280, height: 800 }, { width: 900, height: 640 }]) {
+      const p = await start(b, url, { viewport })
+      await p.keyboard.press('Control+,')
+      await p.waitForSelector('.settings-nav')
+      const problems = []
+      for (const tab of await p.locator('.settings-nav button').all()) {
+        const name = (await tab.innerText()).trim()
+        await tab.click()
+        await sleep(350)
+        const found = await p.evaluate(() => {
+          const out = []
+          for (const row of document.querySelectorAll('.settings-content .setting')) {
+            const label = row.querySelector(':scope > .label')
+            const control = row.querySelector(':scope > .control')
+            const title = label?.querySelector('b')?.textContent?.trim() ?? '?'
+            const r = row.getBoundingClientRect()
+            if (r.width === 0) continue
+            for (const el of row.querySelectorAll('.label b, .label span, .control *')) {
+              if (el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflow !== 'visible' && !el.closest('.select-btn')) out.push(`${title}: abgeschnitten (${el.className || el.tagName})`)
+            }
+            if (label && control) {
+              const a = label.getBoundingClientRect(), c = control.getBoundingClientRect()
+              const side = a.right <= c.left + 1
+              const below = c.top >= a.bottom - 1
+              if (!side && !below) out.push(`${title}: Beschriftung und Bedienelement überlagern sich`)
+              if (c.right > r.right + 1) out.push(`${title}: Bedienelement ragt rechts hinaus`)
+              const lh = parseFloat(getComputedStyle(label.querySelector('b')).lineHeight) || 20
+              if (label.querySelector('b').getBoundingClientRect().height > lh * 2.2) out.push(`${title}: Überschrift bricht mehrfach um`)
+            }
+          }
+          return out
+        })
+        problems.push(...found.map((f) => `[${viewport.width}px · ${name}] ${f}`))
+      }
+      ok(problems.length === 0, `Einstellungen bei ${viewport.width}×${viewport.height} sauber ausgerichtet${problems.length ? ':\n      ' + problems.slice(0, 8).join('\n      ') : ''}`)
+      if (viewport.width === 1280) {
+        await p.locator('.settings-nav button:has-text("Mail-Vorschläge")').click()
+        await sleep(300)
+        const rule = await p.evaluate(() => {
+          const b = [...document.querySelectorAll('.settings-content .setting .label b')].find((x) => x.textContent.includes('Regeln'))
+          return b ? b.getBoundingClientRect().height : -1
+        })
+        ok(rule > 0 && rule < 26, `„Regeln → Projekt“ steht in einer Zeile (${Math.round(rule)} px hoch)`)
+        // Schalter: Ruhe-, Hover-, Fokus- und deaktivierter Zustand unterscheidbar
+        await p.locator('.settings-nav button:has-text("Benachrichtigungen")').click()
+        await sleep(300)
+        const sw = p.locator('.settings-content .switch:not(:disabled)').first()
+        const look = () => sw.evaluate((el) => { const c = getComputedStyle(el); return `${c.backgroundColor}|${c.boxShadow}` })
+        const rest = await look()
+        await sw.hover()
+        await sleep(250)
+        const hover = await look()
+        ok(rest !== hover, 'Schalter: Hover sichtbar')
+        await p.mouse.move(5, 5)
+        await sw.focus()
+        await p.keyboard.press('Shift+Tab')
+        await p.keyboard.press('Tab')
+        await sleep(250)
+        const focusRing = await sw.evaluate((el) => getComputedStyle(el).boxShadow)
+        ok(focusRing !== 'none' && focusRing !== rest.split('|')[1], 'Schalter: Tastaturfokus sichtbar')
+        await p.locator('.switch[aria-label="Vor Terminen erinnern"]').click()
+        await sleep(300)
+        const dis = await p.evaluate(() => { const d = document.querySelector('.settings-content .switch:disabled'); return d ? Number(getComputedStyle(d).opacity) : -1 })
+        ok(dis > 0 && dis < 0.7, `Schalter: deaktiviert erkennbar (Deckkraft ${dis})`)
+        await p.locator('.switch[aria-label="Vor Terminen erinnern"]').click()
+      }
+      await p.context().close()
+    }
+  },
+
   async noNative(b, url) {
     const p = await start(b, url)
     const count = () => p.evaluate(() => document.querySelectorAll('select').length)

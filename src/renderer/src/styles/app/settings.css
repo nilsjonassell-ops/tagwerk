@@ -1,62 +1,212 @@
 /* Einstellungen */
+/* Einstellungen im Stil der macOS-Systemeinstellungen:
+   Seitenleiste links, rechts gruppierte Glas-Karten mit Zeilen aus Beschriftung + Bedienelement. */
 .settings {
   display: grid;
-  grid-template-columns: 210px 1fr;
+  grid-template-columns: 220px minmax(0, 1fr);
   height: 100%;
   min-height: 0;
 }
 .settings-nav {
-  padding: 8px 10px;
-  border-right: 1px solid var(--line-soft);
-  background: var(--canvas);
+  padding: 10px;
+  border-right: 0.5px solid var(--line);
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
   overflow-y: auto;
+}
+.settings-nav .nav-item {
+  height: 34px;
 }
 .settings-content {
-  padding: 4px 24px 24px;
+  container-type: inline-size;
+  padding: 8px 28px 32px;
   overflow-y: auto;
+  background: color-mix(in srgb, var(--sunken) 45%, transparent);
 }
 .settings-content h3 {
-  font-size: var(--fs-lg);
-  margin: 18px 0 4px;
+  margin: 22px 0 10px;
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.015em;
+}
+.settings-content h3:first-child {
+  margin-top: 14px;
 }
 .settings-content > p {
-  margin: 0 0 8px;
+  margin: -2px 0 12px;
   color: var(--ink-3);
+  line-height: var(--lh);
 }
+.settings-group {
+  margin: 22px 0 6px !important;
+  padding-left: 16px;
+}
+
+/* Zeile: Beschriftung | Bedienelement – feste Spalten, nichts überlappt */
 .setting {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 16px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--line-soft);
+  column-gap: 24px;
+  row-gap: 10px;
+  min-height: 52px;
+  padding: 11px 16px;
+  background: var(--glass-card);
+  box-shadow: inset 0.5px 0 0 var(--line-soft), inset -0.5px 0 0 var(--line-soft);
+}
+/* Aufeinanderfolgende Zeilen bilden eine Karte mit Trennlinien */
+.setting + .setting {
+  border-top: 0.5px solid var(--line);
+}
+:not(.setting) + .setting,
+.setting:first-child {
+  border-top-left-radius: var(--r-lg);
+  border-top-right-radius: var(--r-lg);
+}
+.setting:not(:has(+ .setting)) {
+  border-bottom-left-radius: var(--r-lg);
+  border-bottom-right-radius: var(--r-lg);
+  margin-bottom: 6px;
 }
 .setting .label {
-  flex: 1;
   min-width: 0;
 }
 .setting .label b {
   display: block;
-  font-weight: 500;
+  font-weight: var(--fw-medium);
+  line-height: 1.35;
+  text-wrap: balance;
 }
 .setting .label span {
   display: block;
+  margin-top: 2px;
   font-size: var(--fs-sm);
+  line-height: var(--lh);
   color: var(--ink-3);
-  margin-top: 1px;
+  text-wrap: pretty;
 }
 .setting .control {
-  flex-shrink: 0;
   display: flex;
-  gap: 6px;
   align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  max-width: min(340px, 52cqi);
 }
-.setting .control .input,
-.setting .control .select {
-  width: 200px;
+.setting .control > .input,
+.setting .control > .select {
+  width: 220px;
+  max-width: 100%;
 }
+/* Breite Editoren: Bedienelement unter der Beschriftung über die volle Breite */
+.setting.stacked {
+  grid-template-columns: minmax(0, 1fr);
+}
+.setting.stacked .control {
+  justify-content: stretch;
+  max-width: none;
+}
+.setting.stacked .control > * {
+  flex: 1;
+  min-width: 0;
+}
+/* Schmaler Inhaltsbereich: Bedienelemente unter die Beschriftung */
+@container (max-width: 520px) {
+  .setting {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .setting .control {
+    justify-content: flex-start;
+    max-width: none;
+  }
+}
+
+/* Editoren in Einstellungen */
+.editor-stack {
+  display: grid;
+  gap: 10px;
+}
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.inline-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+.rule-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: var(--r-md);
+  box-shadow: inset 0 0 0 0.5px var(--line);
+  background: color-mix(in srgb, var(--raised) 60%, transparent);
+}
+.rule-list li {
+  display: grid;
+  grid-template-columns: auto auto 16px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 4px 6px 4px 12px;
+}
+.rule-list li + li {
+  border-top: 0.5px solid var(--line-soft);
+}
+.rule-when {
+  color: var(--ink-3);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+.rule-value {
+  font-weight: var(--fw-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rule-arrow,
+.rb-arrow {
+  width: 15px;
+  height: 15px;
+  color: var(--ink-3);
+  justify-self: center;
+}
+.rule-project {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rule-builder {
+  display: grid;
+  grid-template-columns: 170px minmax(120px, 1fr) 16px minmax(140px, 0.8fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+.rule-builder .select-btn,
+.rule-builder .input {
+  width: 100%;
+}
+@container (max-width: 560px) {
+  .rule-builder {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .rb-arrow {
+    display: none;
+  }
+  .rb-value {
+    grid-column: 2;
+  }
+  .rb-add {
+    grid-column: 1 / -1;
+  }
+}
+
 .order-list {
   display: flex;
   flex-direction: column;
@@ -186,4 +336,44 @@
   to {
     background-position: -200% 0;
   }
+}
+
+.setting .control > .shortcut-input {
+  width: 290px;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Konten: jedes Konto als eigene Karte mit Innenabstand */
+.settings-content .google-box,
+.settings-content > .source-row {
+  margin-bottom: 6px;
+  padding: 6px 16px 12px;
+  border-bottom: 0;
+  border-radius: var(--r-lg);
+  background: var(--glass-card);
+  box-shadow: inset 0 0 0 0.5px var(--line);
+}
+.settings-content > .source-row {
+  padding: 14px 16px;
+}
+.settings-content .google-box .source-row {
+  padding: 10px 0 8px;
+}
+.settings-content .google-detail {
+  padding-left: 46px;
+  padding-right: 0;
+}
+.settings-content .perm-row {
+  min-height: 52px;
+  padding: 10px 0;
+  border-bottom: 0.5px solid var(--line-soft);
+}
+.settings-content .perm-row:last-child {
+  border-bottom: 0;
+}
+.settings-content .perm-row small {
+  max-width: none;
+  font-size: var(--fs-sm);
+  line-height: var(--lh);
 }

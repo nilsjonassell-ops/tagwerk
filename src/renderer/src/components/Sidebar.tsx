@@ -187,7 +187,7 @@ export function Sidebar() {
           <SettingsIcon aria-hidden="true" />
           <span className="label">Einstellungen</span>
         </button>
-        <button className="source-status" onClick={() => openDialog({ kind: 'settings', section: 'sources' })} title="Verbundene Datenquellen anzeigen">
+        <button className="source-status" onClick={() => openDialog({ kind: 'settings', section: 'sources' })} title="Verbundene Konten anzeigen">
           {online ? <span className={`status-dot ${dotClass}`} /> : <WifiOff size={13} />}
           <span className="label">{online ? sourceLabel : 'Offline – lokale Daten'}</span>
         </button>

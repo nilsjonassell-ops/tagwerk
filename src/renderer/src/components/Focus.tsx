@@ -363,13 +363,16 @@ function SoundPicker() {
             max={1}
             step={0.05}
             value={fs.volume}
+            style={{ '--value': fs.volume, '--min': 0, '--max': 1 } as React.CSSProperties}
             onChange={(e) => {
               const v = Number(e.target.value)
               setAmbientVolume(v)
               void update({ focus: { ...fs, volume: v } })
             }}
             aria-label="Lautstärke"
+            aria-valuetext={`${Math.round(fs.volume * 100)} %`}
           />
+          <span className="focus-volume-value">{Math.round(fs.volume * 100)} %</span>
         </div>
       )}
     </div>

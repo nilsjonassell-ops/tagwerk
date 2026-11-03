@@ -218,13 +218,27 @@
   left: 2px;
   width: 18px;
   height: 18px;
-  border-radius: 50%;
+  border-radius: var(--r-pill);
   background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-  transition: transform var(--dur) var(--ease);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  transition:
+    transform var(--dur) var(--ease),
+    width var(--dur-fast) var(--ease);
+}
+.switch:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 32%, transparent);
+}
+.switch:active:not(:disabled)::after {
+  width: 22px;
 }
 .switch[aria-checked='true'] {
   background: var(--accent);
+}
+.switch[aria-checked='true']:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 86%, var(--ink));
+}
+.switch[aria-checked='true']:active:not(:disabled)::after {
+  transform: translateX(12px);
 }
 .switch[aria-checked='true']::after {
   transform: translateX(16px);
@@ -237,7 +251,48 @@
   box-shadow: var(--ring);
 }
 .switch:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Wertregler (z. B. Lautstärke im Fokus): Spur, gefüllter Teil, Knopf, Zustände */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 22px;
+  margin: 0;
+  background: transparent;
+  --fill: calc((var(--value, 50) - var(--min, 0)) / (var(--max, 100) - var(--min, 0)) * 100%);
+}
+input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(to right, var(--accent) var(--fill), color-mix(in srgb, var(--ink) 16%, transparent) var(--fill));
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -7px;
+  border-radius: var(--r-pill);
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 0 0 0.5px rgba(0, 0, 0, 0.08);
+  transition:
+    transform var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+}
+input[type='range']:hover:not(:disabled)::-webkit-slider-thumb {
+  transform: scale(1.08);
+}
+input[type='range']:focus-visible {
+  outline: none;
+}
+input[type='range']:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 2px var(--canvas), 0 0 0 4px var(--accent);
+}
+input[type='range']:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 .check {
   width: 18px;

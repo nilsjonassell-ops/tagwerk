@@ -3,7 +3,7 @@ import { useState, type ReactNode } from 'react'
 import { useAccounts } from '@/lib/accounts'
 import {
   ArrowDown, ArrowUp, Bell, CalendarDays, CalendarPlus, CloudSun, Database, Eye, EyeOff, FlaskConical, KeyRound, LayoutDashboard, Monitor, Shield, Sparkles, Trash2, Loader2, Check, Download,
-  X, Palette, ListChecks
+  X, Palette, ListChecks, ArrowRight
 } from 'lucide-react'
 import { createDemoData, removeDemo } from '@shared/demo'
 import { CLAUDE_MODELS, type DashboardCardId, type Settings, type Source, type SuggestionKind } from '@shared/types'
@@ -67,9 +67,11 @@ export function SettingsDialog({ section }: { section?: string }) {
   )
 }
 
-function Row({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
+/** Eine Einstellungszeile: links Beschriftung und Hinweis, rechts das Bedienelement.
+ *  `stacked`: Bedienelement unter der Beschriftung (für breite Editoren). */
+function Row({ label, hint, children, stacked }: { label: string; hint?: ReactNode; children: ReactNode; stacked?: boolean }) {
   return (
-    <div className="setting">
+    <div className={`setting ${stacked ? 'stacked' : ''}`}>
       <div className="label">
         <b>{label}</b>
         {hint && <span>{hint}</span>}
@@ -125,7 +127,7 @@ function General() {
           </>
         }
       >
-        <input className="input" value={shortcut} onChange={(e) => setShortcut(e.target.value)} onBlur={saveShortcut} onKeyDown={(e) => e.key === 'Enter' && saveShortcut()} aria-label="Tastenkombination für Schnellnotiz" />
+        <input className="input shortcut-input" value={shortcut} onChange={(e) => setShortcut(e.target.value)} onBlur={saveShortcut} onKeyDown={(e) => e.key === 'Enter' && saveShortcut()} aria-label="Tastenkombination für Schnellnotiz" />
       </Row>
       <VersionRow />
     </>
@@ -375,7 +377,7 @@ function Sources() {
 
   return (
     <>
-      <h3>Datenquellen</h3>
+      <h3>Konten</h3>
       <p>Tagwerk nutzt externe Konten nur, wenn du sie ausdrücklich verbindest. Deine Daten liegen auf diesem Gerät – und, wenn du den Cloud-Speicher einschaltest, zusätzlich in deinem eigenen OneDrive (Ordner „Apps/Tagwerk“). Einen Tagwerk-Server gibt es nicht. Zugangsdaten liegen verschlüsselt im Schlüsselspeicher des Betriebssystems.</p>
 
       <div className="settings-group">Microsoft – Outlook, OneNote und Cloud-Speicher</div>
@@ -687,7 +689,7 @@ export function OnboardingDialog() {
               <input type="radio" name="start" checked={!withDemo} onChange={() => setWithDemo(false)} /> Leer starten
             </label>
           </div>
-          <p className="hint">Konten (Outlook, Apple Kalender, Gmail) und den Cloud-Speicher verbindest du jederzeit unter Einstellungen → Datenquellen.</p>
+          <p className="hint">Konten (Outlook, Apple Kalender, Gmail) und den Cloud-Speicher verbindest du jederzeit unter Einstellungen → Konten.</p>
         </>
       )}
 
@@ -811,7 +813,7 @@ function MailInsightsSettings() {
       {mi.enabled && <ExcludeEditor list={mi.excludeSenders ?? []} onChange={(excludeSenders) => setMi({ excludeSenders })} />}
       {mi.enabled && <MailRulesEditor />}
       {mi.enabled && (
-        <Row label="Auf mehreren PCs" hint={cloudOn ? 'Was du übernommen, ignoriert oder zurückgestellt hast, gleicht der Cloud-Speicher (dein OneDrive) mit deinen anderen PCs ab.' : 'Ohne Cloud-Speicher gilt der Bearbeitungsstand nur auf diesem PC. Einschalten unter Datenquellen → Microsoft → Cloud-Speicher.'}>
+        <Row label="Auf mehreren PCs" hint={cloudOn ? 'Was du übernommen, ignoriert oder zurückgestellt hast, gleicht der Cloud-Speicher (dein OneDrive) mit deinen anderen PCs ab.' : 'Ohne Cloud-Speicher gilt der Bearbeitungsstand nur auf diesem PC. Einschalten unter Konten → Microsoft → Cloud-Speicher.'}>
           <span className="hint">{cloudOn ? 'wird abgeglichen' : 'nur dieser PC'}</span>
         </Row>
       )}
@@ -844,24 +846,30 @@ function MailRulesEditor() {
     setContains('')
   }
   return (
-    <Row label="Regeln → Projekt" hint="Vorschläge aus passenden Mails bekommen dieses Projekt vorgeschlagen – im Dialog kannst du es jederzeit ändern.">
-      <div style={{ display: 'grid', gap: 6, width: '100%' }}>
-        {rules.map((r) => (
-          <div key={r.id} className="row" style={{ gap: 8 }}>
-            <span className="grow">
-              {r.field === 'from' ? 'Absender enthält' : 'Betreff enthält'} „<b>{r.contains}</b>“ → {projects.find((p) => p.id === r.projectId)?.name ?? <i>gelöschtes Projekt</i>}
-            </span>
-            <button className="btn ghost small icon-btn" onClick={() => set({ mailRules: rules.filter((x) => x.id !== r.id) })} aria-label="Regel löschen" title="Regel löschen">
-              <X />
-            </button>
-          </div>
-        ))}
+    <Row stacked label="Regeln → Projekt" hint="Vorschläge aus passenden Mails bekommen dieses Projekt vorgeschlagen – im Dialog kannst du es jederzeit ändern.">
+      <div className="editor-stack">
+        {rules.length > 0 && (
+          <ul className="rule-list">
+            {rules.map((r) => (
+              <li key={r.id}>
+                <span className="rule-when">{r.field === 'from' ? 'Absender enthält' : 'Betreff enthält'}</span>
+                <span className="rule-value">„{r.contains}“</span>
+                <ArrowRight className="rule-arrow" aria-hidden="true" />
+                <span className="rule-project">{projects.find((p) => p.id === r.projectId)?.name ?? <i>gelöschtes Projekt</i>}</span>
+                <button className="btn ghost small icon-btn" onClick={() => set({ mailRules: rules.filter((x) => x.id !== r.id) })} aria-label="Regel löschen" title="Regel löschen">
+                  <X />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
         {projects.length > 0 ? (
-          <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
-            <Select<'from' | 'subject'> aria-label="Feld" style={{ width: 'auto' }} value={field} onChange={setField} options={[{ value: 'from', label: 'Absender enthält' }, { value: 'subject', label: 'Betreff enthält' }]} />
-            <input className="input" style={{ flex: 1, minWidth: 120 }} value={contains} onChange={(e) => setContains(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} placeholder={field === 'from' ? 'z. B. @uni-mannheim.de' : 'z. B. Hausarbeit'} aria-label="Enthält" />
-            <Select aria-label="Projekt" style={{ width: 'auto' }} value={projectId} placeholder="Projekt …" onChange={setProjectId} options={projects.map((p) => ({ value: p.id, label: p.name }))} />
-            <button className="btn small" onClick={add} disabled={!contains.trim() || !projectId}>
+          <div className="rule-builder">
+            <Select<'from' | 'subject'> aria-label="Feld" className="rb-field" value={field} onChange={setField} options={[{ value: 'from', label: 'Absender enthält' }, { value: 'subject', label: 'Betreff enthält' }]} />
+            <input className="input rb-value" value={contains} onChange={(e) => setContains(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} placeholder={field === 'from' ? 'z. B. @uni-mannheim.de' : 'z. B. Hausarbeit'} aria-label="Enthält" />
+            <ArrowRight className="rb-arrow" aria-hidden="true" />
+            <Select aria-label="Projekt" className="rb-project" value={projectId} placeholder="Projekt wählen" onChange={setProjectId} options={projects.map((p) => ({ value: p.id, label: p.name }))} />
+            <button className="btn rb-add" onClick={add} disabled={!contains.trim() || !projectId}>
               Hinzufügen
             </button>
           </div>
@@ -883,10 +891,10 @@ function ExcludeEditor({ list, onChange }: { list: string[]; onChange: (l: strin
     setV('')
   }
   return (
-    <Row label="Nicht prüfen" hint="Absender, Domains oder Mailinglisten (z. B. „newsletter@“, „@liste.uni.de“), deren Mails nie ausgewertet werden.">
-      <div style={{ display: 'grid', gap: 6, width: '100%' }}>
+    <Row stacked label="Nicht prüfen" hint="Absender, Domains oder Mailinglisten (z. B. „newsletter@“, „@liste.uni.de“), deren Mails nie ausgewertet werden.">
+      <div className="editor-stack">
         {list.length > 0 && (
-          <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+          <div className="chip-list">
             {list.map((x) => (
               <span key={x} className="tag">
                 {x}
@@ -897,8 +905,8 @@ function ExcludeEditor({ list, onChange }: { list: string[]; onChange: (l: strin
             ))}
           </div>
         )}
-        <div className="row" style={{ gap: 6 }}>
-          <input className="input" style={{ flex: 1 }} value={v} onChange={(e) => setV(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} placeholder="Adresse oder @domain" aria-label="Absender ausschließen" />
+        <div className="inline-form">
+          <input className="input" value={v} onChange={(e) => setV(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} placeholder="Adresse oder @domain" aria-label="Absender ausschließen" />
           <button className="btn small" onClick={add} disabled={!v.trim()}>
             Ausschließen
           </button>

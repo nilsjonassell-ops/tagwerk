@@ -297,7 +297,7 @@ export function EventDialog({ id, preset, suggestionId, series }: { id?: string;
     const why = existing.organizer
       ? `Organisiert von ${existing.organizer.name}. Nur die organisierende Person kann Zeit und Details ändern.`
       : isGoogle
-        ? 'Tagwerk hat nur Lesezugriff auf deinen Google Kalender. Schreibzugriff kannst du in den Einstellungen unter Datenquellen freigeben.'
+        ? 'Tagwerk hat nur Lesezugriff auf deinen Google Kalender. Schreibzugriff kannst du in den Einstellungen unter Konten freigeben.'
         : existing.source === 'outlook'
           ? 'Das ist ein einzelner Termin aus einer Serie. Serien bearbeitest du direkt in Outlook.'
           : existing.source === 'icloud'

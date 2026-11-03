@@ -354,7 +354,7 @@ function CloudPanel() {
         </ul>
       )}
       <p className="hint" style={{ margin: '6px 0 0' }}>
-        Auf einem neuen PC: Tagwerk installieren → Einstellungen → Datenquellen → mit demselben Microsoft-Konto anmelden, „Cloud-Speicher“ an. Deine Daten sind dann nach wenigen Sekunden da.
+        Auf einem neuen PC: Tagwerk installieren → Einstellungen → Konten → mit demselben Microsoft-Konto anmelden, „Cloud-Speicher“ an. Deine Daten sind dann nach wenigen Sekunden da.
       </p>
     </div>
   )

@@ -575,3 +575,10 @@
     grid-template-columns: 1fr;
   }
 }
+.focus-volume-value {
+  min-width: 44px;
+  text-align: right;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
