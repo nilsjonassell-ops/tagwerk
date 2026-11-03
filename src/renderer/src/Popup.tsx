@@ -6,6 +6,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Bell, CalendarClock, Mail, Sparkles, Sun, Target, X } from 'lucide-react'
 import type { PopupAction, PopupItem } from '@shared/types'
 import { chime } from '@/lib/sound'
+import { applyAppearance } from '@/lib/appearance'
 
 const LIFETIME_MS = 9000
 
@@ -25,10 +26,11 @@ export function Popup() {
 
   useEffect(() => {
     document.documentElement.classList.add('popup-root')
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    let offLook: (() => void) | undefined
     const theme = () =>
       window.tagwerk.settings.get().then((s) => {
-        document.documentElement.dataset.theme = s.theme === 'system' ? (mq.matches ? 'dark' : 'light') : s.theme
+        offLook?.()
+        offLook = applyAppearance(s)
       })
     void theme()
     const off = window.tagwerk.popup.onItems((next) => {
@@ -40,7 +42,10 @@ export function Popup() {
       if (fresh.some((i) => i.sound)) chime('notify')
     })
     window.tagwerk.popup.ready()
-    return off
+    return () => {
+      off()
+      offLook?.()
+    }
   }, [])
 
   // Fenstergröße folgt dem Inhalt

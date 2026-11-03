@@ -13,6 +13,7 @@ import { archiveThread, createNote, markThread, toggleTask } from '@/lib/actions
 import { Sidebar } from '@/components/Sidebar'
 import { AssistantPanel } from '@/components/Assistant'
 import { CommandPalette } from '@/components/CommandPalette'
+import { applyAppearance } from '@/lib/appearance'
 import { ConfirmHost, Toasts } from '@/components/Overlays'
 import { EventDialog, MailNoteDialog, ProjectDialog, TaskDialog } from '@/components/Editors'
 import { SplitDialog } from '@/components/Suggestions'
@@ -36,24 +37,16 @@ export function App() {
   const paletteOpen = useStore((s) => s.paletteOpen)
   const dialog = useStore((s) => s.dialog)
   const theme = useStore((s) => s.settings.theme)
+  const accent = useStore((s) => s.settings.accent)
+  const motion = useStore((s) => s.settings.motion)
   const settings = useStore((s) => s.settings)
 
   useEffect(() => {
     useStore.getState().init()
   }, [])
 
-  // Design: hell / dunkel / wie System
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    const apply = () => {
-      const resolved = theme === 'system' ? (mq.matches ? 'dark' : 'light') : theme
-      document.documentElement.dataset.theme = resolved
-      useStore.getState().set({ resolvedTheme: resolved })
-    }
-    apply()
-    mq.addEventListener('change', apply)
-    return () => mq.removeEventListener('change', apply)
-  }, [theme])
+  // Design: Modus, Akzentfarbe und Bewegung (folgt bei „System“ den Windows-Einstellungen)
+  useEffect(() => applyAppearance({ theme, accent, motion }, (resolvedTheme) => useStore.getState().set({ resolvedTheme })), [theme, accent, motion])
 
   // Google: beim Start, alle 5 Minuten, bei Rückkehr ins Fenster und wenn wieder online.
   // Posteingang und Kalender kommen zusätzlich live: Der Hauptprozess prüft jede

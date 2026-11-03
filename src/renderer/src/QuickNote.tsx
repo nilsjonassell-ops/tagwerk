@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { NotebookPen } from 'lucide-react'
 import { modKey } from '@/lib/format'
+import { applyAppearance } from '@/lib/appearance'
 
 /** Kleines, rahmenloses Fenster für die systemweite Schnellnotiz. */
 export function QuickNote() {
@@ -9,11 +10,10 @@ export function QuickNote() {
   const ref = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    window.tagwerk.settings.get().then((s) => {
-      document.documentElement.dataset.theme = s.theme === 'system' ? (mq.matches ? 'dark' : 'light') : s.theme
-    })
+    let off: (() => void) | undefined
+    window.tagwerk.settings.get().then((s) => (off = applyAppearance(s)))
     ref.current?.focus()
+    return () => off?.()
   }, [])
 
   const save = async () => {

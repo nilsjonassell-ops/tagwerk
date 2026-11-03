@@ -147,7 +147,6 @@ export const webApi: TagwerkApi = {
     set: async (patch) => {
       settings = merge(settings, patch)
       write(K.settings, settings)
-      if (patch.theme) document.documentElement.dataset.theme = patch.theme === 'system' ? '' : patch.theme
       return settings
     }
   },

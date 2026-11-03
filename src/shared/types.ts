@@ -476,6 +476,11 @@ export interface AppData {
 
 export type ThemeMode = 'system' | 'light' | 'dark'
 
+export type AccentId = 'indigo' | 'petrol' | 'blue' | 'green' | 'amber' | 'rose' | 'graphite'
+
+/** Animationen: Windows-Einstellung folgen oder immer reduziert */
+export type MotionMode = 'system' | 'reduced'
+
 export type ViewId = 'today' | 'calendar' | 'inbox' | 'tasks' | 'notes' | 'projects'
 
 export type DashboardCardId = 'brief' | 'schedule' | 'tasks' | 'mail' | 'focus' | 'weather'
@@ -483,6 +488,9 @@ export type DashboardCardId = 'brief' | 'schedule' | 'tasks' | 'mail' | 'focus' 
 export interface Settings {
   userName: string
   theme: ThemeMode
+  /** Akzentfarbe der Oberfläche */
+  accent: AccentId
+  motion: MotionMode
   launchAtLogin: boolean
   /** Seitenleiste als schmaler Symbol-Streifen */
   sidebarCollapsed?: boolean
@@ -576,6 +584,8 @@ export const GMAIL_CATEGORIES: { id: GmailCategory; label: string; hint: string 
 export const DEFAULT_SETTINGS: Settings = {
   userName: '',
   theme: 'system',
+  accent: 'indigo',
+  motion: 'system',
   launchAtLogin: false,
   closeToTray: true,
   quickNoteShortcut: 'CommandOrControl+Shift+Space',

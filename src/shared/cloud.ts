@@ -16,6 +16,8 @@ const MAP_GROUPS = new Set<CloudGroup>(['replyMarks', 'suggestions', 'followUps'
 export const SYNCED_SETTINGS: (keyof Settings)[] = [
   'userName',
   'theme',
+  'accent',
+  'motion',
   'sidebarCollapsed',
   'notifications',
   'sidebar',
