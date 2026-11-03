@@ -20,7 +20,8 @@
     "web": "vite --config vite.web.config.ts",
     "build:web": "vite build --config vite.web.config.ts",
     "tokens": "node --experimental-strip-types scripts/gen-tokens.mjs",
-    "test:e2e": "node tests/e2e/ui.cjs"
+    "test:e2e": "node tests/e2e/ui.cjs",
+    "test:visual": "node tests/e2e/visual.cjs"
   },
   "dependencies": {
     "@floating-ui/react": "^0.27.20",

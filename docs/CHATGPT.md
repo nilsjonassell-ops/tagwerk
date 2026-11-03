@@ -27,7 +27,7 @@ So arbeitest du:
 Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, Notizen, Projekte und Fokuszeit**. Ziel: morgens öffnen, sofort sehen was heute wichtig ist, und alles erledigen, ohne zwischen fünf Apps zu springen.
 
 - Plattform: Windows (Desktop-App), verteilt über den **Microsoft Store** („Tagwerk Planer“, Produkt-ID 9N30ZHF711XF). Der Code läuft technisch auch auf macOS.
-- Design: „Liquid Glass“ – schwebende Glaspaneele, weiche Farbverläufe, Hell/Dunkel-Modus, flüssige Animationen.
+- Design: ruhiges Design-System – zwei schwebende, deckende Flächen auf einem dezenten Verlauf aus der Akzentfarbe; Glas (Unschärfe) nur für Menüs, Pop-ups und hinter Dialogen. Hell/Dunkel/Wie Windows, 7 Akzentfarben (alle auf WCAG-AA-Kontrast geprüft), Inter als Schrift, Instrument Serif für große Überschriften. „Bewegung reduzieren“ wird beachtet.
 - Sprache der App: Deutsch.
 
 ---
@@ -84,6 +84,7 @@ Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, N
 
 ### Fokus
 - Fokus-Sitzungen (Pomodoro-artig) mit Hintergrundklang; stummschaltet Benachrichtigungen, Termine dürfen optional durch.
+- Start-Bildschirm: Aufgabe per Suche wählen, Dauer als Umschalter (15/25/45/60/90/Eigene, Pfeiltasten), **Enter startet sofort**.
 
 ### Benachrichtigungen
 - Eigene **Pop-ups unten rechts** (im Tagwerk-Design) für neue wichtige Mails, Termine, Aufgaben-Erinnerungen, Updates, Wochenrückblick – mit Direktaktionen (Öffnen, Archivieren, Später, Erledigt).
@@ -93,7 +94,10 @@ Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, N
 - Was wurde diese Woche geschafft, was ist liegen geblieben, Ausblick auf nächste Woche.
 
 ### Bedienung
-- Befehlspalette (Strg+K) mit Suche über alles und Befehlen.
+- Befehlspalette (Strg+K) mit Suche über alles und Befehlen – auch „Design: Hell/Dunkel/Wie Windows“ und „Akzent: …“.
+- Einheitliche Menüs und Auswahlfelder (eigene Bausteine statt Windows-Standard): klappen an Fensterrändern um, bleiben während Animationen zuverlässig, komplett per Tastatur (↑ ↓ Pos1 Ende, Anfangsbuchstaben, Enter, Esc); lange Listen mit Suchfeld.
+- Dialoge mit Unschärfe dahinter; bei ungespeicherten Eingaben fragt Tagwerk vor dem Schließen nach („Änderungen verwerfen?“).
+- **Einstellungen** neu gegliedert: Darstellung (Modus-Vorschaukarten, Akzentfarbe, Animationen, Seitenleiste) · Allgemein · Übersicht · Kalender · Benachrichtigungen · Konten · Mail-Vorschläge · Claude · Datenschutz.
 - Einklappbare Seitenleiste (dünner Symbolstreifen, klappt beim Drüberfahren auf, Strg+B).
 - Tastenkürzel: Strg+1–6 Bereiche, Strg+N Aufgabe, Strg+Umschalt+N Termin, Strg+/ alle Kürzel.
 - Start mit Windows, Infobereich-Symbol, Startanimation.
@@ -139,7 +143,8 @@ Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, N
 - Electron + React 19 + TypeScript, Build mit electron-vite, Zustand-Verwaltung mit zustand, Icons lucide-react.
 - Hauptprozess: Fenster, Infobereich, Pop-up-Fenster, Planer für Erinnerungen, Konten-Synchronisierung (Google API, Microsoft Graph, CalDAV), Live-Abfragen (Google jede Sekunde, Outlook alle 3 s, iCloud alle 10 s).
 - Oberfläche läuft abgeschottet (kein Node-Zugriff), schmale Brücke `window.tagwerk`.
-- Tests: Logik-Tests (Node) + automatische Oberflächentests mit Testservern.
+- Gestaltung: Design-Tokens in `styles/tokens.css`, erzeugt aus `src/shared/palette.ts` (`npm run tokens`); Kontrasttest prüft jede Akzentfarbe in Hell/Dunkel. Bausteine `Popover`/`Menu`/`Select`/`Segmented`/`Tooltip` (Positionierung mit @floating-ui).
+- Tests: Logik-Tests (Node) + automatische Oberflächentests mit Testservern; `npm run test:e2e` (Menüs, Auswahl, Dialoge, Darstellung im Browser) und `npm run test:visual` (Bildvergleich, lokal).
 - Auslieferung: GitHub-Actions baut Installer + Store-Paket (MSIX); Store-Einreichung über Microsoft Partner Center.
 
 ---
@@ -184,6 +189,7 @@ Offene Fragen: <falls vorhanden>
 ## 9. Versionsverlauf
 
 <!--VERSIONEN-->
+- **Noch nicht veröffentlicht (gesammelt fürs große Update)** – Neues Design-System: ruhige Flächen statt Glas-Schichten · 7 Akzentfarben + Hell/Dunkel/Wie Windows · eigene, tastaturbedienbare Menüs und Auswahlfelder · Dialoge mit Unschärfe und Rückfrage bei ungespeicherten Eingaben · Fokus-Start neu (Suche, Dauer-Umschalter, Enter startet) · Einstellungen neu gegliedert (Darstellung, Konten, Mail-Vorschläge) · „Bewegung reduzieren“
 - **1.8.0** (03.11.2026) – OneNote lesen & speichern · einklappbare Seitenleiste · Outlook-Mail & -Kalender · Apple Kalender (iCloud) · Postfach-Filter je Konto · Zielkalender beim Anlegen · einfachere Gmail-Einrichtung mit Direktlinks · Microsoft-Anmeldung ohne eigene Einrichtung · Cloud-Speicher über OneDrive (Daten auf jedem PC) · Vorschläge aus Mails („Aus Mails übernehmen“: Termine, Fristen, Aufgaben, Infos – mit Änderungen, Serien, Aufteilen/Zusammenführen, Vorlauf, Regeln) · Wiedervorlage für Mails · „Meine Daten wiederherstellen“ beim ersten Start
 - **1.7.0** – Microsoft-Store-Version (kein Blockieren mehr durch Smart App Control)
 - **1.6.0** – Kalender live, Termine aus Mails, Schnelleingabe mit Uhrzeit, Wochenrückblick

@@ -12,7 +12,10 @@ npm run dev        # Entwicklungsmodus mit Hot Reload
 npm run web        # Web-Vorschau im Browser (Beispieldaten, simulierte Testkonten)
 npm run build      # Produktions-Build nach out/
 npm start          # Produktions-Build starten
-npm test           # Logik-Tests (Konflikte, freie Zeit, Wiederholungen, ICS-Import …)
+npm test           # Logik-Tests (Konflikte, freie Zeit, Wiederholungen, ICS-Import, Farbkontrast …)
+npm run test:e2e   # Oberflächentests im Browser (nach npm run build:web)
+npm run test:visual # Bildvergleich der Hauptansichten, nur lokal (--update setzt neuen Vergleich)
+npm run tokens     # Design-Tokens (styles/tokens.css) aus src/shared/palette.ts erzeugen
 npm run dist:win   # Windows-Installer (.exe) nach release/ – auf Windows ausführen
                    # (nicht signiert: SmartScreen → „Weitere Informationen“ → „Trotzdem ausführen“)
 npm run dist:mac   # macOS-Image (.dmg) – auf einem Mac ausführen

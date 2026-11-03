@@ -9,3 +9,4 @@ diagnose.*
 build.log
 tagwerk.log
 .superpowers/
+tests/visual/
