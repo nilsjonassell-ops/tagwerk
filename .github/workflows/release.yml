@@ -66,3 +66,14 @@ jobs:
           echo "::notice::Store-Paket $(basename "$F") ($(du -h "$F" | cut -f1)) am Release $V angehängt"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: ChatGPT-Briefing aktualisieren
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main --quiet
+          git checkout -B briefing origin/main --quiet
+          node scripts/update-briefing.mjs
+          if git diff --quiet docs/CHATGPT.md; then echo "Briefing unverändert"; exit 0; fi
+          git commit -q -m "ChatGPT-Briefing: Version $(node -p "require('./package.json').version")" docs/CHATGPT.md
+          git push origin briefing:main
