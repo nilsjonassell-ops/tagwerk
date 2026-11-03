@@ -7,7 +7,7 @@ export function Tooltip({ label, children }: { label: string; children: ReactEle
   const [open, setOpen] = useState(false)
   const timer = useRef<number>(0)
   const id = useId()
-  const { refs, floatingStyles } = useFloating({ open, placement: 'top', strategy: 'fixed', whileElementsMounted: autoUpdate, middleware: [offset(6), flip({ padding: 6 }), shift({ padding: 6 })] })
+  const { refs, floatingStyles, isPositioned } = useFloating({ open, placement: 'top', strategy: 'fixed', transform: false, whileElementsMounted: autoUpdate, middleware: [offset(6), flip({ padding: 6 }), shift({ padding: 6 })] })
   const show = () => {
     clearTimeout(timer.current)
     timer.current = window.setTimeout(() => setOpen(true), 500)
@@ -29,7 +29,7 @@ export function Tooltip({ label, children }: { label: string; children: ReactEle
       })}
       {open && (
         <FloatingPortal root={layerRoot()}>
-          <div ref={refs.setFloating} id={id} role="tooltip" className="tooltip" style={floatingStyles}>
+          <div ref={refs.setFloating} id={id} role="tooltip" className="tooltip" style={{ ...floatingStyles, visibility: isPositioned ? undefined : 'hidden' }}>
             {label}
           </div>
         </FloatingPortal>

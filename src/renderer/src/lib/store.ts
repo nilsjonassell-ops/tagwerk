@@ -35,9 +35,9 @@ export interface Selection {
 }
 
 export type DialogState =
-  | { kind: 'task'; id?: string; preset?: Partial<import('@shared/types').Task>; suggestionId?: string; mergeIds?: string[] }
-  | { kind: 'event'; id?: string; preset?: Partial<import('@shared/types').CalEvent>; suggestionId?: string; series?: import('@shared/types').SuggestionRecurrence }
-  | { kind: 'mailnote'; suggestionId?: string; title: string; body: string; threadId: string; projectId?: string }
+  | { kind: 'task'; id?: string; preset?: Partial<import('@shared/types').Task>; suggestionId?: string; mergeIds?: string[]; capture?: import('@shared/capture').Capture }
+  | { kind: 'event'; id?: string; preset?: Partial<import('@shared/types').CalEvent>; suggestionId?: string; series?: import('@shared/types').SuggestionRecurrence; capture?: import('@shared/capture').Capture }
+  | { kind: 'mailnote'; suggestionId?: string; title: string; body: string; threadId: string; projectId?: string; capture?: import('@shared/capture').Capture }
   | { kind: 'split'; suggestionId: string }
   | { kind: 'project'; id?: string }
   | { kind: 'settings'; section?: string }

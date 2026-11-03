@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Archive, CheckSquare, FlaskConical, Inbox as InboxIcon, Mail, MailOpen, Reply, Search, Send, Sparkles, Star, Trash2, X, AlertCircle, Clock, Loader2, Flag, CalendarPlus, ChevronDown, Layers, ListChecks, ListPlus, StickyNote, AlarmClock } from 'lucide-react'
+import { Archive, CheckSquare, FlaskConical, Inbox as InboxIcon, Mail, MailOpen, Reply, Search, Send, Sparkles, Star, Trash2, X, AlertCircle, Clock, Loader2, Flag, CalendarPlus, Layers, ListChecks, ListPlus, StickyNote, AlarmClock, CheckCircle2, MoreHorizontal } from 'lucide-react'
 import { groupThreads, type Thread } from '@shared/analysis'
 import { SuggestionsPane, ThreadSuggestions, useOpenSuggestionCount } from '@/components/Suggestions'
 import { activeFollowUp, setFollowUp, snoozeOptions, toggleReview } from '@/lib/suggestions'
-import { cleanSubject, detectMailSuggestions } from '@shared/mail-insights'
+import { existingFromThread } from '@shared/capture'
+import { startCapture } from '@/lib/capture'
 import type { Source } from '@shared/types'
 import { SOURCE_LABEL } from '@/lib/accounts'
 
 const ACCOUNT_ORDER: Source[] = ['google', 'outlook', 'demo', 'local']
 import { useStore } from '@/lib/store'
 import { hueFor, initials, mailDate, projectName } from '@/lib/format'
-import { archiveThread, deleteThread, markThread, sendReply, setReplyMark, taskFromEmail, toggleStar } from '@/lib/actions'
+import { archiveThread, deleteThread, markThread, sendReply, setReplyMark, toggleStar } from '@/lib/actions'
 import { draftReply, summarizeThread } from '@/lib/assistant'
 import { AccountStatus, CustomDate, Empty, Menu, ViewHeader } from '@/components/ui'
 
@@ -211,7 +212,7 @@ export function InboxView() {
           </div>
 
           {selected ? (
-            <Reader key={selected.id} thread={selected} onTask={() => taskFromEmail(selected.id)} />
+            <Reader key={selected.id} thread={selected} />
           ) : (
             <div className="reader">
               <Empty icon={<MailOpen />} title="Keine Unterhaltung ausgewählt">
@@ -286,7 +287,7 @@ function ThreadRow({ t, selected, onClick, showAccount }: { t: Thread; selected:
   )
 }
 
-function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
+function Reader({ thread }: { thread: Thread }) {
   const claude = useStore((s) => s.claude)
   const online = useStore((s) => s.online)
   const settings = useStore((s) => s.settings)
@@ -358,7 +359,6 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
               </button>
             </>
           )}
-          <TakeOverMenu thread={thread} onTask={onTask} />
           <FollowUpMenu threadId={thread.id} />
           <div style={{ flex: 1 }} />
           {thread.folder !== 'sent' && (
@@ -374,13 +374,9 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
               <Archive />
             </button>
           )}
-          <button className="btn small ghost icon-btn danger-hover" onClick={() => deleteThread(thread.id)} title={readOnlyHint ?? 'Löschen (Entf)'} aria-label="Löschen" disabled={!canModify}>
-            <Trash2 />
-          </button>
-          <button className="btn small ghost icon-btn" onClick={() => markThread(thread.id, { read: false })} title={readOnlyHint ?? 'Als ungelesen markieren'} aria-label="Als ungelesen markieren" disabled={!canModify}>
-            <Mail />
-          </button>
+          <MoreMenu thread={thread} canModify={canModify} readOnlyHint={readOnlyHint} />
         </div>
+        <CaptureBar threadId={thread.id} />
         <ThreadSuggestions threadId={thread.id} />
         {aiOn && !claude.configured && (
           <div className="hint" style={{ marginTop: 8 }}>
@@ -487,57 +483,50 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
 
 /** Erkannte Termine in der letzten eingegangenen Mail – ein Klick legt sie im Kalender an. */
 
-/** „Termin daraus“: erkannter Termin, sonst Betreff mit nächster voller Stunde */
-function eventFromThread(thread: Thread) {
-  const last = [...thread.messages].reverse().find((m) => m.folder !== 'sent') ?? thread.latest
-  const found = detectMailSuggestions(last, { kinds: ['event'] })[0]
-  const who = `${last.from.name || last.from.email}${last.from.email ? ` <${last.from.email}>` : ''}`
-  useStore.getState().openDialog({
-    kind: 'event',
-    suggestionId: found?.id,
-    preset: {
-      title: cleanSubject(thread.subject),
-      start: found?.start,
-      end: found?.end,
-      allDay: found?.allDay,
-      projectId: thread.projectId,
-      mailRef: thread.id,
-      notes: `Aus der E-Mail von ${who}${found ? `:\n„${found.context}“` : ''}`
-    }
-  })
+
+/** Übernehmen als: drei klar unterscheidbare Wege aus der geöffneten Mail */
+function CaptureBar({ threadId }: { threadId: string }) {
+  const data = useStore((s) => s.data)
+  const items = [
+    { kind: 'task' as const, label: 'Aufgabe', hint: 'Etwas erledigen', icon: CheckSquare },
+    { kind: 'note' as const, label: 'Notiz', hint: 'Infos aufheben', icon: StickyNote },
+    { kind: 'event' as const, label: 'Termin', hint: 'Zeit eintragen', icon: CalendarPlus }
+  ]
+  return (
+    <div className="capture-bar" role="group" aria-label="Aus dieser E-Mail übernehmen">
+      <span className="capture-bar-label">Übernehmen als</span>
+      {items.map((it) => {
+        const done = existingFromThread(data, threadId, it.kind)
+        return (
+          <button key={it.kind} type="button" className={`capture-btn k-${it.kind}`} onClick={() => startCapture(threadId, it.kind)} title={done ? `Schon angelegt: „${done.title}“` : `${it.label} aus dieser E-Mail – ${it.hint}`}>
+            <span className="ck-icon" aria-hidden="true">
+              <it.icon />
+            </span>
+            <span className="cb-text">{it.label}</span>
+            {done && <CheckCircle2 className="cb-done" aria-label="schon angelegt" />}
+          </button>
+        )
+      })}
+    </div>
+  )
 }
 
-/** „Als Notiz merken“: erkannte Infos oder der Anfang der Mail */
-function noteFromThread(thread: Thread) {
-  const last = [...thread.messages].reverse().find((m) => m.folder !== 'sent') ?? thread.latest
-  const found = detectMailSuggestions(last, { kinds: ['note'] })[0]
-  const excerpt = last.body.replace(/\n{3,}/g, '\n\n').trim().slice(0, 600)
-  useStore.getState().openDialog({
-    kind: 'mailnote',
-    suggestionId: found?.id,
-    title: cleanSubject(thread.subject),
-    body: `${found?.noteBody ? `${found.noteBody}\n\n` : ''}${excerpt}\n\n– E-Mail von ${last.from.name || last.from.email}, ${new Date(last.date).toLocaleDateString('de-DE')}`,
-    threadId: thread.id,
-    projectId: thread.projectId
-  })
-}
-
-/** „Übernehmen ▾“ in der geöffneten Mail: Termin, Aufgabe oder Notiz daraus */
-function TakeOverMenu({ thread, onTask }: { thread: Thread; onTask: () => void }) {
+/** Seltener gebrauchte Aktionen, damit die Leiste nicht umbricht */
+function MoreMenu({ thread, canModify, readOnlyHint }: { thread: Thread; canModify: boolean; readOnlyHint?: string }) {
   const queued = useStore((s) => !!s.data.reviewQueue?.[thread.id])
   return (
     <Menu
-      label="Übernehmen als"
+      label="Weitere Aktionen"
+      placement="bottom-end"
       trigger={(t) => (
-        <button {...t} className="btn small" title="Termin, Aufgabe oder Notiz aus dieser Mail">
-          <CalendarPlus /> Übernehmen <ChevronDown className="chev" />
+        <button {...t} className="btn small ghost icon-btn" title="Weitere Aktionen" aria-label="Weitere Aktionen">
+          <MoreHorizontal />
         </button>
       )}
       items={[
-        { id: 'event', label: 'Termin daraus', icon: <CalendarPlus />, onSelect: () => eventFromThread(thread) },
-        { id: 'task', label: 'Aufgabe daraus', icon: <CheckSquare />, onSelect: onTask },
-        { id: 'note', label: 'Als Notiz merken', icon: <StickyNote />, onSelect: () => noteFromThread(thread) },
-        { id: 'review', label: queued ? 'Nicht mehr zur Bearbeitung' : 'Zur Bearbeitung', icon: <ListPlus />, hint: 'B', onSelect: () => toggleReview(thread.id) }
+        { id: 'review', label: queued ? 'Nicht mehr zur Bearbeitung' : 'Zur Bearbeitung vormerken', icon: <ListPlus />, hint: 'B', onSelect: () => toggleReview(thread.id) },
+        { id: 'unread', label: 'Als ungelesen markieren', icon: <Mail />, disabled: !canModify, sub: canModify ? undefined : readOnlyHint, onSelect: () => markThread(thread.id, { read: false }) },
+        { id: 'delete', label: 'Löschen', icon: <Trash2 />, hint: 'Entf', danger: true, disabled: !canModify, onSelect: () => deleteThread(thread.id) }
       ]}
     />
   )

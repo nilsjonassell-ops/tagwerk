@@ -503,22 +503,6 @@ export async function sendReply(threadId: string, body: string): Promise<boolean
   return true
 }
 
-export function taskFromEmail(threadId: string) {
-  const msgs = S().data.emails.filter((m) => m.threadId === threadId)
-  const first = msgs[0]
-  if (!first) return
-  S().openDialog({
-    kind: 'task',
-    preset: {
-      title: `Antworten: ${first.subject.replace(/^(re|aw):\s*/i, '')}`,
-      projectId: first.projectId,
-      priority: msgs.some((m) => m.important) ? 'high' : 'medium',
-      due: ymd(new Date()),
-      origin: { kind: 'email', refId: threadId, label: `E-Mail von ${first.from.name}` }
-    }
-  })
-}
-
 // ---------- Notizen ----------
 
 export function createNote(partial: Partial<Note> = {}): Note {

@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Trash2, AlertTriangle } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
+import { Trash2, AlertTriangle, ChevronRight } from 'lucide-react'
 import { eventsOnDay, findConflicts, planTasks, ymd } from '@shared/analysis'
 import type { CalEvent, Person, Priority, Project, ProjectStatus, Recurrence, Task, TaskStatus } from '@shared/types'
 import { uid, useStore } from '@/lib/store'
@@ -12,20 +12,38 @@ import { Mail } from 'lucide-react'
 import { fromLocalInput, PRIORITY_LABEL, RECURRENCE_LABEL, toLocalInput, fTime } from '@/lib/format'
 import { Dialog, Select, SourceTag } from './ui'
 import { projectOptions } from '@/lib/options'
+import type { Capture } from '@shared/capture'
+import { finishCapture, openCreated, switchCapture, takeDraft } from '@/lib/capture'
+import { CaptureHeader, OriginTag } from './CaptureHeader'
+
+/** Beim Übernehmen aus einer Mail: Zusatzangaben eingeklappt, damit nur das Nötige sichtbar ist */
+function MoreFields({ on, summary, children }: { on: boolean; summary?: string; children: React.ReactNode }) {
+  if (!on) return <>{children}</>
+  return (
+    <details className="more-fields">
+      <summary>
+        <ChevronRight aria-hidden="true" /> Weitere Angaben
+        {summary && <span className="more-summary">{summary}</span>}
+      </summary>
+      <div className="more-body">{children}</div>
+    </details>
+  )
+}
 
 // ---------- Aufgabe ----------
 
-export function TaskDialog({ id, preset, suggestionId, mergeIds }: { id?: string; preset?: Partial<Task>; suggestionId?: string; mergeIds?: string[] }) {
+export function TaskDialog({ id, preset, suggestionId, mergeIds, capture }: { id?: string; preset?: Partial<Task>; suggestionId?: string; mergeIds?: string[]; capture?: Capture }) {
   const data = useStore((s) => s.data)
   const close = () => useStore.getState().openDialog(null)
   const existing = id ? data.tasks.find((t) => t.id === id) : undefined
-  const [t, setT] = useState<Task>(() => existing ?? newTask({ title: '', ...preset }))
+  const [t, setT] = useState<Task>(() => takeDraft<Task>(capture) ?? existing ?? newTask({ title: '', ...preset }))
+  const saving = useRef(false)
   const [initial] = useState(() => JSON.stringify(t))
   const [touched, setTouched] = useState(false)
   const set = <K extends keyof Task>(k: K, v: Task[K]) => setT((x) => ({ ...x, [k]: v }))
   const invalid = !t.title.trim()
   // Vorlauf: aus einer Mail-Frist, die noch mindestens drei Tage entfernt ist
-  const fromMail = !existing && (!!suggestionId || !!mergeIds?.length)
+  const fromMail = !existing && (!!suggestionId || !!mergeIds?.length || !!capture)
   const daysLeft = t.due ? Math.round((new Date(`${t.due}T12:00:00`).getTime() - new Date(new Date().toDateString()).getTime()) / 86400_000) : 0
   const prepPossible = fromMail && daysLeft >= 3
   const [prep, setPrep] = useState(() => fromMail && preset?.priority === 'high')
@@ -41,7 +59,8 @@ export function TaskDialog({ id, preset, suggestionId, mergeIds }: { id?: string
 
   const submit = () => {
     setTouched(true)
-    if (invalid) return
+    if (invalid || saving.current) return
+    saving.current = true
     const clean = { ...t, title: t.title.trim(), recurrence: t.due ? t.recurrence : 'none' as Recurrence }
     if (existing) {
       saveTask(clean)
@@ -71,8 +90,9 @@ export function TaskDialog({ id, preset, suggestionId, mergeIds }: { id?: string
       if (fromMail) {
         const st = useStore.getState()
         const sIds = [suggestionId, ...(mergeIds ?? [])].filter(Boolean) as string[]
+        finishCapture(capture)
         st.toast(`Aufgabe „${clean.title.slice(0, 40)}“${extra} angelegt`, {
-          action: clean.due && !createdEvents.length ? { label: 'Einplanen', run: () => st.openDialog({ kind: 'plan' }) } : undefined,
+          action: capture ? { label: 'Öffnen', run: () => openCreated('task', clean.id) } : clean.due && !createdEvents.length ? { label: 'Einplanen', run: () => st.openDialog({ kind: 'plan' }) } : undefined,
           // Rückgängig: genau das Angelegte entfernen und den Vorschlag wieder öffnen
           undo: () =>
             st.mutate((d) => {
@@ -88,7 +108,7 @@ export function TaskDialog({ id, preset, suggestionId, mergeIds }: { id?: string
 
   return (
     <Dialog
-      title={existing ? 'Aufgabe bearbeiten' : 'Neue Aufgabe'}
+      title={existing ? 'Aufgabe bearbeiten' : capture ? 'Aus E-Mail übernehmen' : 'Neue Aufgabe'}
       onClose={close}
       dirty={JSON.stringify(t) !== initial}
       footer={
@@ -102,12 +122,15 @@ export function TaskDialog({ id, preset, suggestionId, mergeIds }: { id?: string
             Abbrechen
           </button>
           <button className="btn primary" onClick={submit}>
-            {existing ? 'Speichern' : 'Anlegen'}
+            {existing ? 'Speichern' : capture ? 'Aufgabe anlegen' : 'Anlegen'}
           </button>
         </>
       }
     >
+      {capture && <CaptureHeader capture={capture} onSwitch={(to) => switchCapture(capture, to, t)} />}
       <form
+        key={capture?.kind}
+        className={capture ? 'capture-form' : undefined}
         onSubmit={(e) => {
           e.preventDefault()
           submit()
@@ -115,13 +138,17 @@ export function TaskDialog({ id, preset, suggestionId, mergeIds }: { id?: string
         style={{ display: 'contents' }}
       >
         <label className="field">
-          <span>Titel</span>
+          <span>
+            Titel <OriginTag o={capture?.origin.title} />
+          </span>
           <input className={`input ${touched && invalid ? 'invalid' : ''}`} value={t.title} onChange={(e) => set('title', e.target.value)} data-autofocus placeholder="Was ist zu tun?" />
           {touched && invalid && <span className="error-text">Gib der Aufgabe einen Titel.</span>}
         </label>
         <div className="grid-3">
           <label className="field">
-            <span>Fällig am</span>
+            <span>
+              Fällig am <OriginTag o={capture?.origin.due} />
+            </span>
             <input type="date" className="input" value={t.due ?? ''} onChange={(e) => set('due', e.target.value || undefined)} />
           </label>
           <label className="field">
@@ -133,6 +160,7 @@ export function TaskDialog({ id, preset, suggestionId, mergeIds }: { id?: string
             <Select aria-label="Priorität" value={t.priority} onChange={(v) => set('priority', v)} options={(['high', 'medium', 'low'] as Priority[]).map((p) => ({ value: p, label: PRIORITY_LABEL[p] }))} />
           </label>
         </div>
+        <MoreFields on={!!capture} summary={[data.projects.find((p) => p.id === t.projectId)?.name, t.notes ? 'Notiz' : ''].filter(Boolean).join(' · ')}>
         <div className="grid-3">
           <label className="field">
             <span>Projekt</span>
@@ -152,6 +180,7 @@ export function TaskDialog({ id, preset, suggestionId, mergeIds }: { id?: string
           <span>Notizen</span>
           <textarea className="textarea" value={t.notes ?? ''} onChange={(e) => set('notes', e.target.value)} rows={3} />
         </label>
+        </MoreFields>
         {prepPossible && (
           <div className="prep-row">
             <label className="row" style={{ gap: 8 }}>
@@ -180,25 +209,30 @@ export function TaskDialog({ id, preset, suggestionId, mergeIds }: { id?: string
 
 // ---------- Termin ----------
 
-export function EventDialog({ id, preset, suggestionId, series }: { id?: string; preset?: Partial<CalEvent>; suggestionId?: string; series?: SuggestionRecurrence }) {
+type EventDraft = { title: string; date: string; startT: string; endT: string; allDay: boolean; location: string; attendees: string; notes: string; projectId: string }
+
+export function EventDialog({ id, preset, suggestionId, series, capture }: { id?: string; preset?: Partial<CalEvent>; suggestionId?: string; series?: SuggestionRecurrence; capture?: Capture }) {
   const data = useStore((s) => s.data)
   const settings = useStore((s) => s.settings)
   const close = () => useStore.getState().openDialog(null)
   const existing = id ? data.events.find((e) => e.id === id) : undefined
+  // Nach einem Wechsel Aufgabe ↔ Termin: zuletzt bearbeiteter Stand
+  const [d0] = useState(() => takeDraft<EventDraft>(capture))
+  const saving = useRef(false)
   const init = useMemo(() => {
     const start = existing?.start ?? preset?.start ?? new Date(Math.ceil(Date.now() / 3600_000) * 3600_000).toISOString()
     const end = existing?.end ?? preset?.end ?? new Date(new Date(start).getTime() + 3600_000).toISOString()
     return { start, end }
   }, [existing, preset])
-  const [title, setTitle] = useState(existing?.title ?? preset?.title ?? '')
-  const [date, setDate] = useState(toLocalInput(init.start).date)
-  const [startT, setStartT] = useState(toLocalInput(init.start).time)
-  const [endT, setEndT] = useState(toLocalInput(init.end).time)
-  const [allDay, setAllDay] = useState(existing?.allDay ?? preset?.allDay ?? false)
-  const [location, setLocation] = useState(existing?.location ?? preset?.location ?? '')
-  const [attendees, setAttendees] = useState((existing?.attendees ?? preset?.attendees ?? []).map((a) => (a.email ? `${a.name} <${a.email}>` : a.name)).join(', '))
-  const [notes, setNotes] = useState(existing?.notes ?? preset?.notes ?? '')
-  const [projectId, setProjectId] = useState(existing?.projectId ?? preset?.projectId ?? '')
+  const [title, setTitle] = useState(d0?.title ?? existing?.title ?? preset?.title ?? '')
+  const [date, setDate] = useState(d0?.date ?? toLocalInput(init.start).date)
+  const [startT, setStartT] = useState(d0?.startT ?? toLocalInput(init.start).time)
+  const [endT, setEndT] = useState(d0?.endT ?? toLocalInput(init.end).time)
+  const [allDay, setAllDay] = useState(d0?.allDay ?? existing?.allDay ?? preset?.allDay ?? false)
+  const [location, setLocation] = useState(d0?.location ?? existing?.location ?? preset?.location ?? '')
+  const [attendees, setAttendees] = useState(d0?.attendees ?? (existing?.attendees ?? preset?.attendees ?? []).map((a) => (a.email ? `${a.name} <${a.email}>` : a.name)).join(', '))
+  const [notes, setNotes] = useState(d0?.notes ?? existing?.notes ?? preset?.notes ?? '')
+  const [projectId, setProjectId] = useState(d0?.projectId ?? existing?.projectId ?? preset?.projectId ?? '')
   const [touched, setTouched] = useState(false)
   const snapshot = JSON.stringify([title, date, startT, endT, allDay, location, attendees, notes, projectId])
   const [initialSnapshot] = useState(snapshot)
@@ -262,20 +296,28 @@ export function EventDialog({ id, preset, suggestionId, series }: { id?: string;
   const seriesList = useMemo(() => (series && !existing ? seriesStarts(new Date(start), series) : []), [series, existing, start])
   const submit = async () => {
     setTouched(true)
-    if (invalidTitle) return
+    if (invalidTitle || saving.current) return
+    saving.current = true
     if (!existing && target !== settings.lastEventTarget) void useStore.getState().updateSettings({ lastEventTarget: target })
     const many = wholeSeries && seriesList.length > 1
     let createdId = ''
     const ok = await saveEvent(draft, !existing, {
       target: existing ? undefined : target,
       notify,
-      quiet: many,
+      quiet: many || !!capture,
       onCreated: (newId) => {
         createdId = newId
         if (suggestionId) markCreated(suggestionId, 'event', newId)
       }
     })
-    if (!ok) return
+    if (!ok) {
+      saving.current = false
+      return
+    }
+    if (capture && createdId && !many) {
+      finishCapture(capture)
+      useStore.getState().toast(`Termin „${draft.title.slice(0, 40)}“ angelegt`, { action: { label: 'Öffnen', run: () => openCreated('event', createdId) } })
+    }
     if (withNote && createdId) {
       const now = new Date().toISOString()
       const st = useStore.getState()
@@ -325,7 +367,7 @@ export function EventDialog({ id, preset, suggestionId, series }: { id?: string;
 
   return (
     <Dialog
-      title={existing ? 'Termin bearbeiten' : 'Neuer Termin'}
+      title={existing ? 'Termin bearbeiten' : capture ? 'Aus E-Mail übernehmen' : 'Neuer Termin'}
       onClose={close}
       dirty={snapshot !== initialSnapshot}
       footer={
@@ -339,12 +381,14 @@ export function EventDialog({ id, preset, suggestionId, series }: { id?: string;
             Abbrechen
           </button>
           <button className="btn primary" onClick={submit}>
-            {existing ? 'Speichern' : 'Anlegen'}
+            {existing ? 'Speichern' : capture ? 'Termin anlegen' : 'Anlegen'}
           </button>
         </>
       }
     >
+      {capture && <CaptureHeader capture={capture} onSwitch={(to) => switchCapture(capture, to, { title, date, startT, endT, allDay, location, attendees, notes, projectId } satisfies EventDraft)} />}
       <form
+        className={capture ? 'capture-form' : undefined}
         onSubmit={(e) => {
           e.preventDefault()
           submit()
@@ -359,14 +403,18 @@ export function EventDialog({ id, preset, suggestionId, series }: { id?: string;
           </label>
         )}
         <label className="field">
-          <span>Titel</span>
+          <span>
+            Titel <OriginTag o={capture?.origin.title} />
+          </span>
           <input className={`input ${touched && invalidTitle ? 'invalid' : ''}`} value={title} onChange={(e) => setTitle(e.target.value)} data-autofocus placeholder="z. B. Abstimmung Angebot" />
           {touched && invalidTitle && <span className="error-text">Gib dem Termin einen Titel.</span>}
         </label>
         <div className="grid-3">
           <label className="field">
-            <span>Datum</span>
-            <input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
+            <span>
+              Datum <OriginTag o={capture?.origin.when} />
+            </span>
+            <input type="date" className={`input ${capture?.origin.when === 'missing' ? 'needs-check' : capture?.origin.when === 'check' ? 'maybe' : ''}`} value={date} onChange={(e) => setDate(e.target.value)} />
           </label>
           <label className="field">
             <span>Beginn</span>
@@ -395,6 +443,7 @@ export function EventDialog({ id, preset, suggestionId, series }: { id?: string;
             </div>
           )
         })}
+        <MoreFields on={!!capture} summary={[location, data.projects.find((p) => p.id === projectId)?.name, notes ? 'Notiz' : ''].filter(Boolean).join(' · ')}>
         <label className="field">
           <span>Ort</span>
           <input className="input" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Adresse, Raum oder „Online“" />
@@ -452,6 +501,7 @@ export function EventDialog({ id, preset, suggestionId, series }: { id?: string;
           <span>Notizen</span>
           <textarea className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
         </label>
+        </MoreFields>
         {seriesList.length > 1 && (
           <div className="field">
             <span>Wiederholung erkannt: {series!.label}</span>
@@ -470,7 +520,7 @@ export function EventDialog({ id, preset, suggestionId, series }: { id?: string;
             <input type="checkbox" className="box-check" checked={withNote} onChange={(e) => setWithNote(e.target.checked)} /> Notiz mit den Maildetails zum Termin anlegen
           </label>
         )}
-        {draft.mailRef && <MailLink threadId={draft.mailRef} />}
+        {draft.mailRef && !capture && <MailLink threadId={draft.mailRef} />}
         <button type="submit" hidden />
       </form>
     </Dialog>
@@ -576,23 +626,36 @@ export function MailLink({ threadId }: { threadId: string }) {
 }
 
 /** Notiz aus einer Mail: Inhalt prüfen, Projekt und Speicherort wählen */
-export function MailNoteDialog(props: { suggestionId?: string; title: string; body: string; threadId: string; projectId?: string }) {
+type NoteDraft = { title: string; body: string; projectId: string }
+
+export function MailNoteDialog(props: { suggestionId?: string; title: string; body: string; threadId: string; projectId?: string; capture?: Capture }) {
   const data = useStore((s) => s.data)
   const settings = useStore((s) => s.settings)
   const ms = useAccounts((s) => s.ms)
   const close = () => useStore.getState().openDialog(null)
-  const [title, setTitle] = useState(props.title)
-  const [body, setBody] = useState(props.body)
-  const [projectId, setProjectId] = useState(props.projectId ?? '')
+  const capture = props.capture
+  const [d0] = useState(() => takeDraft<NoteDraft>(capture))
+  const [title, setTitle] = useState(d0?.title ?? props.title)
+  const [body, setBody] = useState(d0?.body ?? props.body)
+  const [projectId, setProjectId] = useState(d0?.projectId ?? props.projectId ?? '')
+  const [initial] = useState(() => JSON.stringify([title, body, projectId]))
   const oneNoteOk = ms.connected && ms.caps.notes && !!settings.oneNoteSectionId
   const [toOneNote, setToOneNote] = useState(false)
   const [busy, setBusy] = useState(false)
   const submit = async () => {
-    if (!title.trim()) return
+    if (!title.trim() || busy) return
     setBusy(true)
     const now = new Date().toISOString()
     const note = { id: uid('n'), title: title.trim(), body, kind: 'note' as const, projectId: projectId || undefined, mailRef: props.threadId, createdAt: now, updatedAt: now }
-    useStore.getState().mutate((d) => ({ ...d, notes: [note, ...d.notes] }), { toast: `Notiz „${note.title.slice(0, 40)}“ angelegt`, undoable: true })
+    const st = useStore.getState()
+    st.mutate((d) => ({ ...d, notes: [note, ...d.notes] }), capture ? undefined : { toast: `Notiz „${note.title.slice(0, 40)}“ angelegt`, undoable: true })
+    if (capture) {
+      finishCapture(capture)
+      st.toast(`Notiz „${note.title.slice(0, 40)}“ angelegt`, {
+        action: { label: 'Öffnen', run: () => openCreated('note', note.id) },
+        undo: () => st.mutate((d) => ({ ...d, notes: d.notes.filter((n) => n.id !== note.id) }))
+      })
+    }
     if (props.suggestionId) markCreated(props.suggestionId, 'note', note.id)
     if (toOneNote && settings.oneNoteSectionId) {
       const { saveNoteToOneNote } = await import('@/lib/onenote')
@@ -603,8 +666,9 @@ export function MailNoteDialog(props: { suggestionId?: string; title: string; bo
   }
   return (
     <Dialog
-      title="Als Notiz merken"
+      title={capture ? 'Aus E-Mail übernehmen' : 'Als Notiz merken'}
       onClose={close}
+      dirty={JSON.stringify([title, body, projectId]) !== initial}
       footer={
         <>
           <button className="btn" onClick={close}>
@@ -616,12 +680,17 @@ export function MailNoteDialog(props: { suggestionId?: string; title: string; bo
         </>
       }
     >
+      {capture && <CaptureHeader capture={capture} onSwitch={(to) => switchCapture(capture, to, { title, body, projectId } satisfies NoteDraft)} />}
       <label className="field">
-        <span>Titel</span>
+        <span>
+          Titel <OriginTag o={capture?.origin.title} />
+        </span>
         <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
       </label>
       <label className="field">
-        <span>Inhalt</span>
+        <span>
+          Inhalt <OriginTag o={capture?.origin.body} />
+        </span>
         <textarea className="textarea" value={body} onChange={(e) => setBody(e.target.value)} rows={7} />
       </label>
       <label className="field">

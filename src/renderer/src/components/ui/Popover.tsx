@@ -33,12 +33,14 @@ export interface PopoverProps {
 }
 
 export function Popover(p: PopoverProps) {
-  const { refs, floatingStyles, context, placement } = useFloating({
+  const { refs, floatingStyles, context, placement, isPositioned } = useFloating({
     open: p.open,
     onOpenChange: (o) => !o && p.onClose(),
     elements: { reference: p.anchor },
     placement: p.placement ?? 'bottom-start',
     strategy: 'fixed',
+    // Position über left/top statt transform – transform gehört der Einblend-Animation
+    transform: false,
     whileElementsMounted: autoUpdate,
     middleware: [
       offset(6),
@@ -71,7 +73,8 @@ export function Popover(p: PopoverProps) {
           className={`popover ${p.className ?? ''}`}
           data-side={side}
           aria-label={p.label}
-          style={{ ...floatingStyles, ...p.style }}
+          // Erst zeigen, wenn die Position berechnet ist – sonst blitzt das Menü kurz oben links auf
+          style={{ ...floatingStyles, ...p.style, visibility: isPositioned ? undefined : 'hidden' }}
           {...getFloatingProps({
             tabIndex: -1,
             // Tasten gehören dem Popover: nicht an Fenster-Kürzel (Posteingang ↓, Dialog-Esc …) weiterreichen

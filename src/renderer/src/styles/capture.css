@@ -1,0 +1,400 @@
+/* ==========================================================================
+   Tagwerk – Aus E-Mail übernehmen
+   Leiste in der Mail (Aufgabe · Notiz · Termin) und Kopf des Übernahme-Dialogs:
+   Schritte, Quelle, Art-Wahl, Herkunft der Angaben, Hinweis auf Doppelte.
+   ========================================================================== */
+
+/* Farbtöne je Art – dieselben wie bei den Vorschlägen */
+.k-task {
+  --k: var(--ok);
+  --k-soft: var(--ok-soft);
+}
+.k-note {
+  --k: var(--attention);
+  --k-soft: var(--attention-soft);
+}
+.k-event {
+  --k: var(--accent-text);
+  --k-soft: var(--accent-soft);
+}
+.ck-icon {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-md);
+  background: var(--k-soft);
+  color: var(--k);
+}
+.ck-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ---------- Leiste in der geöffneten Mail ---------- */
+.capture-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.capture-bar-label {
+  margin-right: 2px;
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+}
+.capture-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px 0 4px;
+  border: 0;
+  border-radius: var(--r-lg);
+  background: var(--glass-card);
+  box-shadow: inset 0 0 0 1px var(--line), var(--shadow-1);
+  color: var(--ink);
+  font-weight: var(--fw-medium);
+  transition:
+    box-shadow var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
+}
+.capture-btn .ck-icon {
+  width: 30px;
+  height: 30px;
+}
+.capture-btn:hover {
+  background: color-mix(in srgb, var(--k-soft) 55%, var(--raised));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k) 35%, var(--line)), var(--shadow-1);
+}
+.capture-btn:active {
+  transform: scale(0.97);
+}
+.capture-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.cb-done {
+  width: 15px;
+  height: 15px;
+  margin-left: -2px;
+  color: var(--ok);
+}
+
+/* ---------- Dialog-Kopf ---------- */
+.capture-head {
+  display: grid;
+  gap: 12px;
+  animation: fade var(--dur) var(--ease);
+}
+.capture-steps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+}
+.capture-steps li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.capture-steps li + li::before {
+  content: '';
+  width: 22px;
+  height: 1px;
+  margin-right: 2px;
+  background: var(--line);
+}
+.capture-steps .dot {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-pill);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font-size: 11px;
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+.capture-steps .dot svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 3;
+}
+.capture-steps .done .dot {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: none;
+}
+.capture-steps .current {
+  color: var(--ink);
+  font-weight: var(--fw-medium);
+}
+.capture-steps .current .dot {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  color: var(--accent-text);
+}
+
+.capture-source {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--sunken) 70%, transparent);
+  box-shadow: inset 0 0 0 0.5px var(--line);
+}
+.capture-source .avatar {
+  width: 32px;
+  height: 32px;
+}
+.cs-text {
+  min-width: 0;
+  flex: 1;
+}
+.cs-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+}
+.cs-meta b {
+  color: var(--ink-2);
+  font-weight: var(--fw-medium);
+}
+.cs-subject {
+  margin-top: 1px;
+  font-weight: var(--fw-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cs-snippet {
+  margin-top: 2px;
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.capture-kinds {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.capture-kind {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 10px 8px 8px;
+  border: 0;
+  border-radius: var(--r-lg);
+  background: var(--glass-card);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--ink);
+  text-align: left;
+  transition:
+    box-shadow var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease);
+}
+.capture-kind:hover {
+  background: color-mix(in srgb, var(--k-soft) 45%, var(--raised));
+}
+.capture-kind[aria-checked='true'] {
+  background: color-mix(in srgb, var(--k-soft) 70%, var(--raised));
+  box-shadow: inset 0 0 0 1.5px var(--k);
+}
+.capture-kind:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--k), var(--ring);
+}
+.ck-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ck-text b {
+  font-weight: var(--fw-semibold);
+}
+.ck-text small {
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.capture-dup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  border-radius: var(--r-md);
+  background: var(--attention-soft);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+}
+.capture-dup > svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--attention);
+}
+.capture-dup span {
+  flex: 1;
+  min-width: 0;
+}
+
+.capture-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0 !important;
+  font-size: var(--fs-sm);
+  color: var(--ink-2) !important;
+}
+.capture-summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.capture-summary svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.capture-summary .ok {
+  color: var(--ok);
+}
+.capture-summary .check {
+  color: var(--attention);
+}
+.capture-summary .missing {
+  color: var(--alert);
+}
+
+/* Kennzeichen an Feldern */
+.field > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.origin-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+  padding: 0 7px 0 5px;
+  border-radius: var(--r-pill);
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  line-height: 1;
+}
+.origin-tag svg {
+  width: 11px;
+  height: 11px;
+  stroke-width: 2.4;
+}
+.origin-tag.mail {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+.origin-tag.check {
+  background: var(--attention-soft);
+  color: var(--attention);
+}
+.origin-tag.missing {
+  background: var(--alert-soft);
+  color: var(--alert);
+}
+.input.needs-check {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--alert) 45%, transparent);
+}
+.input.maybe {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--attention) 50%, transparent);
+}
+
+/* Formular nach Wechsel der Art sanft einblenden – blockiert keine Eingabe */
+.capture-form,
+.dialog-body:has(.capture-head) > .field,
+.dialog-body:has(.capture-head) > .grid-3,
+.dialog-body:has(.capture-head) > .grid-2 {
+  animation: fade var(--dur) var(--ease);
+}
+
+@container (max-width: 480px) {
+  .capture-kinds {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .capture-kinds {
+    grid-template-columns: 1fr;
+  }
+  .ck-text small {
+    display: none;
+  }
+}
+
+/* Zusatzangaben einklappbar */
+.more-fields {
+  border-radius: var(--r-md);
+  box-shadow: inset 0 0 0 0.5px var(--line);
+}
+.more-fields > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 12px;
+  list-style: none;
+  font-weight: var(--fw-medium);
+  color: var(--ink-2);
+  border-radius: var(--r-md);
+}
+.more-fields > summary::-webkit-details-marker {
+  display: none;
+}
+.more-fields > summary:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+.more-fields > summary:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.more-fields > summary svg {
+  width: 15px;
+  height: 15px;
+  transition: transform var(--dur-fast) var(--ease);
+}
+.more-fields[open] > summary svg {
+  transform: rotate(90deg);
+}
+.more-summary {
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+}
+.more-body {
+  display: grid;
+  gap: 14px;
+  padding: 4px 12px 14px;
+  animation: fade var(--dur) var(--ease);
+}

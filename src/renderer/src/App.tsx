@@ -234,8 +234,8 @@ export function App() {
       {assistantOpen && settings.claude.enabled ? <AssistantPanel /> : <div />}
 
       {paletteOpen && <CommandPalette />}
-      {dialog?.kind === 'task' && <TaskDialog key={dialog.id ?? dialog.suggestionId ?? 'new'} id={dialog.id} preset={dialog.preset} suggestionId={dialog.suggestionId} mergeIds={dialog.mergeIds} />}
-      {dialog?.kind === 'event' && <EventDialog key={dialog.id ?? dialog.suggestionId ?? 'new'} id={dialog.id} preset={dialog.preset} suggestionId={dialog.suggestionId} series={dialog.series} />}
+      {dialog?.kind === 'task' && <TaskDialog key={dialog.id ?? dialog.capture?.threadId ?? dialog.suggestionId ?? 'new'} id={dialog.id} preset={dialog.preset} suggestionId={dialog.suggestionId} mergeIds={dialog.mergeIds} capture={dialog.capture} />}
+      {dialog?.kind === 'event' && <EventDialog key={dialog.id ?? dialog.capture?.threadId ?? dialog.suggestionId ?? 'new'} id={dialog.id} preset={dialog.preset} suggestionId={dialog.suggestionId} series={dialog.series} capture={dialog.capture} />}
       {dialog?.kind === 'split' && <SplitDialog suggestionId={dialog.suggestionId} />}
       {dialog?.kind === 'mailnote' && <MailNoteDialog key={dialog.suggestionId ?? dialog.threadId} {...dialog} />}
       {dialog?.kind === 'project' && <ProjectDialog id={dialog.id} />}

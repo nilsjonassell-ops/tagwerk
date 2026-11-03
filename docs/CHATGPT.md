@@ -27,7 +27,7 @@ So arbeitest du:
 Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, Notizen, Projekte und Fokuszeit**. Ziel: morgens öffnen, sofort sehen was heute wichtig ist, und alles erledigen, ohne zwischen fünf Apps zu springen.
 
 - Plattform: Windows (Desktop-App), verteilt über den **Microsoft Store** („Tagwerk Planer“, Produkt-ID 9N30ZHF711XF). Der Code läuft technisch auch auf macOS.
-- Design: ruhiges Design-System – zwei schwebende, deckende Flächen auf einem dezenten Verlauf aus der Akzentfarbe; Glas (Unschärfe) nur für Menüs, Pop-ups und hinter Dialogen. Hell/Dunkel/Wie Windows, 7 Akzentfarben (alle auf WCAG-AA-Kontrast geprüft), Inter als Schrift, Instrument Serif für große Überschriften. „Bewegung reduzieren“ wird beachtet.
+- Design: ruhige, Apple-inspirierte Glasoptik – Seitenleiste und Hauptfläche als durchscheinende Glasscheiben (Unschärfe, feine Lichtkante, zarte Kontur) auf einem dezenten Verlauf aus der Akzentfarbe; Deckkraft so gewählt, dass Text überall WCAG AA erfüllt (per Test geprüft). Hell/Dunkel/Wie Windows, 7 Akzentfarben (alle auf WCAG-AA-Kontrast geprüft), Inter als Schrift, Instrument Serif für große Überschriften. „Bewegung reduzieren“ wird beachtet.
 - Sprache der App: Deutsch.
 
 ---
@@ -50,6 +50,7 @@ Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, N
 ### Posteingang
 - **Gmail und Outlook gemeinsam**, Filter „Alle Postfächer“ oder je Konto, Konto-Badge an jeder Mail.
 - Ordner: Alle, Wichtig, Gemerkt, Ungelesen, Antwort offen, Gesendet, Archiv; Filter nach Projekt; Suche.
+- **Aus E-Mail übernehmen:** In der geöffneten Mail drei klare Wege „Aufgabe · Notiz · Termin“. Der Dialog führt in Schritten (Art wählen → Prüfen & ergänzen → Speichern), zeigt die Quell-Mail, kennzeichnet jede Angabe („aus Mail“, „prüfen“ mit Begründung, „nicht gefunden“), klappt Zusatzangaben ein, behält Eingaben beim Wechsel der Art, warnt bei bereits Angelegtem aus derselben Mail und bestätigt mit „Öffnen“ direkt zum neuen Element. Seltene Aktionen (ungelesen, löschen, zur Bearbeitung) im Menü „…“.
 - Neues Karten-Design (nur Betreff, ruhig) mit Schnellaktionen: **Archivieren, Löschen, Merken, „Antwort offen“** (auf dem Dashboard sichtbar, von Hand entfernbar).
 - Antworten direkt aus Tagwerk (mit Bestätigung); in der geöffneten Mail „Übernehmen ▾“: Termin daraus, Aufgabe daraus, Als Notiz merken.
 - **Vorschläge – „Aus Mails übernehmen“** (lokal, ohne KI): erkennt Termine (Datum + Uhrzeit, ganztägig mit Stichwort), Fristen („bis spätestens …“, „Abgabe“, „zahlbar bis“, „Monatsende“), Aufgaben („Könntest du … freischalten?“, „Bitte … bestätigen“) und Infos für Notizen (Buchungs-/Bestell-/Sendungsnummern, Raum/Treffpunkt, Meeting-Links, Beträge).
@@ -97,8 +98,8 @@ Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, N
 - Befehlspalette (Strg+K) mit Suche über alles und Befehlen – auch „Design: Hell/Dunkel/Wie Windows“ und „Akzent: …“.
 - Einheitliche Menüs und Auswahlfelder (eigene Bausteine statt Windows-Standard): klappen an Fensterrändern um, bleiben während Animationen zuverlässig, komplett per Tastatur (↑ ↓ Pos1 Ende, Anfangsbuchstaben, Enter, Esc); lange Listen mit Suchfeld.
 - Dialoge mit Unschärfe dahinter; bei ungespeicherten Eingaben fragt Tagwerk vor dem Schließen nach („Änderungen verwerfen?“).
-- **Einstellungen** neu gegliedert: Darstellung (Modus-Vorschaukarten, Akzentfarbe, Animationen, Seitenleiste) · Allgemein · Übersicht · Kalender · Benachrichtigungen · Konten · Mail-Vorschläge · Claude · Datenschutz.
-- Einklappbare Seitenleiste (dünner Symbolstreifen, klappt beim Drüberfahren auf, Strg+B).
+- **Einstellungen** im Stil der macOS-Systemeinstellungen: gruppierte Glas-Karten, festes Raster (Beschriftung | Bedienelement, bei wenig Platz untereinander), Bereiche: Darstellung (Modus-Vorschaukarten, Akzentfarbe, Animationen, Seitenleiste) · Allgemein · Übersicht · Kalender · Benachrichtigungen · Konten · Mail-Vorschläge · Claude · Datenschutz.
+- Seitenleiste „automatisch“: bleibt als schmaler Streifen am Rand, fährt beim Überfahren aus (Inhalt rückt synchron mit) und wieder ein; kein Knopf. Strg+B oder Einstellung „Immer ausgeklappt“.
 - Tastenkürzel: Strg+1–6 Bereiche, Strg+N Aufgabe, Strg+Umschalt+N Termin, Strg+/ alle Kürzel.
 - Start mit Windows, Infobereich-Symbol, Startanimation.
 
@@ -189,7 +190,7 @@ Offene Fragen: <falls vorhanden>
 ## 9. Versionsverlauf
 
 <!--VERSIONEN-->
-- **Noch nicht veröffentlicht (gesammelt fürs große Update)** – Neues Design-System: ruhige Flächen statt Glas-Schichten · 7 Akzentfarben + Hell/Dunkel/Wie Windows · eigene, tastaturbedienbare Menüs und Auswahlfelder · Dialoge mit Unschärfe und Rückfrage bei ungespeicherten Eingaben · Fokus-Start neu (Suche, Dauer-Umschalter, Enter startet) · Einstellungen neu gegliedert (Darstellung, Konten, Mail-Vorschläge) · „Bewegung reduzieren“
+- **Noch nicht veröffentlicht (gesammelt fürs große Update)** – Neues Design-System mit dezenter Glasoptik · 7 Akzentfarben + Hell/Dunkel/Wie Windows · eigene, tastaturbedienbare Menüs und Auswahlfelder · Dialoge mit Unschärfe und Rückfrage bei ungespeicherten Eingaben · Fokus-Start neu (Suche, Dauer-Umschalter, Enter startet) · Einstellungen neu gegliedert als gruppierte Karten (Darstellung, Konten, Mail-Vorschläge) · Seitenleiste fährt automatisch aus und ein · „Aus E-Mail übernehmen“ als geführter Ablauf (Aufgabe · Notiz · Termin) · „Bewegung reduzieren“
 - **1.8.0** (03.11.2026) – OneNote lesen & speichern · einklappbare Seitenleiste · Outlook-Mail & -Kalender · Apple Kalender (iCloud) · Postfach-Filter je Konto · Zielkalender beim Anlegen · einfachere Gmail-Einrichtung mit Direktlinks · Microsoft-Anmeldung ohne eigene Einrichtung · Cloud-Speicher über OneDrive (Daten auf jedem PC) · Vorschläge aus Mails („Aus Mails übernehmen“: Termine, Fristen, Aufgaben, Infos – mit Änderungen, Serien, Aufteilen/Zusammenführen, Vorlauf, Regeln) · Wiedervorlage für Mails · „Meine Daten wiederherstellen“ beim ersten Start
 - **1.7.0** – Microsoft-Store-Version (kein Blockieren mehr durch Smart App Control)
 - **1.6.0** – Kalender live, Termine aus Mails, Schnelleingabe mit Uhrzeit, Wochenrückblick
