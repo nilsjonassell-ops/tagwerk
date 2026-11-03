@@ -30,25 +30,22 @@
     transform 0.3s var(--ease-spring, ease);
 }
 .thread-row.mail-card:hover {
-  background: rgba(255, 255, 255, 0.5);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7), 0 6px 18px -12px rgba(60, 60, 160, 0.35);
+  background: var(--hover);
+  box-shadow: none;
 }
 .thread-row.mail-card.selected,
 .thread-row.mail-card[aria-selected='true'] {
-  background: linear-gradient(115deg, rgba(222, 232, 255, 0.92), rgba(240, 236, 255, 0.85) 60%, rgba(255, 238, 247, 0.8));
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.9),
-    inset 0 1px 0 rgba(255, 255, 255, 1),
-    0 10px 26px -14px rgba(77, 124, 255, 0.45);
+  background: var(--selected);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
 }
 :root[data-theme='dark'] .thread-row.mail-card:hover {
-  background: rgba(255, 255, 255, 0.05);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  background: var(--hover);
+  box-shadow: none;
 }
 :root[data-theme='dark'] .thread-row.mail-card.selected,
 :root[data-theme='dark'] .thread-row.mail-card[aria-selected='true'] {
-  background: linear-gradient(115deg, rgba(77, 124, 255, 0.2), rgba(139, 109, 255, 0.16) 60%, rgba(255, 111, 174, 0.12));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  background: var(--selected);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
 }
 
 /* Kopfzeile: Absender · Markierungen · Datum */
@@ -147,7 +144,7 @@
   bottom: 14px;
   width: 3px;
   border-radius: 3px;
-  background: linear-gradient(180deg, #ff9a5a, #ff6fae);
+  background: var(--attention);
   opacity: 0.85;
 }
 
@@ -160,13 +157,8 @@
   gap: 2px;
   padding: 3px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(18px) saturate(1.8);
-  -webkit-backdrop-filter: blur(18px) saturate(1.8);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.95),
-    0 1px 2px rgba(30, 40, 90, 0.08),
-    0 10px 24px -10px rgba(60, 60, 160, 0.4);
+  background: var(--raised);
+  box-shadow: 0 0 0 1px var(--line), var(--shadow-2);
   opacity: 0;
   transform: translateY(4px) scale(0.96);
   pointer-events: none;
@@ -210,9 +202,8 @@
   height: 16px;
 }
 .mc-btn:hover:not(:disabled) {
-  background: rgba(77, 124, 255, 0.12);
-  color: var(--accent);
-  transform: scale(1.08);
+  background: var(--accent-soft);
+  color: var(--accent-text);
 }
 .mc-btn:active:not(:disabled) {
   transform: scale(0.9);
@@ -260,13 +251,13 @@
   margin-top: 12px;
   padding: 10px 40px 10px 12px;
   border-radius: 14px;
-  background: linear-gradient(115deg, rgba(222, 232, 255, 0.75), rgba(244, 236, 255, 0.7) 60%, rgba(255, 238, 247, 0.65));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.85), 0 8px 22px -16px rgba(77, 124, 255, 0.5);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
   animation: rise 0.45s var(--ease-out, ease) both;
 }
 :root[data-theme='dark'] .mail-suggest {
-  background: linear-gradient(115deg, rgba(77, 124, 255, 0.16), rgba(139, 109, 255, 0.12) 60%, rgba(255, 111, 174, 0.1));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
 }
 .ms-row {
   display: flex;
@@ -281,8 +272,9 @@
   border-radius: 10px;
   display: grid;
   place-items: center;
-  color: #fff;
-  background: linear-gradient(135deg, #4d7cff, #8b6dff 55%, #ff6fae);
+  color: var(--accent-text);
+  background: var(--raised);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
 }
 .ms-icon svg {
   width: 16px;
@@ -324,7 +316,7 @@
   cursor: pointer;
 }
 .ms-close:hover {
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--hover);
   color: var(--ink);
 }
 .ms-close svg {
@@ -402,7 +394,7 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #4d7cff, #8b6dff);
+  background: var(--accent);
 }
 .onenote-body .on-todo {
   display: flex;
@@ -422,7 +414,7 @@
   text-decoration: line-through;
 }
 .onenote-body .on-todo.done .box {
-  background: linear-gradient(135deg, #4d7cff, #8b6dff 60%, #ff6fae) center / 100% no-repeat;
+  background: var(--accent);
   box-shadow: none;
 }
 
@@ -511,7 +503,7 @@
   font-size: 11.5px;
   font-weight: 700;
   color: #fff;
-  background: var(--grad);
+  background: var(--accent);
 }
 .guide.steps-linked > li.hint::before {
   content: '!';

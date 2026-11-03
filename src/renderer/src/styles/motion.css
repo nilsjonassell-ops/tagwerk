@@ -30,8 +30,8 @@
   left: 10px;
   right: 10px;
   border-radius: 10px;
-  background: var(--glass-strong);
-  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 6px 18px -8px rgba(60, 60, 160, 0.4);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line-soft), 0 6px 18px -8px rgba(60, 60, 160, 0.4);
   transition:
     transform 0.5s var(--ease-spring),
     height 0.3s var(--ease-out);
@@ -49,7 +49,7 @@
   bottom: 9px;
   width: 3px;
   border-radius: 3px;
-  background: var(--grad);
+  background: var(--accent);
   box-shadow: 0 0 10px rgba(139, 109, 255, 0.7);
 }
 .nav-item svg {
@@ -114,19 +114,6 @@
 :is(.dash-section, .list-row, .thread-row, .task-row, .note-row, .project-row, .brief-item, .setting, .palette-item):nth-child(8) { animation-delay: 300ms; }
 :is(.dash-section, .list-row, .thread-row, .task-row, .note-row, .project-row, .brief-item, .setting, .palette-item):nth-child(n + 9) { animation-delay: 330ms; }
 
-/* Begrüßung: langsam wandernder Farbverlauf */
-.greeting h1 {
-  background-size: 220% 100%;
-  animation: hue-flow 9s ease-in-out infinite alternate;
-}
-@keyframes hue-flow {
-  from {
-    background-position: 0% 50%;
-  }
-  to {
-    background-position: 100% 50%;
-  }
-}
 
 /* ---------- Karten ---------- */
 .brief,
@@ -137,8 +124,7 @@
 }
 .brief:hover,
 .dash-section > :not(h2):not(.brief):hover {
-  transform: translateY(-2px);
-  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 2px 4px rgba(40, 52, 110, 0.05), 0 22px 44px -16px rgba(60, 50, 150, 0.3);
+  box-shadow: 0 0 0 1px var(--line), var(--shadow-2);
 }
 .brief-item,
 .list-row,
@@ -165,38 +151,18 @@
     transform 0.25s var(--ease-spring),
     filter 0.2s;
 }
-.btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
 .btn:active:not(:disabled) {
-  transform: translateY(0) scale(0.96);
+  transform: scale(0.97);
   transition-duration: 0.08s;
 }
 .btn.ghost:hover:not(:disabled),
 .btn.icon-btn:hover:not(:disabled) {
   transform: none;
 }
-/* Lichtreflex, der über Verlaufsknöpfe streicht */
-.btn.primary::after,
-.btn.danger::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.45) 50%, transparent 70%);
-  transform: translateX(-120%);
-  pointer-events: none;
-}
-.btn.primary:hover::after,
-.btn.danger:hover::after {
-  transform: translateX(120%);
-  transition: transform 0.8s var(--ease-out);
-}
 .btn svg {
   transition: transform 0.35s var(--ease-spring);
 }
-.btn:hover:not(:disabled) svg {
-  transform: scale(1.1) rotate(-4deg);
-}
+
 .link {
   transition: opacity 0.2s;
 }
@@ -242,7 +208,7 @@
   transform: scale(0.88);
 }
 .check.done {
-  background: var(--grad);
+  background: var(--accent);
   border-color: transparent;
   color: #fff;
   animation: check-pop 0.45s var(--ease-snap);
@@ -396,7 +362,7 @@
 
 /* Lade-Skelette mit Glanz */
 .skeleton {
-  background: linear-gradient(90deg, var(--sunken) 0%, rgba(255, 255, 255, 0.55) 50%, var(--sunken) 100%);
+  background: linear-gradient(90deg, var(--sunken) 0%, var(--raised) 50%, var(--sunken) 100%);
   background-size: 200% 100%;
   animation: sheen 1.4s ease-in-out infinite;
 }

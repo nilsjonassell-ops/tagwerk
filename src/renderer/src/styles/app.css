@@ -1,80 +1,5 @@
-@import '@fontsource/instrument-sans/400.css';
-@import '@fontsource/instrument-sans/500.css';
-@import '@fontsource/instrument-sans/600.css';
 @import '@fontsource/instrument-serif/400.css';
 @import '@fontsource/instrument-serif/400-italic.css';
-
-/* ===== Tokens ===== */
-:root {
-  --bg: #eef1ef;
-  --canvas: #f8f9f8;
-  --raised: #ffffff;
-  --sunken: #e6eae8;
-  --ink: #1d2523;
-  --ink-2: #4a5552;
-  --ink-3: #747f7b;
-  --line: #dbe0dd;
-  --line-soft: #e7ebe9;
-  --accent: #1c5f68;
-  --accent-ink: #ffffff;
-  --accent-soft: #dcebec;
-  --accent-line: #a9cdd0;
-  --alert: #b0383a;
-  --alert-soft: #f7e4e2;
-  --attention: #9a6210;
-  --attention-soft: #f6ead3;
-  --ok: #2d7650;
-  --ok-soft: #e0efe6;
-  --focus-ring: #1c5f68;
-  --shadow-pop: 0 12px 32px rgba(20, 34, 30, 0.14), 0 2px 6px rgba(20, 34, 30, 0.08);
-  --hatch: rgba(28, 95, 104, 0.07);
-
-  --font-ui: 'Instrument Sans', 'Segoe UI Variable Text', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-display: 'Instrument Serif', Georgia, 'Times New Roman', serif;
-
-  --fs-xs: 11.5px;
-  --fs-sm: 12.5px;
-  --fs-md: 13.5px;
-  --fs-lg: 15px;
-  --fs-xl: 19px;
-  --fs-2xl: 26px;
-  --fs-3xl: 38px;
-
-  --r-sm: 5px;
-  --r-md: 8px;
-  --r-lg: 12px;
-
-  --titlebar: 44px;
-  --sidebar-w: 224px;
-  --panel-w: 380px;
-  color-scheme: light;
-}
-
-:root[data-theme='dark'] {
-  --bg: #161a19;
-  --canvas: #1b201e;
-  --raised: #222826;
-  --sunken: #131716;
-  --ink: #e2e7e4;
-  --ink-2: #a9b3af;
-  --ink-3: #7c8783;
-  --line: #2e3533;
-  --line-soft: #262c2a;
-  --accent: #74b6bd;
-  --accent-ink: #0f1d1f;
-  --accent-soft: #203436;
-  --accent-line: #355a5e;
-  --alert: #e5837a;
-  --alert-soft: #3a2422;
-  --attention: #dcab52;
-  --attention-soft: #362c1a;
-  --ok: #7cc49b;
-  --ok-soft: #1f3328;
-  --focus-ring: #74b6bd;
-  --shadow-pop: 0 14px 36px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
-  --hatch: rgba(116, 182, 189, 0.06);
-  color-scheme: dark;
-}
 
 /* ===== Basis ===== */
 * {
@@ -139,11 +64,14 @@ button {
 ::-webkit-scrollbar-thumb:hover {
   background-color: var(--ink-3);
 }
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation: none !important;
-    transition: none !important;
-  }
+/* Bewegung reduziert (Windows-Einstellung oder Tagwerk-Einstellung → data-motion) */
+:root[data-motion='reduced'] *,
+:root[data-motion='reduced'] *::before,
+:root[data-motion='reduced'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }
 .sr-only {
   position: absolute;

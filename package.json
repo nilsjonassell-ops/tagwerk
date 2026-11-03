@@ -27,7 +27,6 @@
     "ical.js": "^2.2.1"
   },
   "devDependencies": {
-    "@fontsource/instrument-sans": "^5.3.0",
     "@fontsource/instrument-serif": "^5.3.0",
     "@types/node": "^22.10.0",
     "@types/react": "^19.0.0",

@@ -11,19 +11,20 @@
   margin: 0 0 8px;
   padding: 0 14px;
   border: 0;
-  border-radius: 12px;
-  color: #fff;
-  font-weight: 600;
-  background: var(--grad);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 8px 20px -8px rgba(122, 96, 255, 0.65);
-  transition: transform 0.3s var(--ease-spring), filter 0.2s;
+  border-radius: var(--r-md);
+  color: var(--accent-ink);
+  font-weight: var(--fw-semibold);
+  background: var(--accent);
+  box-shadow: var(--shadow-1);
+  transition:
+    transform var(--dur-fast) var(--ease),
+    filter var(--dur-fast) var(--ease);
 }
 .focus-launch svg {
   width: 17px;
   height: 17px;
 }
 .focus-launch:hover {
-  transform: translateY(-1px);
   filter: brightness(1.06);
 }
 .focus-launch:active {
@@ -36,8 +37,8 @@
   margin: 0 0 8px;
   padding: 4px 4px 4px 6px;
   border-radius: 14px;
-  background: var(--glass-strong);
-  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 8px 20px -10px rgba(80, 70, 180, 0.5);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line-soft), 0 8px 20px -10px rgba(80, 70, 180, 0.5);
   animation: rise 0.4s var(--ease-out) both;
 }
 :root[data-theme='dark'] .focus-pill {
@@ -199,7 +200,7 @@
   padding: 0 14px;
   border: 0;
   border-radius: 999px;
-  background: var(--glass-strong);
+  background: var(--surface-2);
   box-shadow: inset 0 0 0 1px var(--line);
   font-weight: 560;
   transition: background 0.2s, box-shadow 0.2s, transform 0.25s var(--ease-spring), color 0.2s;
@@ -211,7 +212,7 @@
   transform: translateY(-1px);
 }
 .chip.on {
-  background: var(--grad);
+  background: var(--accent);
   color: #fff;
   box-shadow: 0 6px 16px -6px rgba(122, 96, 255, 0.6);
 }
@@ -229,12 +230,12 @@
 .focus-stats {
   background: var(--raised);
   border-radius: 26px;
-  box-shadow: inset 0 0 0 1px var(--glass-edge), var(--glass-shadow-lg);
+  box-shadow: inset 0 0 0 1px var(--line-soft), var(--shadow-3);
   padding: 28px 30px;
 }
 :root[data-theme='dark'] .focus-setup-main,
 :root[data-theme='dark'] .focus-stats {
-  box-shadow: inset 0 0 0 1px var(--glass-hair), var(--glass-shadow-lg);
+  box-shadow: inset 0 0 0 1px var(--line-soft), var(--shadow-3);
 }
 .focus-setup h1 {
   margin: 0 0 16px;
@@ -353,7 +354,7 @@
 .focus-week .bar {
   width: 100%;
   border-radius: 6px;
-  background: var(--grad);
+  background: var(--accent);
   opacity: 0.85;
   transform-origin: bottom;
   animation: grow 0.7s var(--ease-spring) both;
@@ -385,8 +386,8 @@
   height: 30px;
   padding: 0 14px;
   border-radius: 999px;
-  background: var(--glass-strong);
-  box-shadow: inset 0 0 0 1px var(--glass-edge);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line-soft);
   font-weight: 600;
   font-size: var(--fs-sm);
   color: var(--ink-2);
@@ -456,7 +457,7 @@
   transition: background 0.4s, transform 0.4s var(--ease-spring);
 }
 .focus-dots span.done {
-  background: var(--grad);
+  background: var(--accent);
 }
 .focus-dots span.now {
   background: #8b6dff;
@@ -493,7 +494,7 @@
   padding: 0 6px 0 14px;
   border-radius: 16px;
   background: var(--raised);
-  box-shadow: inset 0 0 0 1px var(--glass-edge), var(--glass-shadow);
+  box-shadow: inset 0 0 0 1px var(--line-soft), var(--shadow-2);
   color: var(--ink-3);
 }
 .focus-park form .input {
@@ -549,7 +550,7 @@
   display: grid;
   place-items: center;
   color: #fff;
-  background: var(--grad);
+  background: var(--accent);
   box-shadow: 0 16px 40px -12px rgba(139, 109, 255, 0.7);
   animation: check-pop 0.6s var(--ease-snap) both;
 }
@@ -563,7 +564,7 @@
   padding: 14px 18px;
   border-radius: 18px;
   background: var(--raised);
-  box-shadow: inset 0 0 0 1px var(--glass-edge);
+  box-shadow: inset 0 0 0 1px var(--line-soft);
 }
 .focus-parked-review .focus-label {
   margin-top: 0;

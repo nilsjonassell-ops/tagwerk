@@ -9,7 +9,7 @@
   z-index: 100;
   display: grid;
   place-items: center;
-  background: var(--base);
+  background: var(--bg);
   overflow: hidden;
   cursor: default;
 }
@@ -19,11 +19,11 @@
   position: absolute;
   inset: -15%;
   background:
-    radial-gradient(55% 60% at 6% 10%, var(--mesh-1), transparent 72%),
-    radial-gradient(50% 58% at 96% 4%, var(--mesh-2), transparent 72%),
-    radial-gradient(58% 60% at 82% 100%, var(--mesh-3), transparent 74%),
-    radial-gradient(50% 56% at 14% 96%, var(--mesh-4), transparent 72%),
-    var(--base);
+    radial-gradient(55% 60% at 6% 10%, var(--wash-1), transparent 72%),
+    radial-gradient(50% 58% at 96% 4%, var(--wash-2), transparent 72%),
+    radial-gradient(58% 60% at 82% 100%, var(--wash-1), transparent 74%),
+    radial-gradient(50% 56% at 14% 96%, var(--wash-2), transparent 72%),
+    var(--bg);
   animation: intro-bg 2.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 @keyframes intro-bg {
