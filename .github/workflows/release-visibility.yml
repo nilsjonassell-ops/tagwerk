@@ -1,0 +1,34 @@
+# Release zurückhalten (Entwurf) oder freigeben – z. B. um Updates für ein großes Update zu sammeln.
+# Ein Entwurf wird von der installierten Desktop-App nicht als Update gefunden.
+name: Release sichtbar/zurückhalten
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Versions-Tag, z. B. v1.8.0'
+        required: true
+      action:
+        description: 'draft = zurückhalten, publish = freigeben'
+        required: true
+        default: draft
+        type: choice
+        options: [draft, publish]
+
+permissions:
+  contents: write
+
+jobs:
+  visibility:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Release ändern
+        run: |
+          if [ "${{ inputs.action }}" = "draft" ]; then
+            gh release edit "${{ inputs.tag }}" --draft=true -R "${{ github.repository }}"
+          else
+            gh release edit "${{ inputs.tag }}" --draft=false --latest -R "${{ github.repository }}"
+          fi
+          gh release view "${{ inputs.tag }}" -R "${{ github.repository }}" --json tagName,isDraft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
