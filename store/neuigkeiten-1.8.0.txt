@@ -1,0 +1,10 @@
+Das große Update 1.8:
+
+• Outlook: Outlook-Postfach und Outlook-Kalender direkt in Tagwerk – einfach mit dem Microsoft-Konto anmelden, keine Einrichtung nötig.
+• Apple Kalender: deine iCloud-Kalender von iPhone und Mac anzeigen, anlegen und verschieben.
+• Cloud-Speicher: Aufgaben, Notizen, Projekte und Einstellungen in deinem eigenen OneDrive sichern und auf jedem PC wiederherstellen.
+• Vorschläge aus E-Mails: Tagwerk erkennt Termine, Fristen, Aufgaben und wichtige Infos in deinen Mails – lokal auf deinem PC, ohne KI. Übernommen wird nur, was du bestätigst.
+• Wiedervorlage für Mails, Regeln für Absender, Serien-Termine, Vorbereitungsaufgaben vor Fristen.
+• OneNote: Notizbücher lesen und Notizen nach OneNote speichern.
+• Einklappbare Seitenleiste, zwei Postfächer übersichtlich nebeneinander, einfachere Gmail-Einrichtung.
+• Mehr Sicherheit und viele kleine Verbesserungen.
