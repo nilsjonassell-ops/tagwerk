@@ -81,6 +81,7 @@ export function Menu(p: {
     onKeyDown: (e) => {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault()
+        e.stopPropagation()
         startAt.current = e.key === 'ArrowDown' ? 'first' : 'last'
         setOpen(true)
       }

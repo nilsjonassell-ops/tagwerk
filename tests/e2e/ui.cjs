@@ -84,6 +84,11 @@ const tests = {
     await p.mouse.click(5, 400)
     await sleep(250)
     ok(await p.locator('[role="menu"]').count() === 0, 'Klick daneben schließt das Menü')
+    await trigger.click()
+    await sleep(200)
+    await trigger.click()
+    await sleep(250)
+    ok(await p.locator('[role="menu"]').count() === 0, 'Zweiter Klick auf den Auslöser schließt das Menü')
     // Während die Seitenleiste animiert
     await p.keyboard.press('Control+b')
     await trigger.click()
@@ -218,6 +223,21 @@ const tests = {
     await sleep(500)
     ok(await p.locator('.focus-setup').count() === 0, 'Enter startet den Fokus')
     ok(/Wochenbericht/.test(await p.locator('.focus-view').innerText()), 'mit der gewählten Aufgabe')
+    await p.context().close()
+  },
+
+  async keysStayLocal(b, url) {
+    const p = await start(b, url)
+    await p.keyboard.press('Control+2')
+    await p.waitForSelector('.cal-toolbar')
+    const range = () => p.locator('.cal-toolbar .range').innerText()
+    const before = await range()
+    await p.locator('[role="radiogroup"] [role="radio"][aria-checked="true"]').first().focus()
+    await p.keyboard.press('ArrowRight')
+    await sleep(300)
+    const after = await range()
+    const month = before.match(/(Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember)/)?.[1]
+    ok(!!month && after.includes(month), `→ auf dem Umschalter wechselt nur die Ansicht, blättert nicht (${before} → ${after})`)
     await p.context().close()
   },
 

@@ -66,8 +66,10 @@ export function Select<V extends string = string>(p: {
   const onTriggerKey = (e: React.KeyboardEvent<HTMLButtonElement>) => {
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault()
+      e.stopPropagation() // Tasten gehören der Auswahl, nicht den Fenster-Kürzeln
       show()
     } else if (e.key.length === 1 && /\S/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.stopPropagation()
       const i = typeTo(e.key, p.options, p.options.findIndex((o) => o.value === p.value))
       if (i >= 0) pick(p.options[i])
     }

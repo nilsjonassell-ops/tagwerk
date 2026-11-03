@@ -14,6 +14,7 @@ function useRadioKeys<T extends string>(ids: T[], value: T, onChange: (v: T) => 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) return
     e.preventDefault()
+    e.stopPropagation()
     const key = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? 'ArrowUp' : e.key === 'Home' || e.key === 'End' ? e.key : 'ArrowDown'
     const i = moveIndex(ids.map((id) => ({ label: id })), ids.indexOf(value), key)
     onChange(ids[i])
