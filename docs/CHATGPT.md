@@ -1,6 +1,6 @@
 # Tagwerk – Briefing für ChatGPT (Ideen & Erweiterungen)
 
-> **Stand:** <!--STAND-->Version 1.7.0 (im Microsoft Store) · weitere Funktionen fertig, aber noch nicht veröffentlicht · aktualisiert am 03.11.2026<!--/STAND-->
+> **Stand:** <!--STAND-->Version 1.8.0 (im Microsoft Store) · aktualisiert am 03.11.2026<!--/STAND-->
 >
 > Diese Datei wird nach jedem großen Update automatisch bzw. von Claude aktualisiert.
 > Immer aktuelle Fassung: https://raw.githubusercontent.com/nilsjonassell-ops/tagwerk/main/docs/CHATGPT.md
@@ -179,6 +179,8 @@ Offene Fragen: <falls vorhanden>
 ## 9. Versionsverlauf
 
 <!--VERSIONEN-->
+- **1.8.0** (03.11.2026) – Wartungs-Update
+
 - **Noch nicht veröffentlicht (kommt im nächsten großen Update):** OneNote lesen & speichern · einklappbare Seitenleiste · Outlook-Mail & -Kalender · Apple Kalender (iCloud) · Postfach-Filter je Konto · Zielkalender beim Anlegen · einfachere Gmail-Einrichtung mit Direktlinks · Microsoft-Anmeldung ohne eigene Einrichtung · Cloud-Speicher über OneDrive (Daten auf jedem PC) · Vorschläge aus Mails („Aus Mails übernehmen“: Termine, Fristen, Aufgaben, Infos – mit Änderungen, Serien, Aufteilen/Zusammenführen, Vorlauf, Regeln) · Wiedervorlage für Mails · „Meine Daten wiederherstellen“ beim ersten Start
 - **1.7.0** – Microsoft-Store-Version (kein Blockieren mehr durch Smart App Control)
 - **1.6.0** – Kalender live, Termine aus Mails, Schnelleingabe mit Uhrzeit, Wochenrückblick
