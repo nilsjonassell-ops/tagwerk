@@ -130,6 +130,34 @@ const tests = {
     await p.context().close()
   },
 
+  async dialog(b, url) {
+    const p = await start(b, url)
+    const opener = p.locator('.view-header button:has-text("Aufgabe")')
+    await opener.click()
+    await p.waitForSelector('.dialog')
+    ok((await p.evaluate(() => getComputedStyle(document.querySelector('.overlay')).backdropFilter)) !== 'none', 'Unschärfe hinter dem Dialog')
+    for (let i = 0; i < 25; i++) await p.keyboard.press('Tab')
+    ok(await p.evaluate(() => !!document.activeElement?.closest('.dialog')), 'Tab bleibt im Dialog')
+    await p.keyboard.press('Escape')
+    await sleep(250)
+    ok(await p.locator('.dialog').count() === 0, 'Esc schließt den unveränderten Dialog sofort')
+    ok(await opener.evaluate((el) => el === document.activeElement), 'Fokus zurück auf „Aufgabe“')
+    await opener.click()
+    await p.waitForSelector('.dialog')
+    await p.keyboard.type('Entwurf, der nicht verloren gehen soll')
+    await p.keyboard.press('Escape')
+    await sleep(250)
+    ok(await p.locator('.dialog').count() === 1, 'Mit Eingaben: Esc schließt nicht sofort')
+    ok(await p.locator('.dialog-confirm').isVisible(), 'Rückfrage „Änderungen verwerfen?“ erscheint')
+    await p.locator('.dialog-confirm button:has-text("Weiter bearbeiten")').click()
+    ok(await p.locator('.dialog').count() === 1 && (await p.locator('.dialog-confirm').count()) === 0, 'Weiter bearbeiten behält den Dialog')
+    await p.keyboard.press('Escape')
+    await p.locator('.dialog-confirm button:has-text("Verwerfen")').click()
+    await sleep(250)
+    ok(await p.locator('.dialog').count() === 0, 'Verwerfen schließt den Dialog')
+    await p.context().close()
+  },
+
   async noNative(b, url) {
     const p = await start(b, url)
     const count = () => p.evaluate(() => document.querySelectorAll('select').length)

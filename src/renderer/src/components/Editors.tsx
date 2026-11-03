@@ -20,6 +20,7 @@ export function TaskDialog({ id, preset, suggestionId, mergeIds }: { id?: string
   const close = () => useStore.getState().openDialog(null)
   const existing = id ? data.tasks.find((t) => t.id === id) : undefined
   const [t, setT] = useState<Task>(() => existing ?? newTask({ title: '', ...preset }))
+  const [initial] = useState(() => JSON.stringify(t))
   const [touched, setTouched] = useState(false)
   const set = <K extends keyof Task>(k: K, v: Task[K]) => setT((x) => ({ ...x, [k]: v }))
   const invalid = !t.title.trim()
@@ -89,6 +90,7 @@ export function TaskDialog({ id, preset, suggestionId, mergeIds }: { id?: string
     <Dialog
       title={existing ? 'Aufgabe bearbeiten' : 'Neue Aufgabe'}
       onClose={close}
+      dirty={JSON.stringify(t) !== initial}
       footer={
         <>
           {existing && (
@@ -198,6 +200,8 @@ export function EventDialog({ id, preset, suggestionId, series }: { id?: string;
   const [notes, setNotes] = useState(existing?.notes ?? preset?.notes ?? '')
   const [projectId, setProjectId] = useState(existing?.projectId ?? preset?.projectId ?? '')
   const [touched, setTouched] = useState(false)
+  const snapshot = JSON.stringify([title, date, startT, endT, allDay, location, attendees, notes, projectId])
+  const [initialSnapshot] = useState(snapshot)
   // 'std' = Standard aus den Einstellungen, 'none' = keine, sonst Minuten vorher
   const [reminder, setReminder] = useState<string>(
     existing?.reminderMinutes === undefined ? 'std' : existing.reminderMinutes === null ? 'none' : String(existing.reminderMinutes)
@@ -323,6 +327,7 @@ export function EventDialog({ id, preset, suggestionId, series }: { id?: string;
     <Dialog
       title={existing ? 'Termin bearbeiten' : 'Neuer Termin'}
       onClose={close}
+      dirty={snapshot !== initialSnapshot}
       footer={
         <>
           {existing && (

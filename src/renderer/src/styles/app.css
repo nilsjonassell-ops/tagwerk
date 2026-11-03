@@ -290,76 +290,110 @@ button {
 }
 
 /* ===== Steuerelemente ===== */
+/* Knöpfe: secondary (Standard) · primary · ghost · danger; Größen small · (normal) · large */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 30px;
-  padding: 0 12px;
+  height: 32px;
+  padding: 0 13px;
   border-radius: var(--r-md);
-  border: 1px solid var(--line);
+  border: 0;
   background: var(--raised);
+  box-shadow: inset 0 0 0 1px var(--line), var(--shadow-1);
   color: var(--ink);
   font-size: var(--fs-md);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
   white-space: nowrap;
+  transition:
+    background var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
 }
 .btn svg {
   width: 15px;
   height: 15px;
   stroke-width: 1.9;
+  flex-shrink: 0;
 }
 .btn:hover {
-  background: var(--sunken);
+  background: color-mix(in srgb, var(--raised) 100%, var(--ink) 4%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 70%, var(--ink) 30%), var(--shadow-1);
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
 }
 .btn:disabled {
-  opacity: 0.5;
+  color: var(--disabled-ink);
+  box-shadow: inset 0 0 0 1px var(--line-soft);
   pointer-events: none;
 }
 .btn.primary {
   background: var(--accent);
-  border-color: var(--accent);
+  box-shadow: var(--shadow-1);
   color: var(--accent-ink);
 }
 .btn.primary:hover {
-  filter: brightness(1.08);
+  background: color-mix(in srgb, var(--accent) 88%, var(--ink));
+}
+:root[data-theme='dark'] .btn.primary:hover {
+  background: color-mix(in srgb, var(--accent) 88%, white);
+}
+.btn.primary:disabled {
+  background: color-mix(in srgb, var(--accent) 40%, var(--raised));
+  color: var(--accent-ink);
+  box-shadow: none;
 }
 .btn.danger {
   background: var(--alert);
-  border-color: var(--alert);
+  box-shadow: var(--shadow-1);
   color: #fff;
 }
 :root[data-theme='dark'] .btn.danger {
-  color: #1d0f0e;
+  color: #2a0a10;
+}
+.btn.danger:hover {
+  background: color-mix(in srgb, var(--alert) 88%, var(--ink));
+}
+.btn.ghost {
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-2);
+}
+.btn.ghost:hover {
+  background: var(--hover);
+  box-shadow: none;
+  color: var(--ink);
+}
+.btn.ghost:focus-visible {
+  box-shadow: var(--ring);
 }
 .btn.ghost.danger-hover:not(:disabled):hover {
   color: var(--alert);
 }
-.btn.ghost {
-  border-color: transparent;
-  background: transparent;
-  color: var(--ink-2);
-}
-.btn.ghost:hover {
-  background: var(--sunken);
-  color: var(--ink);
-}
 .btn.small {
-  height: 26px;
-  padding: 0 9px;
+  height: 28px;
+  padding: 0 10px;
   font-size: var(--fs-sm);
 }
+.btn.large {
+  height: 40px;
+  padding: 0 18px;
+  font-size: var(--fs-lg);
+  border-radius: var(--r-lg);
+}
 .btn.icon-btn {
-  width: 30px;
+  width: 32px;
   padding: 0;
 }
 .btn.small.icon-btn {
-  width: 26px;
-  padding: 0;
-}
-.btn svg {
-  flex-shrink: 0;
+  width: 28px;
 }
 .btn.icon-btn svg {
   width: 16px;
@@ -367,8 +401,8 @@ button {
 }
 .btn.active {
   background: var(--accent-soft);
-  border-color: var(--accent-line);
-  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+  color: var(--accent-text);
 }
 
 .segmented {
@@ -459,31 +493,42 @@ button {
 }
 .switch {
   position: relative;
-  width: 34px;
-  height: 20px;
+  width: 38px;
+  height: 22px;
   flex-shrink: 0;
-  border-radius: 20px;
+  border-radius: var(--r-pill);
   border: 0;
-  background: var(--line);
-  transition: background 0.15s;
+  padding: 0;
+  background: color-mix(in srgb, var(--ink) 22%, transparent);
+  transition: background var(--dur) var(--ease);
 }
 .switch::after {
   content: '';
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: #fff;
-  transition: transform 0.15s;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform var(--dur) var(--ease);
 }
 .switch[aria-checked='true'] {
   background: var(--accent);
 }
 .switch[aria-checked='true']::after {
-  transform: translateX(14px);
+  transform: translateX(16px);
+}
+:root[data-theme='dark'] .switch[aria-checked='true']::after {
+  background: var(--accent-ink);
+}
+.switch:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.switch:disabled {
+  opacity: 0.45;
 }
 .check {
   width: 18px;

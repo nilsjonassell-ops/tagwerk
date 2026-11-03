@@ -304,3 +304,25 @@
 .menu-custom-date .input {
   height: 28px;
 }
+
+/* ---------- Dialog ---------- */
+.dialog.size-sm {
+  width: min(420px, calc(100vw - 32px));
+}
+.dialog.size-lg {
+  width: min(820px, calc(100vw - 32px));
+}
+.dialog-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--line-soft);
+  background: var(--attention-soft);
+  animation: fade var(--dur-fast) var(--ease);
+}
+.dialog-confirm span {
+  flex: 1;
+  font-weight: var(--fw-medium);
+  color: var(--ink);
+}

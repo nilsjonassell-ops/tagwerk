@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { FlaskConical, Loader2, RefreshCw, X, AlertTriangle } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { useAccounts } from '@/lib/accounts'
@@ -14,13 +14,20 @@ export function Dialog(props: {
   onClose: () => void
   children: ReactNode
   footer?: ReactNode
+  /** sm 420 px · md 520 px (Standard) · lg 820 px */
+  size?: 'sm' | 'md' | 'lg'
+  /** veraltet: entspricht size="lg" */
   wide?: boolean
   labelledBy?: string
   bodyClass?: string
+  /** Ungespeicherte Eingaben: vor dem Schließen per Esc, × oder Klick daneben nachfragen */
+  dirty?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
-  const closeRef = useRef(props.onClose)
-  closeRef.current = props.onClose
+  const [confirm, setConfirm] = useState(false)
+  const requestClose = () => (props.dirty ? setConfirm(true) : props.onClose())
+  const closeRef = useRef(requestClose)
+  closeRef.current = requestClose
   useEffect(() => {
     const me = Symbol('dialog')
     dialogStack.push(me)
@@ -66,16 +73,27 @@ export function Dialog(props: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   return (
-    <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
-      <div className={`dialog ${props.wide ? 'wide' : ''}`} role="dialog" aria-modal="true" aria-label={props.title} ref={ref} tabIndex={-1} style={{ outline: 'none' }}>
+    <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && requestClose()}>
+      <div className={`dialog size-${props.wide ? 'lg' : props.size ?? 'md'} ${props.wide ? 'wide' : ''}`} role="dialog" aria-modal="true" aria-label={props.title} ref={ref} tabIndex={-1} style={{ outline: 'none' }}>
         <div className="dialog-head">
           <h2>{props.title}</h2>
-          <button className="btn ghost icon-btn small dialog-close" onClick={props.onClose} aria-label="Schließen">
+          <button className="btn ghost icon-btn small dialog-close" onClick={requestClose} aria-label="Schließen">
             <X />
           </button>
         </div>
         <div className={props.bodyClass ?? 'dialog-body'}>{props.children}</div>
-        {props.footer && <div className="dialog-foot">{props.footer}</div>}
+        {confirm && (
+          <div className="dialog-confirm" role="alertdialog" aria-label="Änderungen verwerfen?">
+            <span>Änderungen verwerfen?</span>
+            <button type="button" className="btn small" autoFocus onClick={() => setConfirm(false)}>
+              Weiter bearbeiten
+            </button>
+            <button type="button" className="btn small danger" onClick={props.onClose}>
+              Verwerfen
+            </button>
+          </div>
+        )}
+        {props.footer && !confirm && <div className="dialog-foot">{props.footer}</div>}
       </div>
     </div>
   )
