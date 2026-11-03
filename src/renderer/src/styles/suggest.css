@@ -104,14 +104,6 @@
   background: var(--selected);
   box-shadow: inset 0 0 0 1px var(--accent-line);
 }
-:root[data-theme='dark'] .sg-card:hover {
-  background: var(--hover);
-  box-shadow: none;
-}
-:root[data-theme='dark'] .sg-card.selected {
-  background: var(--selected);
-  box-shadow: inset 0 0 0 1px var(--accent-line);
-}
 .sg-pick {
   margin-top: 8px;
 }
@@ -211,11 +203,11 @@
 .sg-details blockquote {
   margin: 0;
   padding: 6px 10px;
-  border-left: 3px solid rgba(139, 109, 255, 0.5);
+  border-left: 3px solid color-mix(in srgb, var(--accent) 50%, transparent);
   border-radius: 4px;
   font-size: 13px;
   color: var(--ink-2);
-  background: rgba(139, 109, 255, 0.06);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
 }
 .sg-note {
   margin: 0;
@@ -276,16 +268,12 @@
   min-width: 220px;
   padding: 6px;
   border-radius: 14px;
-  background: var(--glass-solid, #fff);
+  background: var(--raised);
   backdrop-filter: var(--blur);
   box-shadow: var(--shadow-3), inset 0 0 0 1px var(--line-soft);
   display: grid;
   gap: 2px;
   animation: rise 0.2s var(--ease-out, ease) both;
-}
-:root[data-theme='dark'] .sg-snooze {
-  background: rgba(36, 38, 60, 0.96);
-  box-shadow: var(--shadow-3), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 .sg-snooze > button {
   display: flex;
@@ -513,11 +501,11 @@
 .sg-split-src {
   margin: 0 0 10px;
   padding: 6px 10px;
-  border-left: 3px solid rgba(139, 109, 255, 0.5);
+  border-left: 3px solid color-mix(in srgb, var(--accent) 50%, transparent);
   border-radius: 4px;
   font-size: 13px;
   color: var(--ink-2);
-  background: rgba(139, 109, 255, 0.06);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
 }
 .prep-row {
   display: flex;
@@ -573,9 +561,6 @@
   cursor: pointer;
   transition: box-shadow 0.2s, transform 0.25s var(--ease-spring, ease);
 }
-:root[data-theme='dark'] .onb-card {
-  background: rgba(255, 255, 255, 0.05);
-}
 .onb-card:hover {
   transform: translateY(-1px);
 }
@@ -595,7 +580,7 @@
 }
 .onb-card.on {
   background: var(--accent-soft);
-  box-shadow: inset 0 0 0 2px rgba(139, 109, 255, 0.55);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 .onb-restore {
   min-height: 70px;
@@ -611,7 +596,7 @@
   flex-shrink: 0;
   width: 22px;
   height: 22px;
-  color: #2fb58a;
+  color: var(--ok);
 }
 .onb-done > div {
   display: grid;
@@ -679,12 +664,9 @@
   box-shadow: inset 0 0 0 1px var(--line);
   cursor: pointer;
 }
-:root[data-theme='dark'] .sg-intro-kind {
-  background: rgba(255, 255, 255, 0.05);
-}
 .sg-intro-kind.on {
   background: var(--accent-soft);
-  box-shadow: inset 0 0 0 2px rgba(139, 109, 255, 0.45);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 .sg-intro-kind > span {
   display: grid;

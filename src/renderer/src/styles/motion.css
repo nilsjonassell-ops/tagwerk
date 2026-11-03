@@ -31,15 +31,11 @@
   right: 10px;
   border-radius: 10px;
   background: var(--surface-2);
-  box-shadow: inset 0 0 0 1px var(--line-soft), 0 6px 18px -8px rgba(60, 60, 160, 0.4);
+  box-shadow: 0 0 0 1px var(--line-soft), var(--shadow-1);
   transition:
     transform 0.5s var(--ease-spring),
     height 0.3s var(--ease-out);
   pointer-events: none;
-}
-:root[data-theme='dark'] .nav-pill {
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 8px 22px -10px rgba(0, 0, 0, 0.6);
 }
 .nav-pill::before {
   content: '';
@@ -50,7 +46,7 @@
   width: 3px;
   border-radius: 3px;
   background: var(--accent);
-  box-shadow: 0 0 10px rgba(139, 109, 255, 0.7);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 70%, transparent);
 }
 .nav-item svg {
   transition: transform 0.35s var(--ease-spring), color 0.2s;
@@ -174,11 +170,11 @@
 @keyframes check-pop {
   0% {
     transform: scale(0.7);
-    box-shadow: 0 0 0 0 rgba(139, 109, 255, 0.5);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 50%, transparent);
   }
   60% {
     transform: scale(1.15);
-    box-shadow: 0 0 0 8px rgba(139, 109, 255, 0);
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 0%, transparent);
   }
   100% {
     transform: scale(1);
@@ -311,7 +307,7 @@
 }
 @keyframes glow {
   50% {
-    box-shadow: 0 0 0 4px rgba(139, 109, 255, 0.18);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
   }
 }
 

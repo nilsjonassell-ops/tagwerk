@@ -35,13 +35,7 @@
   transition:
     width 0.38s var(--sb-ease),
     box-shadow 0.35s ease;
-  box-shadow:
-    0 0 0 1px var(--line-soft),
-    0 24px 60px -18px rgba(40, 40, 130, 0.45),
-    0 0 0 1px rgba(255, 255, 255, 0.35);
-}
-:root[data-theme='dark'] .sidebar.is-rail.peek {
-  box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 0 0 1px var(--line), var(--shadow-3);
 }
 
 /* Gleiche Symbol-Achse in beiden Zuständen (Mitte bei 28,5 px) */
@@ -167,9 +161,6 @@
 }
 .sb-toggle:active {
   transform: scale(0.9);
-}
-:root[data-theme='dark'] .sb-toggle:hover {
-  background: rgba(255, 255, 255, 0.08);
 }
 .sidebar.is-rail:not(.peek) .sb-toggle {
   opacity: 0;

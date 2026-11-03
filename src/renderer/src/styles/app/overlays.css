@@ -2,16 +2,13 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(20, 28, 26, 0.32);
+  background: var(--surface-3);
   display: flex;
   align-items: flex-start;
   justify-content: center;
   padding-top: 11vh;
   z-index: 50;
   animation: fade 0.12s ease-out;
-}
-:root[data-theme='dark'] .overlay {
-  background: rgba(0, 0, 0, 0.5);
 }
 @keyframes fade {
   from {
@@ -187,16 +184,13 @@
 .toast button {
   border: 0;
   background: transparent;
-  color: var(--accent-soft);
+  color: var(--accent-text);
   font-weight: 600;
   padding: 4px 8px;
   border-radius: 6px;
 }
-:root[data-theme='dark'] .toast button {
-  color: #1c5f68;
-}
 .toast button:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--hover);
 }
 .toast.error {
   background: var(--alert);

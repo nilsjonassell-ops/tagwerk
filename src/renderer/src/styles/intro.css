@@ -41,11 +41,8 @@
   width: 560px;
   height: 560px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.75), rgba(185, 166, 255, 0.25) 45%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--raised) 75%, transparent), color-mix(in srgb, var(--wash-1) 35%, transparent) 45%, transparent 70%);
   animation: intro-glow 2.4s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-:root[data-theme='dark'] .intro-glow {
-  background: radial-gradient(circle, rgba(139, 109, 255, 0.35), rgba(255, 111, 174, 0.12) 45%, transparent 70%);
 }
 @keyframes intro-glow {
   from {
@@ -78,7 +75,7 @@
   overflow: visible;
   width: 196px;
   height: 196px;
-  filter: drop-shadow(0 18px 40px rgba(120, 90, 255, 0.35));
+  filter: drop-shadow(0 18px 40px color-mix(in srgb, var(--accent) 35%, transparent));
   animation: intro-float 3.2s ease-in-out 1.6s infinite alternate;
 }
 @keyframes intro-float {
@@ -240,7 +237,7 @@
 }
 .intro-word span {
   display: inline-block;
-  background: linear-gradient(120deg, var(--ink) 10%, #6b6dff 55%, #ff5fa6 100%);
+  background: linear-gradient(120deg, var(--ink) 10%, var(--accent) 55%, #ff5fa6 100%);
   background-size: 700% 100%;
   -webkit-background-clip: text;
   background-clip: text;
