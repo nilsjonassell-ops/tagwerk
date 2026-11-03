@@ -56,6 +56,36 @@ for (const mode of ['light', 'dark'] as const) {
   }
 }
 
+// Glas: Fläche mit Deckkraft über dem Verlaufshintergrund – Text muss auch über dem farbigsten Ton lesbar bleiben
+function hex(h: string): number[] {
+  const n = h.replace('#', '')
+  return [0, 2, 4].map((i) => parseInt(n.slice(i, i + 2), 16))
+}
+function over(top: number[], alpha: number, under: number[]): string {
+  return '#' + top.map((c, i) => Math.round(c * alpha + under[i] * (1 - alpha)).toString(16).padStart(2, '0')).join('')
+}
+for (const mode of ['light', 'dark'] as const) {
+  const n = PALETTE.neutral[mode]
+  const g = PALETTE.glass[mode]
+  for (const { id } of ACCENTS) {
+    test(`${mode}/${id}: Text auf Glas bleibt über dem Verlauf lesbar`, () => {
+      for (const w of PALETTE.accents[id][mode].wash) {
+        // stärkste Stelle des Verlaufs (Mitte des Farbflecks)
+        const backdrop = hex(over(hex(w), g.wash, hex(n.bg)))
+        for (const [name, surface, alpha] of [['Seitenleiste', n.canvas, g.side], ['Hauptfläche', n.canvas, g.main]] as const) {
+          const eff = over(hex(surface), alpha, backdrop)
+          for (const ink of ['ink', 'ink2', 'ink3'] as const) {
+            const c = contrast(n[ink], eff)
+            assert.ok(c >= 4.5, `${ink} auf ${name} (${eff}): ${c.toFixed(2)}`)
+          }
+          const a = PALETTE.accents[id][mode]
+          assert.ok(contrast(a.text, eff) >= 4.5, `Akzenttext auf ${name}: ${contrast(a.text, eff).toFixed(2)}`)
+        }
+      }
+    })
+  }
+}
+
 test('tokens.css ist aus der Palette erzeugt und aktuell', () => {
   const css = readFileSync(new URL('../src/renderer/src/styles/tokens.css', import.meta.url), 'utf8')
   assert.equal(css, renderTokens(), 'npm run tokens ausführen')

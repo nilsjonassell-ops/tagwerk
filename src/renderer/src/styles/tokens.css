@@ -49,7 +49,8 @@
   --shadow-1: 0 1px 2px rgba(20, 24, 45, 0.05), 0 1px 1px rgba(20, 24, 45, 0.03);
   --shadow-2: 0 2px 6px rgba(20, 24, 45, 0.06), 0 12px 32px -6px rgba(20, 24, 45, 0.16);
   --shadow-3: 0 4px 12px rgba(20, 24, 45, 0.08), 0 32px 72px -16px rgba(20, 24, 45, 0.3);
-  --blur: saturate(160%) blur(20px);
+  --blur: saturate(170%) blur(24px);
+  --blur-strong: saturate(180%) blur(40px);
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
@@ -65,13 +66,21 @@
 
 :root,
 :root[data-theme='light'] {
+  --glass-side: rgb(247 248 251 / 0.62);
+  --glass-main: rgb(247 248 251 / 0.72);
+  --glass-card: rgb(255 255 255 / 0.7);
+  --glass-dialog: rgb(255 255 255 / 0.8);
+  --glass-pop: rgb(255 255 255 / 0.82);
+  --wash-strength: 85%;
+  --glass-rim: inset 0 0 0 0.5px rgb(255 255 255 / 0.75), inset 0 1px 0 rgb(255 255 255 / 0.9);
+  --glass-edge: 0 0 0 0.5px rgb(20 24 45 / 0.12);
   --bg: #eceef5;
   --canvas: #f7f8fb;
   --raised: #ffffff;
   --sunken: #eef0f5;
   --ink: #141726;
   --ink-2: #454a5d;
-  --ink-3: #60667a;
+  --ink-3: #5b6175;
   --line: #dcdfe8;
   --line-soft: #e8eaf0;
   --surface-0: #eceef5;
@@ -90,6 +99,14 @@
   --ok-soft: #e1f2ea;
 }
 :root[data-theme='dark'] {
+  --glass-side: rgb(18 20 29 / 0.55);
+  --glass-main: rgb(18 20 29 / 0.7);
+  --glass-card: rgb(25 28 39 / 0.62);
+  --glass-dialog: rgb(25 28 39 / 0.82);
+  --glass-pop: rgb(25 28 39 / 0.84);
+  --wash-strength: 60%;
+  --glass-rim: inset 0 0 0 0.5px rgb(255 255 255 / 0.09), inset 0 1px 0 rgb(255 255 255 / 0.06);
+  --glass-edge: 0 0 0 0.5px rgb(0 0 0 / 0.55);
   --bg: #0b0d14;
   --canvas: #12141d;
   --raised: #191c27;

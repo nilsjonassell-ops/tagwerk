@@ -1,5 +1,5 @@
 // Erzeugt styles/tokens.css aus src/shared/palette.ts (npm run tokens).
-import { PALETTE, type AccentTone, type Neutral, type Status } from '../src/shared/palette.ts'
+import { PALETTE, type AccentTone, type Glass, type Neutral, type Status } from '../src/shared/palette.ts'
 
 const HEAD = `/* ==========================================================================
    Tagwerk – Gestaltungswerte (Design-Tokens)
@@ -53,7 +53,8 @@ const STATIC = `:root {
   --shadow-1: 0 1px 2px rgba(20, 24, 45, 0.05), 0 1px 1px rgba(20, 24, 45, 0.03);
   --shadow-2: 0 2px 6px rgba(20, 24, 45, 0.06), 0 12px 32px -6px rgba(20, 24, 45, 0.16);
   --shadow-3: 0 4px 12px rgba(20, 24, 45, 0.08), 0 32px 72px -16px rgba(20, 24, 45, 0.3);
-  --blur: saturate(160%) blur(20px);
+  --blur: saturate(170%) blur(24px);
+  --blur-strong: saturate(180%) blur(40px);
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
@@ -68,9 +69,23 @@ const STATIC = `:root {
 }
 `
 
-function neutral(n: Neutral, s: Status, mode: 'light' | 'dark'): string {
+const rgb = (h: string, a: number) => {
+  const n = h.replace('#', '')
+  return `rgb(${[0, 2, 4].map((i) => parseInt(n.slice(i, i + 2), 16)).join(' ')} / ${a})`
+}
+
+function neutral(n: Neutral, s: Status, g: Glass, mode: 'light' | 'dark'): string {
   const dark = mode === 'dark'
   return [
+    `  --glass-side: ${rgb(n.canvas, g.side)};`,
+    `  --glass-main: ${rgb(n.canvas, g.main)};`,
+    `  --glass-card: ${rgb(n.raised, g.card)};`,
+    `  --glass-dialog: ${rgb(n.raised, g.dialog)};`,
+    `  --glass-pop: ${rgb(n.raised, g.pop)};`,
+    `  --wash-strength: ${Math.round(g.wash * 100)}%;`,
+    // feine Kontur: innen eine helle Lichtkante, außen eine zarte Linie
+    dark ? `  --glass-rim: inset 0 0 0 0.5px rgb(255 255 255 / 0.09), inset 0 1px 0 rgb(255 255 255 / 0.06);` : `  --glass-rim: inset 0 0 0 0.5px rgb(255 255 255 / 0.75), inset 0 1px 0 rgb(255 255 255 / 0.9);`,
+    dark ? `  --glass-edge: 0 0 0 0.5px rgb(0 0 0 / 0.55);` : `  --glass-edge: 0 0 0 0.5px rgb(20 24 45 / 0.12);`,
     `  --bg: ${n.bg};`,
     `  --canvas: ${n.canvas};`,
     `  --raised: ${n.raised};`,
@@ -115,8 +130,8 @@ function accent(a: AccentTone): string {
 
 export function renderTokens(): string {
   const out = [HEAD, STATIC]
-  out.push(`:root,\n:root[data-theme='light'] {\n${neutral(PALETTE.neutral.light, PALETTE.status.light, 'light')}\n}`)
-  out.push(`:root[data-theme='dark'] {\n${neutral(PALETTE.neutral.dark, PALETTE.status.dark, 'dark')}\n}`)
+  out.push(`:root,\n:root[data-theme='light'] {\n${neutral(PALETTE.neutral.light, PALETTE.status.light, PALETTE.glass.light, 'light')}\n}`)
+  out.push(`:root[data-theme='dark'] {\n${neutral(PALETTE.neutral.dark, PALETTE.status.dark, PALETTE.glass.dark, 'dark')}\n}`)
   for (const [id, pair] of Object.entries(PALETTE.accents)) {
     const sel = id === 'indigo' ? `:root,\n:root[data-accent='indigo']` : `:root[data-accent='${id}']`
     out.push(`${sel} {\n${accent(pair.light)}\n}`)

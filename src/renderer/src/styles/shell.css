@@ -1,8 +1,9 @@
 /* ==========================================================================
-   Tagwerk – Rahmen und Flächen
-   Ruhiger Verlaufshintergrund aus der Akzentfarbe, darauf zwei schwebende,
-   deckende Flächen (Seitenleiste, Hauptbereich). Glas (Unschärfe) gibt es nur
-   für schwebende Ebenen: Menüs, Popover, Toasts und hinter Dialogen.
+   Tagwerk – Rahmen und Flächen (Glas)
+   Ruhiger Verlaufshintergrund aus der Akzentfarbe, darauf schwebende Glasflächen
+   im Stil von macOS: dezente Transparenz, Hintergrundunschärfe, feine Lichtkante
+   innen, zarte Kontur außen, zurückhaltender Schatten. Deckkraft kommt aus der
+   Palette (src/shared/palette.ts → glass) und ist auf Lesbarkeit geprüft.
    ========================================================================== */
 
 @import '@fontsource-variable/inter/opsz.css';
@@ -23,14 +24,10 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(60% 70% at 0% 0%, color-mix(in srgb, var(--wash-1) 55%, transparent), transparent 70%),
-    radial-gradient(55% 65% at 100% 100%, color-mix(in srgb, var(--wash-2) 45%, transparent), transparent 70%),
-    var(--bg);
-}
-:root[data-theme='dark'] body::before {
-  background:
-    radial-gradient(60% 70% at 0% 0%, color-mix(in srgb, var(--wash-1) 45%, transparent), transparent 70%),
-    radial-gradient(55% 65% at 100% 100%, color-mix(in srgb, var(--wash-2) 35%, transparent), transparent 70%),
+    radial-gradient(55% 65% at 8% 6%, color-mix(in srgb, var(--wash-1) var(--wash-strength), transparent), transparent 72%),
+    radial-gradient(50% 60% at 96% 10%, color-mix(in srgb, var(--wash-2) calc(var(--wash-strength) * 0.8), transparent), transparent 72%),
+    radial-gradient(60% 60% at 70% 100%, color-mix(in srgb, var(--wash-1) calc(var(--wash-strength) * 0.7), transparent), transparent 74%),
+    radial-gradient(45% 55% at 0% 100%, color-mix(in srgb, var(--wash-2) calc(var(--wash-strength) * 0.6), transparent), transparent 72%),
     var(--bg);
 }
 ::selection {
@@ -49,25 +46,25 @@ body::before {
   position: relative;
   border: 0;
   border-radius: var(--r-xl);
-  box-shadow: 0 0 0 1px var(--line-soft), var(--shadow-1);
+  -webkit-backdrop-filter: var(--blur-strong);
+  backdrop-filter: var(--blur-strong);
 }
 .sidebar {
   margin: 10px 0 10px 10px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--canvas) 78%, transparent);
-}
-.sidebar.is-rail.peek {
-  background: var(--canvas);
-  box-shadow: 0 0 0 1px var(--line), var(--shadow-3);
+  background: var(--glass-side);
+  box-shadow: var(--glass-rim), var(--glass-edge), var(--shadow-1);
 }
 .main {
   margin: 10px 10px 10px 0;
-  background: var(--canvas);
+  background: var(--glass-main);
+  box-shadow: var(--glass-rim), var(--glass-edge), var(--shadow-2);
 }
 .assistant {
   margin: 10px 10px 10px 0;
   overflow: hidden;
-  background: var(--canvas);
+  background: var(--glass-main);
+  box-shadow: var(--glass-rim), var(--glass-edge), var(--shadow-2);
 }
 .view-header {
   border-bottom-color: var(--line-soft);
@@ -116,8 +113,8 @@ body::before {
 .nav-pill,
 .settings-nav .nav-item[aria-current='page'] {
   position: relative;
-  background: var(--raised);
-  box-shadow: 0 0 0 1px var(--line-soft), var(--shadow-1);
+  background: var(--glass-card);
+  box-shadow: var(--glass-rim), var(--glass-edge), var(--shadow-1);
 }
 .nav-item .count {
   white-space: nowrap;
@@ -148,9 +145,9 @@ body::before {
 .plan-row,
 .focus-parked-review,
 .focus-park form {
-  background: var(--raised);
+  background: var(--glass-card);
   border-radius: var(--r-lg);
-  box-shadow: 0 0 0 1px var(--line-soft), var(--shadow-1);
+  box-shadow: var(--glass-rim), var(--glass-edge), var(--shadow-1);
 }
 .dash-section > :not(h2):not(.brief) {
   padding: 8px;
@@ -242,11 +239,11 @@ body::before {
   border-right-color: var(--line-soft);
 }
 .settings-nav {
-  background: var(--sunken);
+  background: color-mix(in srgb, var(--sunken) 55%, transparent);
 }
 .reader,
 .detail-pane {
-  background: var(--canvas);
+  background: transparent;
 }
 .detail-pane {
   border-left-color: var(--line-soft);
@@ -428,15 +425,16 @@ body::before {
 /* ===== Schwebende Ebenen: einzige Stellen mit Glas ===== */
 .overlay {
   background: var(--surface-3);
-  -webkit-backdrop-filter: blur(6px) saturate(120%);
-  backdrop-filter: blur(6px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
 }
+/* Dialog als Glasscheibe über der weichgezeichneten App */
 .dialog,
 .palette {
   position: relative;
   border-radius: var(--r-xl);
-  background: var(--raised);
-  box-shadow: 0 0 0 1px var(--line-soft), var(--shadow-3);
+  background: var(--glass-dialog);
+  box-shadow: var(--glass-rim), var(--glass-edge), var(--shadow-3);
 }
 .dialog-head,
 .dialog-foot {
@@ -450,10 +448,10 @@ body::before {
 .update-card,
 .focus-pill,
 .focus-phase {
-  background: var(--surface-2);
+  background: var(--glass-pop);
   -webkit-backdrop-filter: var(--blur);
   backdrop-filter: var(--blur);
-  box-shadow: 0 0 0 1px var(--line-soft), var(--shadow-2);
+  box-shadow: var(--glass-rim), var(--glass-edge), var(--shadow-2);
 }
 .toast {
   border-radius: var(--r-pill);
@@ -535,7 +533,33 @@ body::before {
   color: var(--ink-3);
 }
 
-/* ===== Rückfall: keine Transparenzeffekte ===== */
+/* ===== Rückfall: keine Transparenzeffekte (Windows „Transparenzeffekte“ aus oder Animationen „Reduziert“) ===== */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass-side: var(--canvas);
+    --glass-main: var(--canvas);
+    --glass-card: var(--raised);
+    --glass-dialog: var(--raised);
+    --glass-pop: var(--raised);
+  }
+  .sidebar,
+  .main,
+  .assistant {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+:root[data-motion='reduced'] {
+  --glass-side: var(--canvas);
+  --glass-main: var(--canvas);
+  --glass-card: var(--raised);
+  --glass-dialog: var(--raised);
+  --glass-pop: var(--raised);
+}
+:root[data-motion='reduced'] :is(.sidebar, .main, .assistant, .overlay) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 @media (prefers-reduced-transparency: reduce) {
   .toast,
   .update-card,

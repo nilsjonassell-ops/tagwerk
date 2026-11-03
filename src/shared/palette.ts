@@ -38,11 +38,28 @@ export interface Status {
   okSoft: string
 }
 
+/** Deckkraft der Glasflächen (0–1) und Stärke des Verlaufs im Hintergrund */
+export interface Glass {
+  /** Seitenleiste (Vibrancy) */
+  side: number
+  /** Hauptfläche */
+  main: number
+  /** Karten auf der Hauptfläche */
+  card: number
+  /** Dialoge */
+  dialog: number
+  /** Menüs, Popover, Toasts */
+  pop: number
+  /** Deckkraft der Farbflecken im Hintergrund */
+  wash: number
+}
+
 type Pair<T> = { light: T; dark: T }
 
 export const PALETTE: {
   neutral: Pair<Neutral>
   status: Pair<Status>
+  glass: Pair<Glass>
   accents: Record<AccentId, Pair<AccentTone>>
 } = {
   neutral: {
@@ -53,7 +70,7 @@ export const PALETTE: {
       sunken: '#eef0f5',
       ink: '#141726',
       ink2: '#454a5d',
-      ink3: '#60667a',
+      ink3: '#5b6175',
       line: '#dcdfe8',
       lineSoft: '#e8eaf0'
     },
@@ -68,6 +85,10 @@ export const PALETTE: {
       line: '#2a2e3c',
       lineSoft: '#212432'
     }
+  },
+  glass: {
+    light: { side: 0.62, main: 0.72, card: 0.7, dialog: 0.8, pop: 0.82, wash: 0.85 },
+    dark: { side: 0.55, main: 0.7, card: 0.62, dialog: 0.82, pop: 0.84, wash: 0.6 }
   },
   status: {
     light: { alert: '#c0243f', alertSoft: '#fbe7ea', attention: '#93520a', attentionSoft: '#f8ecd9', ok: '#16704f', okSoft: '#e1f2ea' },

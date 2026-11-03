@@ -15,10 +15,10 @@
   overflow: auto;
   padding: 4px;
   border-radius: var(--r-lg);
-  background: var(--surface-2);
+  background: var(--glass-pop);
   -webkit-backdrop-filter: var(--blur);
   backdrop-filter: var(--blur);
-  box-shadow: 0 0 0 1px var(--line), var(--shadow-2);
+  box-shadow: var(--glass-rim), var(--glass-edge), var(--shadow-2);
   color: var(--ink);
   outline: none;
   user-select: none;
