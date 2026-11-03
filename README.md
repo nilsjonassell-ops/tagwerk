@@ -9,6 +9,7 @@ Voraussetzung: Node.js 20 oder neuer. Im Projektordner (z. B. in PowerShell):
 ```bash
 npm install
 npm run dev        # Entwicklungsmodus mit Hot Reload
+npm run web        # Web-Vorschau im Browser (Beispieldaten, simulierte Testkonten)
 npm run build      # Produktions-Build nach out/
 npm start          # Produktions-Build starten
 npm test           # Logik-Tests (Konflikte, freie Zeit, Wiederholungen, ICS-Import …)

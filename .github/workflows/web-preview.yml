@@ -1,0 +1,46 @@
+# Web-Vorschau: Nach jedem Push auf main wird die Oberfläche mit Beispieldaten nach GitHub Pages gebaut.
+# Zum Testen im Browser (auch am Handy) – ohne Installation, ohne Store, ohne echte Konten.
+name: Web-Vorschau
+
+on:
+  push:
+    branches: [main]
+    paths: ['src/**', 'vite.web.config.ts', 'package.json', 'package-lock.json', '.github/workflows/web-preview.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: web-preview
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build:web
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: out/web
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

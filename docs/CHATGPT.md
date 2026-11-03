@@ -144,6 +144,11 @@ Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, N
 
 ---
 
+## 6b. Testen ohne Store
+
+- **Web-Vorschau:** https://nilsjonassell-ops.github.io/tagwerk/ – nach jeder Änderung automatisch aktualisiert, läuft im Browser (auch am Handy), mit Beispieldaten und simulierten Testkonten (Outlook, Apple). Echte Konten, Pop-up-Fenster, Autostart, OneNote und Cloud-Speicher gibt es nur in der installierten App.
+- Updates werden gesammelt und erst als großes Update in den Store gebracht.
+
 ## 7. Format für Aufträge an Claude
 
 Wenn eine Idee umgesetzt werden soll, schreibe sie so (Nils kopiert das 1:1 zu Claude):
