@@ -1,10 +1,11 @@
 // „Aus Mails übernehmen“: erkannte Termine, Fristen, Aufgaben und Infos prüfen und übernehmen.
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AlarmClock, CalendarCheck, CalendarPlus, Check, CheckSquare, ChevronDown, ChevronRight, Clock, Copy, Mail, Paperclip, RotateCcw, StickyNote, X, ListChecks } from 'lucide-react'
+import { AlarmClock, ArrowRight, CalendarCheck, CalendarPlus, Check, CheckSquare, ChevronDown, ChevronRight, Clock, Copy, Mail, Merge, Paperclip, RefreshCw, Repeat, RotateCcw, Scissors, StickyNote, Tag, X, ListChecks } from 'lucide-react'
 import type { SuggestionKind } from '@shared/types'
 import { useStore } from '@/lib/store'
 import { SOURCE_LABEL } from '@/lib/accounts'
-import { acceptMany, acceptSuggestion, canBulk, ignoreSuggestion, reopenSuggestion, snoozeOptions, snoozeSuggestion, undoAccepted, useSuggestions, type SuggestionItem } from '@/lib/suggestions'
+import { acceptMany, acceptSuggestion, addRule, canBulk, canMerge, createSplit, ignoreSuggestion, mergeSuggestions, reopenSuggestion, snoozeOptions, snoozeSuggestion, splitParts, undoAccepted, useSuggestions, type SuggestionItem } from '@/lib/suggestions'
+import { Dialog } from './ui'
 import { Empty } from './ui'
 
 type KindFilter = 'all' | SuggestionKind | 'uncertain'
@@ -59,7 +60,17 @@ export function SuggestionsPane() {
   const [showIgnored, setShowIgnored] = useState(false)
   const [snoozeFor, setSnoozeFor] = useState<string | null>(null)
 
-  const list = useMemo(() => open.filter((s) => kind === 'all' || (kind === 'uncertain' ? s.uncertain : s.kind === kind)), [open, kind])
+  const list = useMemo(() => {
+    const l = open.filter((s) => kind === 'all' || (kind === 'uncertain' ? s.uncertain : s.kind === kind))
+    // Vorschläge einer Unterhaltung bleiben zusammen – in der frühesten Gruppe
+    const order = { today: 0, week: 1, later: 2 } as const
+    const best = new Map<string, SuggestionItem['bucket']>()
+    for (const s of l) {
+      const b = best.get(s.threadId)
+      if (!b || order[s.bucket] < order[b]) best.set(s.threadId, s.bucket)
+    }
+    return l.map((s) => (best.get(s.threadId) === s.bucket ? s : { ...s, bucket: best.get(s.threadId)! }))
+  }, [open, kind])
   const counts = useMemo(() => {
     const c: Partial<Record<KindFilter, number>> = { all: open.length, uncertain: open.filter((s) => s.uncertain).length }
     for (const s of open) c[s.kind] = (c[s.kind] ?? 0) + 1
@@ -92,7 +103,7 @@ export function SuggestionsPane() {
         move(1)
       } else if (e.key === 'l') setSnoozeFor(s.id)
       else if (e.key === ' ') setExpanded(expanded === s.id ? null : s.id)
-      else if (e.key === 'x' && picking && canBulk(s)) setPicked((p) => toggle(p, s.id))
+      else if (e.key === 'x' && picking && canMerge(s)) setPicked((p) => toggle(p, s.id))
       else if (e.key === 'o') go('inbox', s.threadId)
       else return
       e.preventDefault()
@@ -102,7 +113,9 @@ export function SuggestionsPane() {
   }, [sel, expanded, picking, go])
 
   const bulkable = list.filter(canBulk)
+  const mergeable = list.filter(canMerge)
   const pickedItems = list.filter((s) => picked.has(s.id))
+  const pickedBulk = pickedItems.filter(canBulk)
 
   return (
     <section className="suggest-pane" aria-label="Aus Mails übernehmen">
@@ -112,7 +125,7 @@ export function SuggestionsPane() {
           <p className="hint">Erkannt in deinen E-Mails – angelegt wird erst, wenn du es bestätigst.</p>
         </div>
         <div className="row" style={{ gap: 6 }}>
-          {bulkable.length > 1 && (
+          {mergeable.length > 1 && (
             <button className={`btn small ${picking ? 'primary' : 'ghost'}`} onClick={() => (setPicking(!picking), setPicked(new Set()))}>
               <ListChecks /> {picking ? 'Auswahl beenden' : 'Mehrere übernehmen'}
             </button>
@@ -134,21 +147,36 @@ export function SuggestionsPane() {
       {picking && (
         <div className="sg-bulk" role="region" aria-label="Mehrfachauswahl">
           <span>
-            {pickedItems.length ? `${pickedItems.length} ausgewählt` : 'Eindeutige Aufgaben, Fristen und Notizen auswählen'} · Termine und unsichere Angaben prüfst du einzeln.
+            {pickedItems.length ? `${pickedItems.length} ausgewählt` : 'Aufgaben, Fristen und Notizen auswählen'} · Termine und unsichere Angaben werden nicht ungeprüft übernommen.
           </span>
-          <button className="link" onClick={() => setPicked(new Set(bulkable.map((s) => s.id)))}>
-            Alle eindeutigen
-          </button>
+          {bulkable.length > 0 && (
+            <button className="link" onClick={() => setPicked(new Set(bulkable.map((s) => s.id)))}>
+              Alle eindeutigen
+            </button>
+          )}
           <button
-            className="btn small primary"
-            disabled={!pickedItems.length}
+            className="btn small"
+            disabled={pickedItems.length < 2}
+            title="Zu einer Aufgabe zusammenführen (vorher prüfen)"
             onClick={() => {
-              acceptMany(pickedItems)
+              mergeSuggestions(pickedItems)
               setPicked(new Set())
               setPicking(false)
             }}
           >
-            <Check /> {pickedItems.length || ''} übernehmen
+            <Merge /> Zusammenführen
+          </button>
+          <button
+            className="btn small primary"
+            disabled={!pickedBulk.length}
+            title={pickedItems.length > pickedBulk.length ? `${pickedItems.length - pickedBulk.length} unsichere bitte einzeln prüfen` : undefined}
+            onClick={() => {
+              acceptMany(pickedBulk)
+              setPicked(new Set())
+              setPicking(false)
+            }}
+          >
+            <Check /> {pickedBulk.length || ''} übernehmen
           </button>
         </div>
       )}
@@ -167,7 +195,9 @@ export function SuggestionsPane() {
               <div className="sg-group-head">
                 {b.label} <span className="count">{items.length}</span>
               </div>
-              {items.map((s) => (
+              {groupByThread(items).map((g) => (
+                <ThreadGroup key={g.threadId} items={g.items}>
+                {g.items.map((s) => (
                 <SuggestionCard
                   key={s.id}
                   s={s}
@@ -181,6 +211,8 @@ export function SuggestionsPane() {
                   snoozeOpen={snoozeFor === s.id}
                   setSnoozeOpen={(v) => setSnoozeFor(v ? s.id : null)}
                 />
+                ))}
+                </ThreadGroup>
               ))}
             </div>
           )
@@ -206,6 +238,29 @@ export function SuggestionsPane() {
         </p>
       </div>
     </section>
+  )
+}
+
+/** Vorschläge derselben Unterhaltung zusammenhalten (Reihenfolge des ersten Auftretens) */
+function groupByThread(items: SuggestionItem[]): { threadId: string; items: SuggestionItem[] }[] {
+  const out: { threadId: string; items: SuggestionItem[] }[] = []
+  for (const s of items) {
+    const g = out.find((x) => x.threadId === s.threadId)
+    if (g) g.items.push(s)
+    else out.push({ threadId: s.threadId, items: [s] })
+  }
+  return out
+}
+
+function ThreadGroup({ items, children }: { items: SuggestionItem[]; children: React.ReactNode }) {
+  if (items.length < 2) return <>{children}</>
+  return (
+    <div className="sg-thread" role="group" aria-label={`Unterhaltung: ${items[0].subject}`}>
+      <div className="sg-thread-head">
+        <Mail /> {items[0].subject.replace(/^((re|aw|fwd?|wg)\s*:\s*)+/gi, '')} <span className="hint">· {items.length} Vorschläge aus einer Unterhaltung</span>
+      </div>
+      {children}
+    </div>
   )
 }
 
@@ -242,7 +297,7 @@ function SuggestionCard(p: {
   return (
     <div
       id={`sg-${s.id}`}
-      className={`sg-card ${p.selected ? 'selected' : ''} ${p.expanded ? 'expanded' : ''}`}
+      className={`sg-card ${p.selected ? 'selected' : ''} ${p.expanded ? 'expanded' : ''} ${s.change ? 'is-change' : ''}`}
       onClick={() => {
         p.onSelect()
         p.onToggle()
@@ -255,8 +310,8 @@ function SuggestionCard(p: {
           type="checkbox"
           className="box-check sg-pick"
           checked={p.picked}
-          disabled={!bulk}
-          title={bulk ? 'Auswählen' : 'Bitte einzeln prüfen'}
+          disabled={!canMerge(s)}
+          title={canMerge(s) ? (bulk ? 'Auswählen' : 'Auswählen – zum Zusammenführen; übernehmen bitte einzeln') : 'Termine bitte einzeln prüfen'}
           onClick={(e) => e.stopPropagation()}
           onChange={p.onPick}
           aria-label={`${s.title} auswählen`}
@@ -267,8 +322,29 @@ function SuggestionCard(p: {
         <div className="sg-title">
           <b>{s.title}</b>
         </div>
+        {s.change ? (
+          <div className="sg-change">
+            <span className="tag attention">
+              <RefreshCw /> Änderung
+            </span>
+            <span className="old">{s.change.oldLabel}</span>
+            <ArrowRight />
+            <b>{s.change.newLabel}</b>
+            <span className="hint">· {s.change.kind === 'event' ? 'Termin' : 'Aufgabe'} „{s.change.title}“</span>
+          </div>
+        ) : null}
         <div className="sg-when">
-          {when && <span>{when}</span>}
+          {when && !s.change && <span>{when}</span>}
+          {s.recurrence && (
+            <span className="tag" title="Wiederkehrend – beim Übernehmen wählst du „nur dieser“ oder „ganze Serie“">
+              <Repeat /> {s.recurrence.label}
+            </span>
+          )}
+          {s.ruleId && projectLabel(s.projectId) && (
+            <span className="tag" title="Projekt aus deiner Regel">
+              <Tag /> {projectLabel(s.projectId)}
+            </span>
+          )}
           {s.uncertain && (
             <span className="tag attention" title={s.reason}>
               unsicher
@@ -304,15 +380,23 @@ function SuggestionCard(p: {
                 Möglicherweise schon vorhanden: <b>{s.duplicate.title}</b>
               </div>
             )}
-            <button className="link" onClick={() => go('inbox', s.threadId)}>
-              <Mail /> Zur Mail
-            </button>
+            <div className="sg-detail-actions">
+              <button className="link" onClick={() => go('inbox', s.threadId)}>
+                <Mail /> Zur Mail
+              </button>
+              {(s.kind === 'task' || s.kind === 'deadline') && !s.change && (
+                <button className="link" onClick={() => useStore.getState().openDialog({ kind: 'split', suggestionId: s.id })}>
+                  <Scissors /> Aufteilen
+                </button>
+              )}
+              <RuleQuick s={s} />
+            </div>
           </div>
         )}
       </div>
       <div className="sg-actions" onClick={(e) => e.stopPropagation()}>
         <button className="btn small primary" onClick={() => acceptSuggestion(s)} title="Prüfen und übernehmen (Enter)">
-          {s.kind === 'event' ? <CalendarPlus /> : s.kind === 'note' ? <StickyNote /> : <CheckSquare />} Übernehmen
+          {s.change ? <RefreshCw /> : s.kind === 'event' ? <CalendarPlus /> : s.kind === 'note' ? <StickyNote /> : <CheckSquare />} {s.change ? 'Aktualisieren' : 'Übernehmen'}
         </button>
         <div className="sg-more">
           <button className="btn ghost small icon-btn" onClick={() => p.setSnoozeOpen(!p.snoozeOpen)} title="Später (L)" aria-label="Später" aria-expanded={p.snoozeOpen}>
@@ -402,7 +486,7 @@ export function ThreadSuggestions({ threadId }: { threadId: string }) {
           <KindIcon kind={s.kind} />
           <span className="ms-text">
             <b>
-              {KIND_LABEL[s.kind]}: {whenLabel(s) ?? s.title}
+              {s.change ? `Änderung: ${s.change.oldLabel} → ${s.change.newLabel}` : `${KIND_LABEL[s.kind]}: ${whenLabel(s) ?? s.title}`}
               {s.uncertain && (
                 <span className="tag attention" title={s.reason} style={{ marginLeft: 6 }}>
                   unsicher
@@ -412,7 +496,7 @@ export function ThreadSuggestions({ threadId }: { threadId: string }) {
             <span>{s.kind === 'note' ? s.noteBody?.split('\n').slice(0, 2).join(' · ') : `„${s.context}“`}</span>
           </span>
           <button className="btn small primary" onClick={() => acceptSuggestion(s)}>
-            Übernehmen
+            {s.change ? 'Aktualisieren' : 'Übernehmen'}
           </button>
           <button className="btn ghost small icon-btn" onClick={() => ignoreSuggestion(s)} aria-label="Ignorieren" title="Ignorieren">
             <X />
@@ -439,4 +523,95 @@ export function ThreadSuggestions({ threadId }: { threadId: string }) {
 /** Anzahl offener Vorschläge für die Navigation */
 export function useOpenSuggestionCount(): number {
   return useSuggestions().open.length
+}
+
+function projectLabel(id?: string): string | undefined {
+  return id ? useStore.getState().data.projects.find((p) => p.id === id)?.name : undefined
+}
+
+/** „Mails von X immer Projekt Y vorschlagen“ direkt an der Karte */
+function RuleQuick({ s }: { s: SuggestionItem }) {
+  const projects = useStore((st) => st.data.projects)
+  const [open, setOpen] = useState(false)
+  if (!projects.length) return null
+  const who = s.from.email || s.from.name
+  if (!open)
+    return (
+      <button className="link" onClick={() => setOpen(true)} title="Regel: Mails von diesem Absender bekommen automatisch ein Projekt">
+        <Tag /> {s.ruleId ? 'Regel ändern' : 'Projekt für Absender merken'}
+      </button>
+    )
+  return (
+    <span className="row" style={{ gap: 6 }}>
+      <span className="hint">Mails von {who} →</span>
+      <select
+        className="select"
+        autoFocus
+        defaultValue={s.projectId ?? ''}
+        onChange={(e) => {
+          if (e.target.value) addRule('from', who, e.target.value)
+          setOpen(false)
+        }}
+        aria-label="Projekt für diesen Absender"
+      >
+        <option value="">Projekt wählen …</option>
+        {projects.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
+      </select>
+    </span>
+  )
+}
+
+/** Aufteilen: eine Bitte mit mehreren Teilen wird zu mehreren Aufgaben */
+export function SplitDialog({ suggestionId }: { suggestionId: string }) {
+  const { all } = useSuggestions()
+  const s = all.find((x) => x.id === suggestionId)
+  const close = () => useStore.getState().openDialog(null)
+  const [parts, setParts] = useState<string[]>(() => (s ? splitParts(s) : []))
+  if (!s) return null
+  const valid = parts.filter((x) => x.trim()).length
+  return (
+    <Dialog
+      title="Vorschlag aufteilen"
+      onClose={close}
+      footer={
+        <>
+          <button className="btn" onClick={close}>
+            Abbrechen
+          </button>
+          <button
+            className="btn primary"
+            disabled={!valid}
+            onClick={() => {
+              createSplit(s, parts)
+              close()
+            }}
+          >
+            {valid} {valid === 1 ? 'Aufgabe' : 'Aufgaben'} anlegen
+          </button>
+        </>
+      }
+    >
+      <p className="hint" style={{ marginTop: 0 }}>
+        Jede Zeile wird eine eigene Aufgabe{s.due ? ` (fällig ${new Date(`${s.due}T12:00:00`).toLocaleDateString('de-DE')})` : ''}, alle mit Verweis auf die Mail.
+      </p>
+      <blockquote className="sg-split-src">„{s.context}“</blockquote>
+      <div className="sg-split">
+        {parts.map((p, i) => (
+          <div key={i} className="row" style={{ gap: 6 }}>
+            <input className="input" value={p} onChange={(e) => setParts(parts.map((x, j) => (j === i ? e.target.value : x)))} aria-label={`Aufgabe ${i + 1}`} placeholder="Weitere Aufgabe" />
+            <button className="btn ghost small icon-btn" onClick={() => setParts(parts.filter((_, j) => j !== i))} aria-label="Entfernen" disabled={parts.length < 2}>
+              <X />
+            </button>
+          </div>
+        ))}
+        <button className="link" style={{ justifySelf: 'start' }} onClick={() => setParts([...parts, ''])}>
+          + Weitere Aufgabe
+        </button>
+      </div>
+    </Dialog>
+  )
 }

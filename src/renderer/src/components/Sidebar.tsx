@@ -3,6 +3,7 @@ import { CalendarDays, CheckSquare, FolderKanban, Inbox, NotebookPen, PanelLeftC
 import { groupThreads, isDueToday, isOverdue } from '@shared/analysis'
 import type { ViewId } from '@shared/types'
 import { useStore } from '@/lib/store'
+import { useAccounts } from '@/lib/accounts'
 import { FocusLaunch } from '@/components/Focus'
 import { modKey } from '@/lib/format'
 
@@ -78,18 +79,31 @@ export function Sidebar() {
   const syncErr = useStore((s) => s.googleSync.errors)
   const googleProblem = google.expired || !!syncErr.general || !!syncErr.calendar || !!syncErr.gmail
   const expiringSoon = google.connected && !!google.expiresAt && google.expiresAt - Date.now() < 86400_000
+  const cloud = useAccounts((st) => st.cloud)
+  const ms = useAccounts((st) => st.ms)
+  const ic = useAccounts((st) => st.icloud)
+  const cloudOn = cloud.available && cloud.enabled
+  const accounts = [google.connected && 'Google', ms.connected && (ms.caps.mail || ms.caps.calendar) && 'Outlook', ic.connected && 'Apple'].filter(Boolean).join(', ')
   const sourceLabel = google.expired
     ? 'Google: neu anmelden'
     : expiringSoon
       ? 'Google: bald neu verbinden'
-    : google.connected
-      ? `${syncing ? 'Synchronisiert …' : googleProblem ? 'Google: Fehler' : 'Google verbunden'}${data.sources.demo ? ' + Demo' : ''}`
-      : data.sources.demo
-        ? 'Demo-Daten aktiv'
-        : data.sources.icsImports.length
-          ? 'Kalender importiert'
-          : 'Nur lokale Daten'
-  const dotClass = google.expired || (google.connected && googleProblem) ? 'off' : expiringSoon ? 'demo' : google.connected ? 'on' : data.sources.demo ? 'demo' : 'on'
+      : cloudOn && cloud.error
+        ? 'Cloud-Speicher: Fehler'
+        : cloudOn
+          ? cloud.syncing || syncing
+            ? 'Wird abgeglichen …'
+            : 'In OneDrive gesichert'
+          : google.connected && googleProblem
+            ? 'Google: Fehler'
+            : accounts
+              ? `${syncing ? 'Synchronisiert …' : `${accounts} verbunden`}${data.sources.demo ? ' + Demo' : ''}`
+              : data.sources.demo
+                ? 'Demo-Daten aktiv'
+                : data.sources.icsImports.length
+                  ? 'Kalender importiert'
+                  : 'Nur auf diesem PC'
+  const dotClass = google.expired || (google.connected && googleProblem) || (cloudOn && cloud.error) ? 'off' : expiringSoon ? 'demo' : accounts || cloudOn ? 'on' : data.sources.demo ? 'demo' : 'on'
 
   return (
     <aside

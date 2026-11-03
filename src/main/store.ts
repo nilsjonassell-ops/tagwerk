@@ -86,7 +86,8 @@ function mergeSettings(raw: Partial<Settings>): Settings {
     retention: { ...d.retention, ...raw.retention },
     weather: { ...d.weather, ...raw.weather },
     focus: { ...d.focus, ...raw.focus },
-    mailInsights: { ...d.mailInsights, ...raw.mailInsights }
+    mailInsights: { ...d.mailInsights, ...raw.mailInsights },
+    mailRules: Array.isArray(raw.mailRules) ? raw.mailRules : d.mailRules
   }
   // Neue Ansichten/Karten aus Updates ergänzen, ohne die Nutzerreihenfolge zu verlieren.
   if (!Array.isArray(s.gmailHiddenCategories)) s.gmailHiddenCategories = [...d.gmailHiddenCategories]

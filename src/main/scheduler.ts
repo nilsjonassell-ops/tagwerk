@@ -31,14 +31,14 @@ function inWords(mins: number): string {
 
 // Kleiner Merkzettel, damit der Wochenrückblick auch nach einem Neustart nur einmal kommt
 const stateFile = () => join(app.getPath('userData'), 'scheduler.json')
-function readState(): { review?: string } {
+function readState(): { review?: string; followUps?: string[] } {
   try {
     return existsSync(stateFile()) ? JSON.parse(readFileSync(stateFile(), 'utf8')) : {}
   } catch {
     return {}
   }
 }
-function writeState(patch: { review?: string }) {
+function writeState(patch: { review?: string; followUps?: string[] }) {
   try {
     writeFileSync(stateFile(), JSON.stringify({ ...readState(), ...patch }))
   } catch {
@@ -122,6 +122,33 @@ function run() {
         target: { view: 'command', id: `task:${t.id}` }
       })
     }
+  }
+
+  // Wiedervorlagen: erinnern, wenn bis zum gewählten Zeitpunkt keine neue Nachricht in der Unterhaltung kam
+  const fups = Object.entries(data.followUps ?? {})
+  if (fups.length) {
+    const done = new Set(readState().followUps ?? [])
+    let changed = false
+    for (const [tid, f] of fups) {
+      const at = new Date(f.at).getTime()
+      const key = `${tid}@${f.at}`
+      if (at > now.getTime() || done.has(key)) continue
+      done.add(key)
+      changed = true
+      const msgs = data.emails.filter((m) => m.threadId === tid)
+      // Inzwischen geantwortet oder neue Nachricht? Dann nichts melden. Ältere als 3 Tage nicht nachholen.
+      if (!msgs.length || msgs.some((m) => m.date > f.setAt) || now.getTime() - at > 3 * 86400_000) continue
+      const last = [...msgs].sort((a, b) => b.date.localeCompare(a.date))[0]
+      const subject = last.subject.replace(/^((re|aw|fwd?|wg)\s*:\s*)+/gi, '')
+      const since = new Date(f.setAt).toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' })
+      notify({
+        kind: 'mail',
+        title: `Wiedervorlage: ${subject}`,
+        body: `Seit ${since} keine neue Nachricht von ${last.folder === 'sent' ? last.to[0]?.name || 'der Gegenseite' : last.from.name || last.from.email}.${last.needsReply ? ' Deine Antwort ist noch offen.' : ''}`,
+        target: { view: 'inbox', id: tid }
+      })
+    }
+    if (changed) writeState({ followUps: [...done].slice(-200) })
   }
 
   // Wochenrückblick – einmal pro Woche zur eingestellten Zeit (bis zu 6 Std. nachholen)

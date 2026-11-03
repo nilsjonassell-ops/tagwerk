@@ -44,6 +44,16 @@ export function Toasts() {
       {toasts.map((t) => (
         <div key={t.id} className={`toast ${t.tone === 'error' ? 'error' : ''}`}>
           <span className="grow">{t.text}</span>
+          {t.action && (
+            <button
+              onClick={() => {
+                t.action?.run()
+                dismiss(t.id)
+              }}
+            >
+              {t.action.label}
+            </button>
+          )}
           {t.undo && (
             <button
               onClick={() => {

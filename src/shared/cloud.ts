@@ -5,11 +5,12 @@
 // erzeugt keine Konfliktkopien. Beim Abgleich gewinnt je Eintrag die jüngste Änderung;
 // Löschungen werden als „Grabstein“ mit Zeitstempel weitergegeben.
 
-import type { AppData, CloudCollection, CloudPatch, ReplyMark, Settings, SuggestionState } from './types'
+import type { AppData, CloudCollection, CloudPatch, FollowUp, ReplyMark, Settings, SuggestionState } from './types'
 
 export const CLOUD_COLLECTIONS: CloudCollection[] = ['tasks', 'notes', 'projects', 'docs', 'events', 'focusLog']
-export type CloudGroup = CloudCollection | 'replyMarks' | 'suggestions' | 'settings'
-export const CLOUD_GROUPS: CloudGroup[] = [...CLOUD_COLLECTIONS, 'replyMarks', 'suggestions', 'settings']
+export type CloudGroup = CloudCollection | 'replyMarks' | 'suggestions' | 'followUps' | 'settings'
+export const CLOUD_GROUPS: CloudGroup[] = [...CLOUD_COLLECTIONS, 'replyMarks', 'suggestions', 'followUps', 'settings']
+const MAP_GROUPS = new Set<CloudGroup>(['replyMarks', 'suggestions', 'followUps', 'settings'])
 
 /** Einstellungen, die auf allen PCs gleich sein sollen (Gerätespezifisches wie Autostart bleibt lokal). */
 export const SYNCED_SETTINGS: (keyof Settings)[] = [
@@ -26,7 +27,8 @@ export const SYNCED_SETTINGS: (keyof Settings)[] = [
   'weather',
   'focus',
   'gmailHiddenCategories',
-  'mailInsights'
+  'mailInsights',
+  'mailRules'
 ]
 
 /** Grabsteine nach 90 Tagen vergessen */
@@ -73,6 +75,7 @@ export function extractRecords(data: AppData, settings: Settings): Record<CloudG
     focusLog: by(data.focusLog, () => true),
     replyMarks: { ...(data.replyMarks ?? {}) },
     suggestions: { ...(data.suggestions ?? {}) },
+    followUps: { ...(data.followUps ?? {}) },
     settings: s
   }
 }
@@ -131,6 +134,7 @@ export function mergeRemote(book: SyncBook, docs: DeviceDoc[]): MergeResult {
   const settings: Partial<Settings> = {}
   const marks = { set: {} as Record<string, ReplyMark>, remove: [] as string[] }
   const sugg = { set: {} as Record<string, SuggestionState>, remove: [] as string[] }
+  const fups = { set: {} as Record<string, FollowUp>, remove: [] as string[] }
   let changed = false
   let settingsChanged = false
   for (const doc of docs) {
@@ -141,7 +145,7 @@ export function mergeRemote(book: SyncBook, docs: DeviceDoc[]): MergeResult {
       const meta = (book.meta[g] ??= {})
       for (const [id, r] of Object.entries(recs)) {
         if (!r || typeof r.t !== 'number') continue
-        if (g !== 'settings' && g !== 'replyMarks' && g !== 'suggestions' && isDemo(id)) continue
+        if (!MAP_GROUPS.has(g) && isDemo(id)) continue
         if (g === 'settings' && !SYNCED_SETTINGS.includes(id as keyof Settings)) continue
         const local = meta[id]
         if (local && local.t >= r.t) continue
@@ -153,6 +157,7 @@ export function mergeRemote(book: SyncBook, docs: DeviceDoc[]): MergeResult {
           if (g === 'settings') continue
           if (g === 'replyMarks') marks.remove.push(id)
           else if (g === 'suggestions') sugg.remove.push(id)
+          else if (g === 'followUps') fups.remove.push(id)
           else (patch.remove[g] ??= []).push(id)
           changed = true
         } else {
@@ -165,6 +170,7 @@ export function mergeRemote(book: SyncBook, docs: DeviceDoc[]): MergeResult {
             settingsChanged = true
           } else if (g === 'replyMarks') marks.set[id] = r.v as ReplyMark
           else if (g === 'suggestions') sugg.set[id] = r.v as SuggestionState
+          else if (g === 'followUps') fups.set[id] = r.v as FollowUp
           else {
             const list = (patch.upsert[g] ??= [])
             const i = list.findIndex((x) => x.id === id)
@@ -181,6 +187,7 @@ export function mergeRemote(book: SyncBook, docs: DeviceDoc[]): MergeResult {
   }
   if (Object.keys(marks.set).length || marks.remove.length) patch.replyMarks = marks
   if (Object.keys(sugg.set).length || sugg.remove.length) patch.suggestions = sugg
+  if (Object.keys(fups.set).length || fups.remove.length) patch.followUps = fups
   return { patch, settings: settingsChanged ? settings : null, changed: changed || settingsChanged }
 }
 
@@ -229,6 +236,12 @@ export function applyCloudPatch(d: AppData, p: CloudPatch): AppData {
     for (const k of p.suggestions.remove) delete m[k]
     Object.assign(m, p.suggestions.set)
     next = { ...next, suggestions: m }
+  }
+  if (p.followUps) {
+    const m = { ...(d.followUps ?? {}) }
+    for (const k of p.followUps.remove) delete m[k]
+    Object.assign(m, p.followUps.set)
+    next = { ...next, followUps: m }
   }
   return next
 }

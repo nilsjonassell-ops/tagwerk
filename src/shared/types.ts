@@ -151,6 +151,29 @@ export interface MailSuggestion {
   hasAttachments?: boolean
   /** Weitere Mails derselben Unterhaltung mit derselben Angabe (Erinnerung, Nachtrag) */
   followUps?: number
+  /** Wiederkehrender Termin („jeden Dienstag“, „alle zwei Wochen bis 15.12.“) */
+  recurrence?: SuggestionRecurrence
+}
+
+export interface SuggestionRecurrence {
+  freq: 'daily' | 'weekly' | 'biweekly' | 'monthly'
+  /** Letzter Termin (YYYY-MM-DD), falls genannt */
+  until?: string
+  label: string
+}
+
+/** Regel: Mails von einem Absender oder mit einem Betreff schlagen ein Projekt vor */
+export interface MailRule {
+  id: string
+  field: 'from' | 'subject'
+  contains: string
+  projectId: string
+}
+
+/** Wiedervorlage für eine Unterhaltung: erinnert, wenn bis dahin keine neue Nachricht kam */
+export interface FollowUp {
+  at: string
+  setAt: string
 }
 
 export interface SuggestionState {
@@ -231,6 +254,7 @@ export interface CloudPatch {
   remove: Partial<Record<CloudCollection, string[]>>
   replyMarks?: { set: Record<string, ReplyMark>; remove: string[] }
   suggestions?: { set: Record<string, SuggestionState>; remove: string[] }
+  followUps?: { set: Record<string, FollowUp>; remove: string[] }
 }
 
 export interface CloudApi {
@@ -425,6 +449,8 @@ export interface AppData {
   replyMarks?: Record<string, ReplyMark>
   /** Bearbeitungsstand der Vorschläge aus Mails (übernommen, ignoriert, zurückgestellt) */
   suggestions?: Record<string, SuggestionState>
+  /** Wiedervorlagen je Unterhaltung */
+  followUps?: Record<string, FollowUp>
   sources: {
     demo: boolean
     icsImports: IcsImport[]
@@ -507,6 +533,8 @@ export interface Settings {
   gmailHiddenCategories: GmailCategory[]
   /** Vorschläge aus E-Mails: an/aus, geprüfte Konten (leer = alle) und Arten */
   mailInsights: { enabled: boolean; sources: Source[]; kinds: SuggestionKind[] }
+  /** Regeln Absender/Betreff → Projekt */
+  mailRules: MailRule[]
   onboarded: boolean
 }
 
@@ -575,6 +603,7 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   gmailHiddenCategories: ['promotions', 'social'],
   mailInsights: { enabled: true, sources: [], kinds: ['event', 'deadline', 'task', 'note'] },
+  mailRules: [],
   onboarded: false
 }
 

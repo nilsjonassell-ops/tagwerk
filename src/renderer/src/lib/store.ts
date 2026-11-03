@@ -22,6 +22,8 @@ export interface Toast {
   text: string
   tone?: 'default' | 'error'
   undo?: () => void
+  /** Zusätzliche Aktion, z. B. „Einplanen“ */
+  action?: { label: string; run: () => void }
 }
 
 export interface Selection {
@@ -33,9 +35,10 @@ export interface Selection {
 }
 
 export type DialogState =
-  | { kind: 'task'; id?: string; preset?: Partial<import('@shared/types').Task>; suggestionId?: string }
-  | { kind: 'event'; id?: string; preset?: Partial<import('@shared/types').CalEvent>; suggestionId?: string }
+  | { kind: 'task'; id?: string; preset?: Partial<import('@shared/types').Task>; suggestionId?: string; mergeIds?: string[] }
+  | { kind: 'event'; id?: string; preset?: Partial<import('@shared/types').CalEvent>; suggestionId?: string; series?: import('@shared/types').SuggestionRecurrence }
   | { kind: 'mailnote'; suggestionId?: string; title: string; body: string; threadId: string; projectId?: string }
+  | { kind: 'split'; suggestionId: string }
   | { kind: 'project'; id?: string }
   | { kind: 'settings'; section?: string }
   | { kind: 'shortcuts' }
@@ -75,7 +78,7 @@ interface State {
   syncGoogle(opts?: { quiet?: boolean; only?: 'gmail' | 'calendar' }): Promise<void>
   go(view: ViewId, id?: string): void
   select(view: keyof Selection, id?: string): void
-  toast(text: string, opts?: { tone?: Toast['tone']; undo?: () => void }): void
+  toast(text: string, opts?: { tone?: Toast['tone']; undo?: () => void; action?: Toast['action'] }): void
   dismissToast(id: number): void
   openDialog(d: DialogState): void
   setAssistant(open: boolean, seed?: string, bodiesFor?: string[]): void
@@ -255,7 +258,7 @@ export const useStore = create<State>((set, get) => ({
   toast(text, opts) {
     const id = ++toastSeq
     set({ toasts: [...get().toasts.slice(-2), { id, text, ...opts }] })
-    setTimeout(() => get().dismissToast(id), opts?.undo ? 7000 : 4000)
+    setTimeout(() => get().dismissToast(id), opts?.undo || opts?.action ? 8000 : 4000)
   },
 
   dismissToast(id) {

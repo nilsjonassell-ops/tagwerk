@@ -1,7 +1,9 @@
 import { useUpdateStatus, VersionRow } from '@/components/Updates'
 import { useState, type ReactNode } from 'react'
+import { useAccounts } from '@/lib/accounts'
 import {
-  ArrowDown, ArrowUp, Bell, CalendarDays, CalendarPlus, CloudSun, Database, Eye, EyeOff, FlaskConical, KeyRound, LayoutDashboard, Monitor, Shield, Sparkles, Trash2, Loader2, Check, Download
+  ArrowDown, ArrowUp, Bell, CalendarDays, CalendarPlus, CloudSun, Database, Eye, EyeOff, FlaskConical, KeyRound, LayoutDashboard, Monitor, Shield, Sparkles, Trash2, Loader2, Check, Download,
+  X
 } from 'lucide-react'
 import { createDemoData, removeDemo } from '@shared/demo'
 import { CLAUDE_MODELS, type DashboardCardId, type Settings, type Source, type SuggestionKind } from '@shared/types'
@@ -601,35 +603,163 @@ function Privacy() {
 
 export function OnboardingDialog() {
   const settings = useStore((s) => s.settings)
+  const online = useStore((s) => s.online)
+  const [mode, setMode] = useState<'new' | 'restore'>('new')
   const [name, setName] = useState(settings.userName)
   const [withDemo, setWithDemo] = useState(true)
+  const [phase, setPhase] = useState<'idle' | 'signin' | 'loading' | 'done' | 'empty' | 'error'>('idle')
+  const [err, setErr] = useState('')
+  const [summary, setSummary] = useState('')
   const finish = async () => {
     const st = useStore.getState()
-    await st.updateSettings({ userName: name.trim(), onboarded: true })
-    if (!withDemo && st.data.sources.demo) st.replaceData(removeDemo(st.data))
+    if (mode === 'restore') {
+      await st.updateSettings({ onboarded: true })
+    } else {
+      await st.updateSettings({ userName: name.trim(), onboarded: true })
+      if (!withDemo && st.data.sources.demo) st.replaceData(removeDemo(st.data))
+    }
     st.openDialog(null)
   }
+  const restore = async () => {
+    setErr('')
+    setPhase('signin')
+    const r = await window.tagwerk.microsoft.connect({ mail: true, calendar: true, notes: true, sync: true })
+    if (!r.ok) {
+      setPhase('error')
+      return setErr(r.error ?? 'Die Anmeldung hat nicht geklappt.')
+    }
+    if (!r.status.caps.sync) {
+      setPhase('error')
+      return setErr('Der Zugriff auf den Cloud-Speicher wurde nicht freigegeben. Bitte noch einmal anmelden und „OneDrive“ zustimmen.')
+    }
+    // Beispieldaten weg – gleich kommen deine echten Daten
+    const st = useStore.getState()
+    if (st.data.sources.demo) st.replaceData(removeDemo(st.data))
+    void useAccounts.getState().refresh()
+    setPhase('loading')
+    const t0 = Date.now()
+    let cs = await window.tagwerk.cloud.syncNow()
+    while (Date.now() - t0 < 30_000 && (cs.syncing || !cs.lastSync)) {
+      await new Promise((res) => setTimeout(res, 600))
+      cs = await window.tagwerk.cloud.status()
+    }
+    await new Promise((res) => setTimeout(res, 800)) // Oberfläche übernimmt den Stand
+    if (cs.error) {
+      setPhase('error')
+      return setErr(cs.error)
+    }
+    const d = useStore.getState().data
+    const others = cs.devices.filter((x) => !x.self)
+    if (!others.length) return setPhase('empty')
+    const n = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`
+    setSummary(
+      ([
+        [d.tasks.length, 'Aufgabe', 'Aufgaben'],
+        [d.notes.length, 'Notiz', 'Notizen'],
+        [d.projects.length, 'Projekt', 'Projekte'],
+        [d.events.filter((e) => e.source === 'local').length, 'eigener Termin', 'eigene Termine']
+      ] as [number, string, string][])
+        .filter(([k]) => k > 0)
+        .map(([k, a, b]) => n(k, a, b))
+        .join(' · ') +
+        ` – zuletzt gesichert auf „${others[0].name}“`
+    )
+    setPhase('done')
+  }
+  const busy = phase === 'signin' || phase === 'loading'
   return (
     <Dialog
       title="Willkommen bei Tagwerk"
-      onClose={finish}
-      footer={<button className="btn primary" onClick={finish}>Loslegen</button>}
+      onClose={busy ? () => {} : finish}
+      footer={
+        mode === 'restore' && phase !== 'done' && phase !== 'empty' ? (
+          <>
+            <button className="btn" onClick={() => (busy ? window.tagwerk.microsoft.cancelConnect() : setMode('new'))}>
+              {busy ? 'Abbrechen' : 'Zurück'}
+            </button>
+            <button className="btn primary" onClick={restore} disabled={busy || !online}>
+              {busy ? <Loader2 className="spin" /> : null} {phase === 'error' ? 'Erneut versuchen' : 'Mit Microsoft anmelden'}
+            </button>
+          </>
+        ) : (
+          <button className="btn primary" onClick={finish}>
+            Loslegen
+          </button>
+        )
+      }
     >
       <p>Tagwerk bündelt Kalender, E-Mails, Aufgaben, Notizen und Projekte – ruhig und an einem Ort.</p>
-      <label className="field">
-        <span>Wie dürfen wir dich ansprechen?</span>
-        <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Vorname" data-autofocus onKeyDown={(e) => e.key === 'Enter' && finish()} />
-      </label>
-      <div className="field">
-        <span className="field-label">Womit möchtest du starten?</span>
-        <label className="row" style={{ gap: 8 }}>
-          <input type="radio" name="start" checked={withDemo} onChange={() => setWithDemo(true)} /> Mit Beispieldaten ausprobieren (klar als „Demo“ gekennzeichnet)
-        </label>
-        <label className="row" style={{ gap: 8 }}>
-          <input type="radio" name="start" checked={!withDemo} onChange={() => setWithDemo(false)} /> Leer starten
-        </label>
+      <div className="onb-choice" role="radiogroup" aria-label="Wie möchtest du starten?">
+        <button role="radio" aria-checked={mode === 'new'} className={`onb-card ${mode === 'new' ? 'on' : ''}`} onClick={() => !busy && setMode('new')}>
+          <Sparkles />
+          <b>Neu starten</b>
+          <span>Mit Beispieldaten ausprobieren oder leer beginnen.</span>
+        </button>
+        <button role="radio" aria-checked={mode === 'restore'} className={`onb-card ${mode === 'restore' ? 'on' : ''}`} onClick={() => !busy && setMode('restore')}>
+          <Download />
+          <b>Meine Daten wiederherstellen</b>
+          <span>Du nutzt Tagwerk schon auf einem anderen PC? Mit Microsoft anmelden – alles ist wieder da.</span>
+        </button>
       </div>
-      <p className="hint">Es ist noch kein Konto verbunden. Kalenderdateien und Claude kannst du jederzeit in den Einstellungen hinzufügen.</p>
+
+      {mode === 'new' && (
+        <>
+          <label className="field">
+            <span>Wie dürfen wir dich ansprechen?</span>
+            <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Vorname" data-autofocus onKeyDown={(e) => e.key === 'Enter' && finish()} />
+          </label>
+          <div className="field">
+            <span className="field-label">Womit möchtest du starten?</span>
+            <label className="row" style={{ gap: 8 }}>
+              <input type="radio" name="start" checked={withDemo} onChange={() => setWithDemo(true)} /> Mit Beispieldaten ausprobieren (klar als „Demo“ gekennzeichnet)
+            </label>
+            <label className="row" style={{ gap: 8 }}>
+              <input type="radio" name="start" checked={!withDemo} onChange={() => setWithDemo(false)} /> Leer starten
+            </label>
+          </div>
+          <p className="hint">Konten (Outlook, Apple Kalender, Gmail) und den Cloud-Speicher verbindest du jederzeit unter Einstellungen → Datenquellen.</p>
+        </>
+      )}
+
+      {mode === 'restore' && (
+        <div className="onb-restore" aria-live="polite">
+          {phase === 'idle' && (
+            <p className="hint">
+              Im Browser meldest du dich mit dem Microsoft-Konto an, mit dem du den Cloud-Speicher auf dem anderen PC eingeschaltet hast, und bestätigst den Zugriff (Outlook-Mail, Kalender, OneNote und der Tagwerk-Ordner in deinem OneDrive – später in den Einstellungen änderbar).
+            </p>
+          )}
+          {phase === 'signin' && (
+            <p className="row hint">
+              <Loader2 className="spin" size={14} /> Warte auf deine Anmeldung im Browser …
+            </p>
+          )}
+          {phase === 'loading' && (
+            <p className="row hint">
+              <Loader2 className="spin" size={14} /> Deine Daten werden aus OneDrive geladen …
+            </p>
+          )}
+          {phase === 'done' && (
+            <div className="onb-done">
+              <Check />
+              <div>
+                <b>Willkommen zurück{useStore.getState().settings.userName ? `, ${useStore.getState().settings.userName}` : ''}!</b>
+                <span>{summary}</span>
+                <span className="hint">Konten wie Gmail und Apple Kalender verbindest du auf diesem PC einmal neu – Passwörter werden aus Sicherheitsgründen nie in die Cloud kopiert.</span>
+              </div>
+            </div>
+          )}
+          {phase === 'empty' && (
+            <div className="onb-done">
+              <Check />
+              <div>
+                <b>Angemeldet – der Cloud-Speicher ist noch leer.</b>
+                <span>In diesem Microsoft-Konto liegen noch keine Tagwerk-Daten. Ab jetzt wird alles, was du hier anlegst, automatisch gesichert.</span>
+              </div>
+            </div>
+          )}
+          {phase === 'error' && <div className="error-text">{err}</div>}
+        </div>
+      )}
     </Dialog>
   )
 }
@@ -702,6 +832,7 @@ function MailInsightsSettings() {
           </div>
         </Row>
       )}
+      {mi.enabled && <MailRulesEditor />}
       {mi.enabled && (
         <Row label="Erkennen">
           <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
@@ -714,5 +845,58 @@ function MailInsightsSettings() {
         </Row>
       )}
     </>
+  )
+}
+
+/** Regeln: Absender/Betreff → Projekt (für Vorschläge aus Mails) */
+function MailRulesEditor() {
+  const [s, set] = useSettings()
+  const projects = useStore((st) => st.data.projects)
+  const [field, setField] = useState<'from' | 'subject'>('from')
+  const [contains, setContains] = useState('')
+  const [projectId, setProjectId] = useState('')
+  const rules = s.mailRules ?? []
+  const add = () => {
+    if (!contains.trim() || !projectId) return
+    set({ mailRules: [...rules, { id: `r-${crypto.randomUUID()}`, field, contains: contains.trim(), projectId }] })
+    setContains('')
+  }
+  return (
+    <Row label="Regeln → Projekt" hint="Vorschläge aus passenden Mails bekommen dieses Projekt vorgeschlagen – im Dialog kannst du es jederzeit ändern.">
+      <div style={{ display: 'grid', gap: 6, width: '100%' }}>
+        {rules.map((r) => (
+          <div key={r.id} className="row" style={{ gap: 8 }}>
+            <span className="grow">
+              {r.field === 'from' ? 'Absender enthält' : 'Betreff enthält'} „<b>{r.contains}</b>“ → {projects.find((p) => p.id === r.projectId)?.name ?? <i>gelöschtes Projekt</i>}
+            </span>
+            <button className="btn ghost small icon-btn" onClick={() => set({ mailRules: rules.filter((x) => x.id !== r.id) })} aria-label="Regel löschen" title="Regel löschen">
+              <X />
+            </button>
+          </div>
+        ))}
+        {projects.length > 0 ? (
+          <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+            <select className="select" style={{ width: 'auto' }} value={field} onChange={(e) => setField(e.target.value as 'from' | 'subject')} aria-label="Feld">
+              <option value="from">Absender enthält</option>
+              <option value="subject">Betreff enthält</option>
+            </select>
+            <input className="input" style={{ flex: 1, minWidth: 120 }} value={contains} onChange={(e) => setContains(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} placeholder={field === 'from' ? 'z. B. @uni-mannheim.de' : 'z. B. Hausarbeit'} aria-label="Enthält" />
+            <select className="select" style={{ width: 'auto' }} value={projectId} onChange={(e) => setProjectId(e.target.value)} aria-label="Projekt">
+              <option value="">Projekt …</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <button className="btn small" onClick={add} disabled={!contains.trim() || !projectId}>
+              Hinzufügen
+            </button>
+          </div>
+        ) : (
+          <span className="hint">Lege zuerst ein Projekt an.</span>
+        )}
+      </div>
+    </Row>
   )
 }

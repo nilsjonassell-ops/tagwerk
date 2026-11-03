@@ -140,3 +140,20 @@ test('„zwischen 10 und 14 Uhr“ wird als Zeitspanne erkannt', () => {
   assert.equal(new Date(a.start!).getHours(), 10)
   assert.equal(new Date(a.end!).getHours(), 14)
 })
+
+test('Serie: „jeden Dienstag um 18 Uhr bis 15.12.“ und „immer donnerstags“', async () => {
+  const { seriesStarts } = await import('../src/shared/mail-insights.ts')
+  const a = run('Lerngruppe', 'Wir treffen uns ab jetzt jeden Dienstag um 18 Uhr bis 15.12.2026.')
+  assert.equal(a.length, 1, 'Enddatum ist kein eigener Termin und keine Frist')
+  assert.equal(a[0].kind, 'event')
+  assert.equal(a[0].recurrence?.freq, 'weekly')
+  assert.equal(a[0].recurrence?.until, '2026-12-15')
+  const starts = seriesStarts(new Date(a[0].start!), a[0].recurrence!)
+  assert.equal(starts.length, 7, '10.11. bis 15.12. = 6 Wochen, mit erstem Termin 7') // 10.11.–15.12.
+  assert.equal(starts.at(-1)!.getDate(), 15)
+  const b = run('Training', 'Das Training ist immer donnerstags um 19:30 Uhr.')
+  assert.equal(b[0].kind, 'event')
+  assert.equal(new Date(b[0].start!).getDay(), 4)
+  assert.equal(b[0].recurrence?.label, 'wöchentlich')
+  assert.equal(run('Kurs', 'Der Kurs findet alle zwei Wochen am 10.11. um 9 Uhr statt.')[0].recurrence?.freq, 'biweekly')
+})

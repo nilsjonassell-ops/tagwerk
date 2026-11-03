@@ -2,7 +2,7 @@
 // Läuft komplett lokal (Regeln + die Datums-/Zeiterkennung aus parse-de) – ohne KI,
 // ohne Server. Erkannt wird nur; angelegt wird erst nach Bestätigung in der Oberfläche.
 
-import type { Email, MailSuggestion, SuggestionKind } from './types.ts'
+import type { Email, MailSuggestion, SuggestionKind, SuggestionRecurrence } from './types.ts'
 import { findAppointments, findDates, findTimes, stripQuoted, ymdOf, type Found } from './parse-de.ts'
 
 const DAY = 86400_000
@@ -69,6 +69,40 @@ function allDates(text: string, base: Date): Found<Date>[] {
   return [...a, ...b].sort((x, y) => x.index - y.index)
 }
 
+const WD = 'montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag'
+
+/** Wiederholung im Satz: „jeden Dienstag“, „immer donnerstags“, „alle zwei Wochen“, „monatlich“ – mit „bis …“ als Ende */
+export function recurrenceOf(s: string, base: Date): SuggestionRecurrence | undefined {
+  let freq: SuggestionRecurrence['freq'] | undefined
+  if (/(?<![\p{L}])(jeden\s+tag|täglich)(?![\p{L}])/iu.test(s)) freq = 'daily'
+  else if (/(alle\s+(zwei|2)\s+wochen|zweiwöchentlich|14-tägig|vierzehntägig|alle\s+14\s+tage)/iu.test(s)) freq = 'biweekly'
+  else if (/(monatlich|jeden\s+monat|einmal\s+im\s+monat)/iu.test(s)) freq = 'monthly'
+  else if (new RegExp(`(?<![\\p{L}])((jeden|jede)\\s+(${WD})|(${WD})s|wöchentlich|jede\\s+woche|einmal\\s+pro\\s+woche)(?![\\p{L}])`, 'iu').test(s)) freq = 'weekly'
+  if (!freq) return undefined
+  const m = /(?<![\p{L}])bis\s+(?:zum\s+|einschließlich\s+)?(.{0,30})/iu.exec(s)
+  const end = m ? findDates(m[1], base)[0] : undefined
+  const until = end && end.index === 0 ? ymdOf(end.value) : undefined
+  const names = { daily: 'täglich', weekly: 'wöchentlich', biweekly: 'alle zwei Wochen', monthly: 'monatlich' }
+  return { freq, until, label: `${names[freq]}${until ? ` bis ${fmtDay(new Date(`${until}T12:00:00`))}` : ''}` }
+}
+
+/** Termine einer Serie ab dem ersten (höchstens 26, Standard: 8 Wochen bzw. 6 Monate) */
+export function seriesStarts(start: Date, r: SuggestionRecurrence): Date[] {
+  const out: Date[] = []
+  const until = r.until ? new Date(`${r.until}T23:59:59`) : null
+  const max = until ? 26 : r.freq === 'monthly' ? 6 : r.freq === 'daily' ? 14 : 8
+  for (let i = 0; out.length < max && i < 400; i++) {
+    const d = new Date(start)
+    if (r.freq === 'daily') d.setDate(d.getDate() + i)
+    else if (r.freq === 'weekly') d.setDate(d.getDate() + 7 * i)
+    else if (r.freq === 'biweekly') d.setDate(d.getDate() + 14 * i)
+    else d.setMonth(d.getMonth() + i)
+    if (until && d.getTime() > until.getTime()) break
+    out.push(d)
+  }
+  return out
+}
+
 const fmtDay = (d: Date) => d.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'numeric' })
 
 /** Relative Angaben („nächsten Donnerstag“) werden berechnet – das ist eine Annahme und wird so markiert. */
@@ -127,13 +161,18 @@ export function detectMailSuggestions(m: Email, opts: DetectOptions = {}): MailS
 
   sents.forEach((s, i) => {
     const isSubject = i === sents.length - 1
-    const dates = allDates(s, base)
-    const deadline = DEADLINE.test(s)
+    // Serie: „bis 15.12.“ ist dann das Ende, keine Frist; „dienstags“ zählt als nächster Dienstag
+    const rec = recurrenceOf(s, base)
+    const sd = rec ? s.replace(new RegExp(`(${WD})s(?![\\p{L}])`, 'giu'), '$1') : s
+    const dates = allDates(sd, base)
+    const deadline = !rec && DEADLINE.test(s)
     const request = REQUEST.test(s) && ACTION.test(s)
 
     if (dates.length) {
       // Termin: Datum + Uhrzeit nah beieinander (vorhandene Erkennung)
-      const appts = deadline ? [] : findAppointments(s, base, now)
+      const found = deadline ? [] : findAppointments(sd, base, now)
+      // Bei einer Serie zählt nur der erste Termin (das Enddatum ist kein eigener Termin)
+      const appts = rec ? found.slice(0, 1) : found
       if (appts.length && kinds.has('event')) {
         for (const a of appts) {
           if (has('event', a.start)) continue
@@ -149,6 +188,7 @@ export function detectMailSuggestions(m: Email, opts: DetectOptions = {}): MailS
             end: a.end,
             uncertain: !!why || vague,
             reason: why ?? (vague ? `Uhrzeit ungefähr: „${a.phrase}“` : undefined),
+            recurrence: rec,
             phrase: a.phrase,
             context: isSubject ? `Betreff: ${s}` : short(s, 220)
           })

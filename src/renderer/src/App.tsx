@@ -15,6 +15,7 @@ import { AssistantPanel } from '@/components/Assistant'
 import { CommandPalette } from '@/components/CommandPalette'
 import { ConfirmHost, Toasts } from '@/components/Overlays'
 import { EventDialog, MailNoteDialog, ProjectDialog, TaskDialog } from '@/components/Editors'
+import { SplitDialog } from '@/components/Suggestions'
 import { OnboardingDialog, SettingsDialog, ShortcutsDialog } from '@/components/SettingsDialog'
 import { TodayView } from '@/views/Today'
 import { CalendarView } from '@/views/Calendar'
@@ -237,8 +238,9 @@ export function App() {
       {assistantOpen && settings.claude.enabled ? <AssistantPanel /> : <div />}
 
       {paletteOpen && <CommandPalette />}
-      {dialog?.kind === 'task' && <TaskDialog key={dialog.id ?? dialog.suggestionId ?? 'new'} id={dialog.id} preset={dialog.preset} suggestionId={dialog.suggestionId} />}
-      {dialog?.kind === 'event' && <EventDialog key={dialog.id ?? dialog.suggestionId ?? 'new'} id={dialog.id} preset={dialog.preset} suggestionId={dialog.suggestionId} />}
+      {dialog?.kind === 'task' && <TaskDialog key={dialog.id ?? dialog.suggestionId ?? 'new'} id={dialog.id} preset={dialog.preset} suggestionId={dialog.suggestionId} mergeIds={dialog.mergeIds} />}
+      {dialog?.kind === 'event' && <EventDialog key={dialog.id ?? dialog.suggestionId ?? 'new'} id={dialog.id} preset={dialog.preset} suggestionId={dialog.suggestionId} series={dialog.series} />}
+      {dialog?.kind === 'split' && <SplitDialog suggestionId={dialog.suggestionId} />}
       {dialog?.kind === 'mailnote' && <MailNoteDialog key={dialog.suggestionId ?? dialog.threadId} {...dialog} />}
       {dialog?.kind === 'project' && <ProjectDialog id={dialog.id} />}
       {dialog?.kind === 'settings' && <SettingsDialog section={dialog.section} />}

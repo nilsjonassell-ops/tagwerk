@@ -144,7 +144,7 @@ export async function syncNow(): Promise<CloudStatus> {
       const { patch, settings, changed } = mergeRemote(s, docs)
       if (changed) {
         const data = store.loadData()
-        const hasPatch = Object.keys(patch.upsert).length || Object.keys(patch.remove).length || patch.replyMarks || patch.suggestions
+        const hasPatch = Object.keys(patch.upsert).length || Object.keys(patch.remove).length || patch.replyMarks || patch.suggestions || patch.followUps
         if (data && hasPatch) {
           // Die Oberfläche übernimmt den Stand auf ihre aktuellen Daten; bis dahin keine lokalen Änderungen werten
           if (awaitingAck) clearTimeout(awaitingAck)

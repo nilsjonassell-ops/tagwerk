@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Archive, CheckSquare, FlaskConical, Inbox as InboxIcon, Mail, MailOpen, Reply, Search, Send, Sparkles, Star, Trash2, X, AlertCircle, Clock, Loader2, Flag, CalendarPlus, ChevronDown, Layers, ListChecks, StickyNote } from 'lucide-react'
+import { Archive, CheckSquare, FlaskConical, Inbox as InboxIcon, Mail, MailOpen, Reply, Search, Send, Sparkles, Star, Trash2, X, AlertCircle, Clock, Loader2, Flag, CalendarPlus, ChevronDown, Layers, ListChecks, StickyNote, AlarmClock } from 'lucide-react'
 import { groupThreads, type Thread } from '@shared/analysis'
 import { SuggestionsPane, ThreadSuggestions, useOpenSuggestionCount } from '@/components/Suggestions'
+import { activeFollowUp, setFollowUp, snoozeOptions } from '@/lib/suggestions'
 import { cleanSubject, detectMailSuggestions } from '@shared/mail-insights'
 import type { Source } from '@shared/types'
 import { SOURCE_LABEL } from '@/lib/accounts'
@@ -224,6 +225,7 @@ export function InboxView() {
 }
 
 function ThreadRow({ t, selected, onClick, showAccount }: { t: Thread; selected: boolean; onClick: () => void; showAccount?: boolean }) {
+  const hasFollowUp = useStore((s) => !!activeFollowUp(t.id, s.data))
   const google = useStore((s) => s.google)
   const isGmail = t.messages.some((m) => m.source === 'google')
   const canModify = !isGmail || google.caps.gmailWrite
@@ -248,6 +250,7 @@ function ThreadRow({ t, selected, onClick, showAccount }: { t: Thread; selected:
         </span>
         {showAccount && <span className={`mc-acc acc-${t.messages[0]?.source}`}>{SOURCE_LABEL[t.messages[0]?.source] ?? ''}</span>}
         <span className="mc-marks">
+          {hasFollowUp && <AlarmClock className="mc-fu" aria-label="Wiedervorlage" />}
           {t.needsReply && <Flag className="mc-flag" aria-label="Antwort offen" />}
           {t.starred && <Star className="mc-star" aria-label="Gemerkt" />}
         </span>
@@ -329,6 +332,7 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
           {thread.important && <span className="tag accent">Wichtig</span>}
           {thread.starred && <span className="tag star">Gemerkt</span>}
           {thread.needsReply && <span className="tag attention">Antwort offen{thread.replyManual ? ' · von dir markiert' : ''}</span>}
+          <FollowUpTag threadId={thread.id} />
           {lastInbound?.replied && <span className="tag ok">Beantwortet</span>}
           {proj && <span className="tag">{proj}</span>}
           <span className="hint">{thread.messages.length} {thread.messages.length === 1 ? 'Nachricht' : 'Nachrichten'}</span>
@@ -348,6 +352,7 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
             </>
           )}
           <TakeOverMenu thread={thread} onTask={onTask} />
+          <FollowUpMenu threadId={thread.id} />
           <div style={{ flex: 1 }} />
           {thread.folder !== 'sent' && (
             <button className={`btn small ghost icon-btn ${thread.needsReply ? 'is-on-reply' : ''}`} onClick={() => setReplyMark(thread.id, !thread.needsReply)} title={thread.needsReply ? 'Aus „Antwort offen“ entfernen (A)' : 'Als „Antwort offen“ markieren (A)'} aria-label="Antwort offen umschalten" aria-pressed={thread.needsReply}>
@@ -546,6 +551,68 @@ function TakeOverMenu({ thread, onTask }: { thread: Thread; onTask: () => void }
           </button>
         </div>
       )}
+    </span>
+  )
+}
+
+/** Wiedervorlage: „Erinnere mich, falls bis … keine neue Nachricht kommt“ */
+function FollowUpMenu({ threadId }: { threadId: string }) {
+  const [open, setOpen] = useState(false)
+  const [custom, setCustom] = useState('')
+  useEffect(() => {
+    if (!open) return
+    const off = (e: MouseEvent) => !(e.target as HTMLElement).closest?.('.followup') && setOpen(false)
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    document.addEventListener('mousedown', off)
+    document.addEventListener('keydown', esc)
+    return () => {
+      document.removeEventListener('mousedown', off)
+      document.removeEventListener('keydown', esc)
+    }
+  }, [open])
+  const now = new Date()
+  const in3 = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3, 9, 0)
+  const opts = [...snoozeOptions(now).filter((o) => o.label !== 'Heute Abend'), { label: 'In 3 Tagen', at: in3 }].sort((a, b) => a.at.getTime() - b.at.getTime())
+  const pick = (d: Date) => {
+    setFollowUp(threadId, d)
+    setOpen(false)
+  }
+  return (
+    <span className="takeover followup">
+      <button className="btn small ghost icon-btn" onClick={() => setOpen(!open)} aria-expanded={open} aria-haspopup="menu" title="Wiedervorlage: erinnern, falls keine Antwort kommt" aria-label="Wiedervorlage">
+        <AlarmClock />
+      </button>
+      {open && (
+        <div className="sg-snooze" role="menu" aria-label="Wiedervorlage" style={{ left: 'auto', right: 0 }}>
+          <div className="hint" style={{ padding: '4px 10px 6px' }}>Erinnern, falls bis dahin keine neue Nachricht kommt:</div>
+          {opts.map((o) => (
+            <button key={o.label} role="menuitem" onClick={() => pick(o.at)}>
+              {o.label}
+              <span className="hint">{o.at.toLocaleString('de-DE', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+            </button>
+          ))}
+          <div className="sg-snooze-custom">
+            <input className="input" type="date" value={custom} onChange={(e) => setCustom(e.target.value)} aria-label="Eigenes Datum" />
+            <button className="btn small" disabled={!custom} onClick={() => pick(new Date(`${custom}T09:00:00`))}>
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+    </span>
+  )
+}
+
+function FollowUpTag({ threadId }: { threadId: string }) {
+  const data = useStore((s) => s.data)
+  const f = activeFollowUp(threadId, data)
+  if (!f) return null
+  return (
+    <span className="tag accent fu-tag" title="Tagwerk erinnert dich, falls bis dahin keine neue Nachricht kommt">
+      <AlarmClock /> Wiedervorlage {new Date(f.at).toLocaleString('de-DE', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+      <button onClick={() => setFollowUp(threadId, null)} aria-label="Wiedervorlage entfernen" title="Entfernen">
+        <X size={11} />
+      </button>
     </span>
   )
 }
