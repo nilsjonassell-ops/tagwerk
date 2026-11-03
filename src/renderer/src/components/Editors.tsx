@@ -10,7 +10,8 @@ import { seriesStarts } from '@shared/mail-insights'
 import type { SuggestionRecurrence } from '@shared/types'
 import { Mail } from 'lucide-react'
 import { fromLocalInput, PRIORITY_LABEL, RECURRENCE_LABEL, toLocalInput, fTime } from '@/lib/format'
-import { Dialog, SourceTag } from './ui'
+import { Dialog, Select, SourceTag } from './ui'
+import { projectOptions } from '@/lib/options'
 
 // ---------- Aufgabe ----------
 
@@ -127,45 +128,22 @@ export function TaskDialog({ id, preset, suggestionId, mergeIds }: { id?: string
           </label>
           <label className="field">
             <span>Priorität</span>
-            <select className="select" value={t.priority} onChange={(e) => set('priority', e.target.value as Priority)}>
-              {(['high', 'medium', 'low'] as Priority[]).map((p) => (
-                <option key={p} value={p}>
-                  {PRIORITY_LABEL[p]}
-                </option>
-              ))}
-            </select>
+            <Select aria-label="Priorität" value={t.priority} onChange={(v) => set('priority', v)} options={(['high', 'medium', 'low'] as Priority[]).map((p) => ({ value: p, label: PRIORITY_LABEL[p] }))} />
           </label>
         </div>
         <div className="grid-3">
           <label className="field">
             <span>Projekt</span>
-            <select className="select" value={t.projectId ?? ''} onChange={(e) => set('projectId', e.target.value || undefined)}>
-              <option value="">Kein Projekt</option>
-              {data.projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            <Select aria-label="Projekt" value={t.projectId ?? ''} onChange={(v) => set('projectId', v || undefined)} options={projectOptions(data.projects)} />
           </label>
           <label className="field">
             <span>Wiederholen</span>
-            <select className="select" value={t.recurrence} onChange={(e) => set('recurrence', e.target.value as Recurrence)} disabled={!t.due}>
-              {(Object.keys(RECURRENCE_LABEL) as Recurrence[]).map((r) => (
-                <option key={r} value={r}>
-                  {RECURRENCE_LABEL[r]}
-                </option>
-              ))}
-            </select>
+            <Select aria-label="Wiederholen" value={t.recurrence} onChange={(v) => set('recurrence', v)} disabled={!t.due} options={(Object.keys(RECURRENCE_LABEL) as Recurrence[]).map((r) => ({ value: r, label: RECURRENCE_LABEL[r] }))} />
             {!t.due && <span className="hint">Wiederholung braucht ein Fälligkeitsdatum.</span>}
           </label>
           <label className="field">
             <span>Status</span>
-            <select className="select" value={t.status} onChange={(e) => set('status', e.target.value as TaskStatus)}>
-              <option value="open">Offen</option>
-              <option value="doing">In Arbeit</option>
-              <option value="done">Erledigt</option>
-            </select>
+            <Select<TaskStatus> aria-label="Status" value={t.status} onChange={(v) => set('status', v)} options={[{ value: 'open', label: 'Offen' }, { value: 'doing', label: 'In Arbeit' }, { value: 'done', label: 'Erledigt' }]} />
           </label>
         </div>
         <label className="field">
@@ -178,13 +156,7 @@ export function TaskDialog({ id, preset, suggestionId, mergeIds }: { id?: string
               <input type="checkbox" className="box-check" checked={prep} onChange={(e) => setPrep(e.target.checked)} />
               Vorbereitungsaufgabe
             </label>
-            <select className="select" value={prepDays} onChange={(e) => setPrepDays(Number(e.target.value))} disabled={!prep} aria-label="Tage vorher">
-              {[1, 2, 3, 5, 7].filter((n) => n < daysLeft).map((n) => (
-                <option key={n} value={n}>
-                  {n} {n === 1 ? 'Tag' : 'Tage'} vorher
-                </option>
-              ))}
-            </select>
+            <Select aria-label="Tage vorher" value={String(prepDays)} onChange={(v) => setPrepDays(Number(v))} disabled={!prep} style={{ width: 'auto' }} options={[1, 2, 3, 5, 7].filter((n) => n < daysLeft).map((n) => ({ value: String(n), label: `${n} ${n === 1 ? 'Tag' : 'Tage'} vorher` }))} />
             <span className="hint">Danach kannst du beides in freie Zeit einplanen.</span>
           </div>
         )}
@@ -378,13 +350,7 @@ export function EventDialog({ id, preset, suggestionId, series }: { id?: string;
         {!existing && targets.length > 1 && (
           <label className="field">
             <span>Kalender</span>
-            <select className="select" value={target} onChange={(e) => setTarget(e.target.value)}>
-              {targets.map((t) => (
-                <option key={t.id} value={t.id} disabled={t.disabled}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
+            <Select aria-label="Kalender" value={target} onChange={setTarget} options={targets.map((t) => ({ value: t.id, label: t.label, disabled: t.disabled }))} />
           </label>
         )}
         <label className="field">
@@ -453,31 +419,28 @@ export function EventDialog({ id, preset, suggestionId, series }: { id?: string;
         <div className="grid-2">
           <label className="field">
             <span>Erinnerung</span>
-            <select className="select" value={reminder} onChange={(e) => setReminder(e.target.value)} disabled={allDay}>
-              <option value="std">
-                Standard{settings.notifications.events ? ` (${settings.notifications.leadMinutes} Min. vorher)` : ' (aus)'}
-              </option>
-              <option value="none">Keine Erinnerung</option>
-              <option value="0">Zum Beginn</option>
-              <option value="5">5 Minuten vorher</option>
-              <option value="10">10 Minuten vorher</option>
-              <option value="15">15 Minuten vorher</option>
-              <option value="30">30 Minuten vorher</option>
-              <option value="60">1 Stunde vorher</option>
-              <option value="120">2 Stunden vorher</option>
-              <option value="1440">1 Tag vorher</option>
-            </select>
+            <Select
+              aria-label="Erinnerung"
+              value={reminder}
+              onChange={setReminder}
+              disabled={allDay}
+              options={[
+                { value: 'std', label: `Standard${settings.notifications.events ? ` (${settings.notifications.leadMinutes} Min. vorher)` : ' (aus)'}` },
+                { value: 'none', label: 'Keine Erinnerung' },
+                { value: '0', label: 'Zum Beginn' },
+                { value: '5', label: '5 Minuten vorher' },
+                { value: '10', label: '10 Minuten vorher' },
+                { value: '15', label: '15 Minuten vorher' },
+                { value: '30', label: '30 Minuten vorher' },
+                { value: '60', label: '1 Stunde vorher' },
+                { value: '120', label: '2 Stunden vorher' },
+                { value: '1440', label: '1 Tag vorher' }
+              ]}
+            />
           </label>
           <label className="field">
             <span>Projekt</span>
-            <select className="select" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-              <option value="">Kein Projekt</option>
-              {data.projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            <Select aria-label="Projekt" value={projectId} onChange={setProjectId} options={projectOptions(data.projects)} />
           </label>
         </div>
         <label className="field">
@@ -576,12 +539,7 @@ export function ProjectDialog({ id }: { id?: string }) {
       </label>
       <label className="field">
         <span>Status</span>
-        <select className="select" value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus)}>
-          <option value="on-track">Im Plan</option>
-          <option value="at-risk">Gefährdet</option>
-          <option value="paused">Pausiert</option>
-          <option value="done">Abgeschlossen</option>
-        </select>
+        <Select<ProjectStatus> aria-label="Status" value={status} onChange={setStatus} options={[{ value: 'on-track', label: 'Im Plan' }, { value: 'at-risk', label: 'Gefährdet' }, { value: 'paused', label: 'Pausiert' }, { value: 'done', label: 'Abgeschlossen' }]} />
       </label>
       <label className="field">
         <span>Kurzbeschreibung</span>
@@ -663,14 +621,7 @@ export function MailNoteDialog(props: { suggestionId?: string; title: string; bo
       </label>
       <label className="field">
         <span>Projekt</span>
-        <select className="select" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-          <option value="">Kein Projekt</option>
-          {data.projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+        <Select aria-label="Projekt" value={projectId} onChange={setProjectId} options={projectOptions(data.projects)} />
       </label>
       <div className="field">
         <span>Speichern in</span>

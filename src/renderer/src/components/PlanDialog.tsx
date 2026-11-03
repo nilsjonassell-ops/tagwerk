@@ -8,7 +8,7 @@ import type { CalEvent } from '@shared/types'
 import { useStore, uid } from '@/lib/store'
 import { saveEvent } from '@/lib/actions'
 import { durationLabel, fDayMed, fTime, projectName } from '@/lib/format'
-import { Dialog, Empty, Segmented } from '@/components/ui'
+import { Dialog, Empty, Segmented, Select } from '@/components/ui'
 
 const DURATIONS = [15, 30, 45, 60, 90, 120]
 
@@ -130,20 +130,7 @@ export function PlanDialog() {
                       {t.priority === 'high' && <span className="tag" style={{ color: 'var(--alert)', background: 'var(--alert-soft)' }}>Hoch</span>}
                     </div>
                   </div>
-                  <select
-                    className="select"
-                    style={{ width: 110 }}
-                    value={minutes}
-                    onChange={(e) => setDurations((d) => ({ ...d, [t.id]: Number(e.target.value) }))}
-                    aria-label="Dauer"
-                    disabled={!on}
-                  >
-                    {DURATIONS.map((m) => (
-                      <option key={m} value={m}>
-                        {durationLabel(m)}
-                      </option>
-                    ))}
-                  </select>
+                  <Select aria-label="Dauer" style={{ width: 110 }} value={String(minutes)} onChange={(v) => setDurations((d) => ({ ...d, [t.id]: Number(v) }))} disabled={!on} options={DURATIONS.map((m) => ({ value: String(m), label: durationLabel(m) }))} />
                   <div className="plan-slot">
                     {!on ? (
                       <span className="hint">ausgelassen</span>

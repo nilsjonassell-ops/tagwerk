@@ -26,6 +26,8 @@ export function Dialog(props: {
     dialogStack.push(me)
     const onEsc = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || dialogStack[dialogStack.length - 1] !== me) return
+      // Ein offenes Menü/Auswahlfeld schließt zuerst sich selbst
+      if ((e.target as HTMLElement | null)?.closest?.('#layer-root')) return
       e.preventDefault()
       e.stopPropagation()
       closeRef.current()
@@ -127,18 +129,6 @@ export function ViewHeader({ title, children }: { title: string; children?: Reac
   )
 }
 
-export function Segmented<T extends string>({ value, options, onChange, label }: { value: T; options: { id: T; label: string }[]; onChange: (v: T) => void; label: string }) {
-  return (
-    <div className="segmented" role="group" aria-label={label}>
-      {options.map((o) => (
-        <button key={o.id} aria-pressed={value === o.id} onClick={() => onChange(o.id)}>
-          {o.label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
 /** Kontostatus in der Kopfzeile: verbundene Konten, letzte Synchronisation, Sync-Knopf. */
 export function AccountStatus({ kind }: { kind: 'gmail' | 'calendar' }) {
   const google = useStore((s) => s.google)
@@ -183,3 +173,10 @@ export function AccountStatus({ kind }: { kind: 'gmail' | 'calendar' }) {
     </span>
   )
 }
+
+export { Segmented } from './ui/Segmented'
+export { Select, type SelectOption } from './ui/Select'
+export { Menu, type MenuItem } from './ui/Menu'
+export { Popover } from './ui/Popover'
+export { Tooltip } from './ui/Tooltip'
+export { CustomDate } from './ui/CustomDate'

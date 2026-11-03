@@ -5,7 +5,7 @@ import type { Project, ProjectStatus } from '@shared/types'
 import { confirm, useStore } from '@/lib/store'
 import { dueLabel, fDayMed, fTime, mailDate } from '@/lib/format'
 import { toggleTask } from '@/lib/actions'
-import { Empty, PriorityMark, SourceTag, ViewHeader } from '@/components/ui'
+import { Empty, PriorityMark, Select, SourceTag, ViewHeader } from '@/components/ui'
 
 export const STATUS: Record<ProjectStatus, { label: string; tone: string }> = {
   'on-track': { label: 'Im Plan', tone: 'ok' },
@@ -123,13 +123,7 @@ function ProjectDetail({ p }: { p: Project }) {
           </button>
         </div>
         <div className="row" style={{ marginTop: 10, gap: 8, flexWrap: 'wrap' }}>
-          <select className="select" style={{ width: 'auto', height: 28, fontSize: 'var(--fs-sm)' }} value={p.status} onChange={(e) => setStatus(e.target.value as ProjectStatus)} aria-label="Projektstatus">
-            {(Object.keys(STATUS) as ProjectStatus[]).map((s) => (
-              <option key={s} value={s}>
-                {STATUS[s].label}
-              </option>
-            ))}
-          </select>
+          <Select<ProjectStatus> aria-label="Projektstatus" size="small" style={{ width: 'auto' }} value={p.status} onChange={setStatus} options={(Object.keys(STATUS) as ProjectStatus[]).map((s) => ({ value: s, label: STATUS[s].label }))} />
           <SourceTag source={p.source} />
         </div>
         {p.summary && (

@@ -12,7 +12,7 @@ import { useStore } from '@/lib/store'
 import { hueFor, initials, mailDate, projectName } from '@/lib/format'
 import { archiveThread, deleteThread, markThread, sendReply, setReplyMark, taskFromEmail, toggleStar } from '@/lib/actions'
 import { draftReply, summarizeThread } from '@/lib/assistant'
-import { AccountStatus, Empty, ViewHeader } from '@/components/ui'
+import { AccountStatus, CustomDate, Empty, Menu, ViewHeader } from '@/components/ui'
 
 type Filter = 'important' | 'starred' | 'unread' | 'reply' | 'all' | 'sent' | 'archive' | 'suggest'
 
@@ -524,93 +524,43 @@ function noteFromThread(thread: Thread) {
 
 /** „Übernehmen ▾“ in der geöffneten Mail: Termin, Aufgabe oder Notiz daraus */
 function TakeOverMenu({ thread, onTask }: { thread: Thread; onTask: () => void }) {
-  const [open, setOpen] = useState(false)
-  useEffect(() => {
-    if (!open) return
-    const off = (e: MouseEvent) => !(e.target as HTMLElement).closest?.('.takeover') && setOpen(false)
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
-    document.addEventListener('mousedown', off)
-    document.addEventListener('keydown', esc)
-    return () => {
-      document.removeEventListener('mousedown', off)
-      document.removeEventListener('keydown', esc)
-    }
-  }, [open])
-  const run = (fn: () => void) => () => {
-    setOpen(false)
-    fn()
-  }
+  const queued = useStore((s) => !!s.data.reviewQueue?.[thread.id])
   return (
-    <span className="takeover">
-      <button className="btn small" onClick={() => setOpen(!open)} aria-expanded={open} aria-haspopup="menu" title="Termin, Aufgabe oder Notiz aus dieser Mail">
-        <CalendarPlus /> Übernehmen <ChevronDown className="chev" />
-      </button>
-      {open && (
-        <div className="sg-snooze" role="menu" aria-label="Übernehmen als">
-          <button role="menuitem" onClick={run(() => eventFromThread(thread))}>
-            <span className="row" style={{ gap: 8 }}><CalendarPlus size={15} /> Termin daraus</span>
-          </button>
-          <button role="menuitem" onClick={run(onTask)}>
-            <span className="row" style={{ gap: 8 }}><CheckSquare size={15} /> Aufgabe daraus</span>
-          </button>
-          <button role="menuitem" onClick={run(() => noteFromThread(thread))}>
-            <span className="row" style={{ gap: 8 }}><StickyNote size={15} /> Als Notiz merken</span>
-          </button>
-          <button role="menuitem" onClick={run(() => toggleReview(thread.id))}>
-            <span className="row" style={{ gap: 8 }}><ListPlus size={15} /> {useStore.getState().data.reviewQueue?.[thread.id] ? 'Nicht mehr zur Bearbeitung' : 'Zur Bearbeitung'}</span>
-            <span className="hint">B</span>
-          </button>
-        </div>
+    <Menu
+      label="Übernehmen als"
+      trigger={(t) => (
+        <button {...t} className="btn small" title="Termin, Aufgabe oder Notiz aus dieser Mail">
+          <CalendarPlus /> Übernehmen <ChevronDown className="chev" />
+        </button>
       )}
-    </span>
+      items={[
+        { id: 'event', label: 'Termin daraus', icon: <CalendarPlus />, onSelect: () => eventFromThread(thread) },
+        { id: 'task', label: 'Aufgabe daraus', icon: <CheckSquare />, onSelect: onTask },
+        { id: 'note', label: 'Als Notiz merken', icon: <StickyNote />, onSelect: () => noteFromThread(thread) },
+        { id: 'review', label: queued ? 'Nicht mehr zur Bearbeitung' : 'Zur Bearbeitung', icon: <ListPlus />, hint: 'B', onSelect: () => toggleReview(thread.id) }
+      ]}
+    />
   )
 }
 
 /** Wiedervorlage: „Erinnere mich, falls bis … keine neue Nachricht kommt“ */
 function FollowUpMenu({ threadId }: { threadId: string }) {
-  const [open, setOpen] = useState(false)
-  const [custom, setCustom] = useState('')
-  useEffect(() => {
-    if (!open) return
-    const off = (e: MouseEvent) => !(e.target as HTMLElement).closest?.('.followup') && setOpen(false)
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
-    document.addEventListener('mousedown', off)
-    document.addEventListener('keydown', esc)
-    return () => {
-      document.removeEventListener('mousedown', off)
-      document.removeEventListener('keydown', esc)
-    }
-  }, [open])
   const now = new Date()
   const in3 = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3, 9, 0)
   const opts = [...snoozeOptions(now).filter((o) => o.label !== 'Heute Abend'), { label: 'In 3 Tagen', at: in3 }].sort((a, b) => a.at.getTime() - b.at.getTime())
-  const pick = (d: Date) => {
-    setFollowUp(threadId, d)
-    setOpen(false)
-  }
   return (
-    <span className="takeover followup">
-      <button className="btn small ghost icon-btn" onClick={() => setOpen(!open)} aria-expanded={open} aria-haspopup="menu" title="Wiedervorlage: erinnern, falls keine Antwort kommt" aria-label="Wiedervorlage">
-        <AlarmClock />
-      </button>
-      {open && (
-        <div className="sg-snooze" role="menu" aria-label="Wiedervorlage" style={{ left: 'auto', right: 0 }}>
-          <div className="hint" style={{ padding: '4px 10px 6px' }}>Erinnern, falls bis dahin keine neue Nachricht kommt:</div>
-          {opts.map((o) => (
-            <button key={o.label} role="menuitem" onClick={() => pick(o.at)}>
-              {o.label}
-              <span className="hint">{o.at.toLocaleString('de-DE', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</span>
-            </button>
-          ))}
-          <div className="sg-snooze-custom">
-            <input className="input" type="date" value={custom} onChange={(e) => setCustom(e.target.value)} aria-label="Eigenes Datum" />
-            <button className="btn small" disabled={!custom} onClick={() => pick(new Date(`${custom}T09:00:00`))}>
-              OK
-            </button>
-          </div>
-        </div>
+    <Menu
+      label="Wiedervorlage"
+      placement="bottom-end"
+      header="Erinnern, falls bis dahin keine neue Nachricht kommt:"
+      trigger={(t) => (
+        <button {...t} className="btn small ghost icon-btn" title="Wiedervorlage: erinnern, falls keine Antwort kommt" aria-label="Wiedervorlage">
+          <AlarmClock />
+        </button>
       )}
-    </span>
+      items={opts.map((o) => ({ id: o.label, label: o.label, hint: o.at.toLocaleString('de-DE', { weekday: 'short', hour: '2-digit', minute: '2-digit' }), onSelect: () => setFollowUp(threadId, o.at) }))}
+      footer={(close) => <CustomDate time="09:00" onPick={(d) => (setFollowUp(threadId, d), close())} />}
+    />
   )
 }
 

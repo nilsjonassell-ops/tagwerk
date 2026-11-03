@@ -10,7 +10,7 @@ import { useFocus, remaining, initFocus } from '@/lib/focus'
 import { playAmbient, setAmbientVolume, stopAmbient } from '@/lib/sound'
 import { addTask, newTask, toggleTask } from '@/lib/actions'
 import { durationLabel, fTime } from '@/lib/format'
-import { Switch } from '@/components/ui'
+import { Select, Switch } from '@/components/ui'
 
 const PRESETS = [15, 25, 45, 60, 90]
 const SOUNDS: { id: FocusSound; label: string; icon: typeof Waves }[] = [
@@ -218,14 +218,7 @@ function Setup() {
     <div className="focus-setup">
       <div className="focus-setup-main">
         <h1>Worauf willst du dich konzentrieren?</h1>
-        <select className="select focus-task" value={taskId} onChange={(e) => setTaskId(e.target.value)} aria-label="Aufgabe">
-          <option value="">Ohne bestimmte Aufgabe</option>
-          {tasks.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.title}
-            </option>
-          ))}
-        </select>
+        <Select aria-label="Aufgabe" className="focus-task" value={taskId} onChange={setTaskId} searchable placeholder="Ohne bestimmte Aufgabe" options={[{ value: '', label: 'Ohne bestimmte Aufgabe' }, ...tasks.map((t) => ({ value: t.id, label: t.title }))]} />
 
         <div className="focus-label">Dauer</div>
         <div className="focus-chips">
@@ -313,13 +306,7 @@ function Setup() {
         <div className="focus-label" style={{ marginTop: 6 }}>
           Tagesziel
         </div>
-        <select className="select" value={fs.dailyGoalMinutes} onChange={(e) => setF({ dailyGoalMinutes: Number(e.target.value) })} aria-label="Tagesziel">
-          {[60, 90, 120, 180, 240, 300].map((m) => (
-            <option key={m} value={m}>
-              {durationLabel(m)}
-            </option>
-          ))}
-        </select>
+        <Select aria-label="Tagesziel" value={String(fs.dailyGoalMinutes)} onChange={(v) => setF({ dailyGoalMinutes: Number(v) })} options={[60, 90, 120, 180, 240, 300].map((m) => ({ value: String(m), label: durationLabel(m) }))} />
       </aside>
     </div>
   )

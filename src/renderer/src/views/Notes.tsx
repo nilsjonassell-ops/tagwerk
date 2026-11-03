@@ -6,7 +6,8 @@ import { useStore } from '@/lib/store'
 import { fDayMed, fTime, mailDate } from '@/lib/format'
 import { addTask, createNote, deleteNote, newTask } from '@/lib/actions'
 import { suggestTasksFromNote } from '@/lib/assistant'
-import { Dialog, Empty, Segmented, ViewHeader } from '@/components/ui'
+import { Dialog, Empty, Segmented, Select, ViewHeader } from '@/components/ui'
+import { projectOptions } from '@/lib/options'
 import { OneNoteBrowser, OneNoteSaveButton } from '@/components/OneNote'
 import { MailLink } from '@/components/Editors'
 
@@ -150,27 +151,10 @@ function NoteEditor({ note }: { note: Note }) {
     <div className="editor">
       <div className="editor-inner">
         <div className="editor-toolbar">
-          <select className="select" value={draft.kind} onChange={(e) => set('kind', e.target.value as Note['kind'])} aria-label="Art der Notiz">
-            <option value="note">Notiz</option>
-            <option value="meeting">Meetingnotiz</option>
-          </select>
-          <select className="select" value={draft.projectId ?? ''} onChange={(e) => set('projectId', e.target.value || undefined)} aria-label="Projekt">
-            <option value="">Kein Projekt</option>
-            {data.projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+          <Select<Note['kind']> aria-label="Art der Notiz" value={draft.kind} onChange={(v) => set('kind', v)} options={[{ value: 'note', label: 'Notiz' }, { value: 'meeting', label: 'Meetingnotiz' }]} />
+          <Select aria-label="Projekt" value={draft.projectId ?? ''} onChange={(v) => set('projectId', v || undefined)} options={projectOptions(data.projects)} />
           {draft.kind === 'meeting' && (
-            <select className="select" value={draft.eventId ?? ''} onChange={(e) => set('eventId', e.target.value || undefined)} aria-label="Zugehöriger Termin">
-              <option value="">Kein Termin verknüpft</option>
-              {upcoming.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {fDayMed.format(new Date(e.start))} {fTime.format(new Date(e.start))} · {e.title}
-                </option>
-              ))}
-            </select>
+            <Select aria-label="Zugehöriger Termin" value={draft.eventId ?? ''} onChange={(v) => set('eventId', v || undefined)} options={[{ value: '', label: 'Kein Termin verknüpft' }, ...upcoming.map((e) => ({ value: e.id, label: `${fDayMed.format(new Date(e.start))} ${fTime.format(new Date(e.start))} · ${e.title}` }))]} />
           )}
           {ev && (
             <button className="btn small ghost" onClick={() => go('calendar', ev.id)}>

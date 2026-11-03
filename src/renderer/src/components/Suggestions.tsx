@@ -5,7 +5,7 @@ import type { SuggestionKind } from '@shared/types'
 import { useStore } from '@/lib/store'
 import { SOURCE_LABEL } from '@/lib/accounts'
 import { acceptMany, acceptSuggestion, addRule, excludeSender, ignoreMail, canBulk, canMerge, createSplit, ignoreSuggestion, mergeSuggestions, reopenSuggestion, snoozeOptions, snoozeSuggestion, splitParts, undoAccepted, useSuggestions, type SuggestionItem } from '@/lib/suggestions'
-import { Dialog, Switch } from './ui'
+import { CustomDate, Dialog, Menu, Select, Switch } from './ui'
 import { useAccounts } from '@/lib/accounts'
 import { detectAll } from '@shared/mail-insights'
 import { Ban, EyeOff, Info, Pause } from 'lucide-react'
@@ -454,47 +454,31 @@ function SuggestionCard(p: {
           {s.change ? <RefreshCw /> : s.kind === 'event' ? <CalendarPlus /> : s.kind === 'note' ? <StickyNote /> : <CheckSquare />} {s.change ? 'Aktualisieren' : s.conflict ? 'Entscheiden' : 'Übernehmen'}
         </button>
         <div className="sg-more">
-          <button className="btn ghost small icon-btn" onClick={() => p.setSnoozeOpen(!p.snoozeOpen)} title="Später (L)" aria-label="Später" aria-expanded={p.snoozeOpen}>
-            <Clock />
-          </button>
+          <SnoozeMenu open={p.snoozeOpen} onOpenChange={p.setSnoozeOpen} onPick={(d) => snoozeSuggestion(s, d)} />
           <button className="btn ghost small icon-btn" onClick={() => ignoreSuggestion(s)} title="Ignorieren (I)" aria-label="Ignorieren">
             <X />
           </button>
         </div>
-        {p.snoozeOpen && <SnoozeMenu onPick={(d) => (snoozeSuggestion(s, d), p.setSnoozeOpen(false))} onClose={() => p.setSnoozeOpen(false)} />}
       </div>
     </div>
   )
 }
 
-function SnoozeMenu({ onPick, onClose }: { onPick: (d: Date) => void; onClose: () => void }) {
-  const [custom, setCustom] = useState('')
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const off = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && onClose()
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    setTimeout(() => document.addEventListener('mousedown', off), 0)
-    document.addEventListener('keydown', esc)
-    return () => {
-      document.removeEventListener('mousedown', off)
-      document.removeEventListener('keydown', esc)
-    }
-  }, [onClose])
+function SnoozeMenu({ onPick, open, onOpenChange }: { onPick: (d: Date) => void; open: boolean; onOpenChange: (v: boolean) => void }) {
   return (
-    <div className="sg-snooze" ref={ref} role="menu" aria-label="Wiedervorlage">
-      {snoozeOptions().map((o) => (
-        <button key={o.label} role="menuitem" onClick={() => onPick(o.at)}>
-          {o.label}
-          <span className="hint">{o.at.toLocaleString('de-DE', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+    <Menu
+      label="Später"
+      placement="bottom-end"
+      open={open}
+      onOpenChange={onOpenChange}
+      trigger={(t) => (
+        <button {...t} className="btn ghost small icon-btn" title="Später (L)" aria-label="Später">
+          <Clock />
         </button>
-      ))}
-      <div className="sg-snooze-custom">
-        <input className="input" type="date" value={custom} onChange={(e) => setCustom(e.target.value)} aria-label="Eigenes Datum" />
-        <button className="btn small" disabled={!custom} onClick={() => onPick(new Date(`${custom}T08:00:00`))}>
-          OK
-        </button>
-      </div>
-    </div>
+      )}
+      items={snoozeOptions().map((o) => ({ id: o.label, label: o.label, hint: o.at.toLocaleString('de-DE', { weekday: 'short', hour: '2-digit', minute: '2-digit' }), onSelect: () => onPick(o.at) }))}
+      footer={(close) => <CustomDate time="08:00" onPick={(d) => (onPick(d), close())} />}
+    />
   )
 }
 
@@ -609,23 +593,16 @@ function RuleQuick({ s }: { s: SuggestionItem }) {
   return (
     <span className="row" style={{ gap: 6 }}>
       <span className="hint">Mails von {who} →</span>
-      <select
-        className="select"
-        autoFocus
-        defaultValue={s.projectId ?? ''}
-        onChange={(e) => {
-          if (e.target.value) addRule('from', who, e.target.value)
+      <Select
+        aria-label="Projekt für diesen Absender"
+        value=""
+        placeholder="Projekt wählen …"
+        onChange={(v) => {
+          if (v) addRule('from', who, v)
           setOpen(false)
         }}
-        aria-label="Projekt für diesen Absender"
-      >
-        <option value="">Projekt wählen …</option>
-        {projects.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </select>
+        options={projects.map((p) => ({ value: p.id, label: p.name }))}
+      />
     </span>
   )
 }

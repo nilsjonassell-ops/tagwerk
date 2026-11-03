@@ -8,7 +8,7 @@ import { useStore } from '@/lib/store'
 import { mailDate } from '@/lib/format'
 import { createNote } from '@/lib/actions'
 import { openInOneNote, saveNoteToOneNote, useOneNote } from '@/lib/onenote'
-import { Dialog, Empty } from '@/components/ui'
+import { Dialog, Empty, Select } from '@/components/ui'
 
 const RECENT = ''
 
@@ -64,18 +64,7 @@ export function OneNoteBrowser() {
       <div className="list-pane">
         <div className="search-box" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div className="row" style={{ gap: 6 }}>
-            <select className="select" style={{ flex: 1, minWidth: 0 }} value={section} onChange={(e) => (setSection(e.target.value), setSelected(undefined))} aria-label="Abschnitt">
-              <option value={RECENT}>Zuletzt bearbeitet</option>
-              {notebooks.map(([nb, list]) => (
-                <optgroup key={nb} label={nb}>
-                  {list.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+            <Select aria-label="Abschnitt" style={{ flex: 1, minWidth: 0 }} value={section} onChange={(v) => (setSection(v), setSelected(undefined))} options={[{ value: RECENT, label: 'Zuletzt bearbeitet' }, ...notebooks.flatMap(([nb, list]) => list.map((s) => ({ value: s.id, label: s.name, group: nb })))]} />
             <button
               className="btn small ghost icon-btn"
               title="Neu laden"
@@ -268,17 +257,7 @@ function OneNoteSaveDialog({ note, onClose }: { note: Note; onClose: () => void 
             <Loader2 className="spin" /> Lade Notizbücher …
           </div>
         ) : (
-          <select className="select" value={target} onChange={(e) => setTarget(e.target.value)}>
-            {notebooks.map(([nb, list]) => (
-              <optgroup key={nb} label={nb}>
-                {list.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+          <Select aria-label="Abschnitt in OneNote" value={target} onChange={setTarget} options={notebooks.flatMap(([nb, list]) => list.map((s) => ({ value: s.id, label: s.name, group: nb })))} />
         )}
       </label>
       {replacing && <div className="hint">Die frühere Fassung in diesem Abschnitt wird durch die aktuelle ersetzt.</div>}

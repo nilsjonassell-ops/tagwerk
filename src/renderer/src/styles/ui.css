@@ -1,0 +1,306 @@
+/* ==========================================================================
+   Tagwerk – Bausteine: Popover, Menü, Auswahl, Tooltip
+   ========================================================================== */
+
+#layer-root {
+  position: relative;
+  z-index: 1000;
+}
+
+/* ---------- Popover: schwebende Ebene mit Glas ---------- */
+.popover {
+  z-index: 1000;
+  min-width: 180px;
+  max-width: min(360px, calc(100vw - 16px));
+  overflow: auto;
+  padding: 4px;
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow: 0 0 0 1px var(--line), var(--shadow-2);
+  color: var(--ink);
+  outline: none;
+  user-select: none;
+  animation: pop-in var(--dur) var(--ease) both;
+}
+.popover[data-side='bottom'] {
+  --pop-from: translateY(-4px);
+}
+.popover[data-side='top'] {
+  --pop-from: translateY(4px);
+}
+.popover[data-side='left'] {
+  --pop-from: translateX(4px);
+}
+.popover[data-side='right'] {
+  --pop-from: translateX(-4px);
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: var(--pop-from, none);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .popover {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: var(--surface-2-solid);
+  }
+}
+:root[data-motion='reduced'] .popover {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: var(--surface-2-solid);
+}
+
+/* ---------- Menü ---------- */
+.menu-list {
+  display: flex;
+  flex-direction: column;
+}
+.menu-header {
+  padding: 6px 10px 6px;
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 32px;
+  padding: 5px 10px 5px 8px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font-size: var(--fs-md);
+  outline: none;
+}
+.menu-item:hover:not(:disabled),
+.menu-item:focus-visible,
+.menu-item:focus {
+  background: var(--hover);
+}
+.menu-item:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.menu-item:disabled {
+  color: var(--disabled-ink);
+}
+.menu-item.danger {
+  color: var(--alert);
+}
+.menu-item.danger:hover,
+.menu-item.danger:focus {
+  background: var(--alert-soft);
+}
+.menu-icon {
+  width: 18px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--ink-3);
+}
+.menu-item.danger .menu-icon {
+  color: inherit;
+}
+.menu-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.menu-item[aria-checked='true'] .menu-icon {
+  color: var(--accent-text);
+}
+.menu-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.menu-sub {
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+}
+.menu-hint {
+  margin-left: 12px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font: inherit;
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font-variant-numeric: tabular-nums;
+}
+.menu-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--line-soft);
+}
+.menu-footer {
+  margin-top: 4px;
+  padding: 8px 6px 4px;
+  border-top: 1px solid var(--line-soft);
+}
+
+/* ---------- Auswahl ---------- */
+.select-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  cursor: default;
+}
+.select-btn.small {
+  height: 28px;
+  font-size: var(--fs-sm);
+}
+.select-btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--ink) 22%, var(--line));
+}
+.select-btn[aria-expanded='true'] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.select-btn:disabled {
+  color: var(--disabled-ink);
+  background: var(--sunken);
+}
+.select-btn:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.select-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.select-btn.is-placeholder .select-value {
+  color: var(--ink-3);
+}
+.select-chev {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: var(--ink-3);
+  transition: transform var(--dur-fast) var(--ease);
+}
+.select-btn[aria-expanded='true'] .select-chev {
+  transform: rotate(180deg);
+}
+.select-pop {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  overflow: hidden;
+}
+.select-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 2px 4px;
+  padding: 0 8px;
+  height: 32px;
+  border-radius: var(--r-sm);
+  background: var(--sunken);
+  color: var(--ink-3);
+}
+.select-search svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+.select-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  color: var(--ink);
+}
+.select-list {
+  overflow: auto;
+  outline: none;
+}
+.select-group {
+  padding: 8px 10px 4px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.select-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 5px 10px 5px 6px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-md);
+}
+.select-option.active {
+  background: var(--hover);
+}
+.select-list:focus-visible .select-option.active,
+.select-pop:has(.select-search input:focus-visible) .select-option.active {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.select-option[aria-selected='true'] {
+  color: var(--accent-text);
+  font-weight: var(--fw-medium);
+}
+.select-option[aria-disabled='true'] {
+  color: var(--disabled-ink);
+}
+.select-check {
+  width: 18px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.select-check svg {
+  width: 15px;
+  height: 15px;
+}
+.select-label {
+  flex: 1;
+  min-width: 0;
+}
+.select-hint {
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+}
+.select-empty {
+  padding: 10px;
+  color: var(--ink-3);
+  font-size: var(--fs-sm);
+}
+
+/* ---------- Tooltip ---------- */
+.tooltip {
+  z-index: 1001;
+  max-width: 260px;
+  padding: 5px 9px;
+  border-radius: var(--r-sm);
+  background: var(--ink);
+  color: var(--canvas);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-tight);
+  pointer-events: none;
+  box-shadow: var(--shadow-2);
+  animation: pop-in var(--dur-fast) var(--ease) both;
+}
+.menu-custom-date {
+  display: flex;
+  gap: 6px;
+}
+.menu-custom-date .input {
+  height: 28px;
+}

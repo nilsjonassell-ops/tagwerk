@@ -12,7 +12,7 @@ import { VIEW_META } from './Sidebar'
 import { GoogleSettings } from './GoogleSettings'
 import { MicrosoftSettings } from './OneNoteSettings'
 import { ICloudSettings } from './ICloudSettings'
-import { Dialog, Segmented, Switch } from './ui'
+import { Dialog, Segmented, Select, Switch } from './ui'
 import { isMac, modKey } from '@/lib/format'
 
 type Section = 'general' | 'dashboard' | 'calendar' | 'notifications' | 'sources' | 'claude' | 'privacy'
@@ -100,11 +100,7 @@ function General() {
         <input className="input" value={s.userName} onChange={(e) => set({ userName: e.target.value })} placeholder="Vorname" />
       </Row>
       <Row label="Erscheinungsbild">
-        <select className="select" value={s.theme} onChange={(e) => set({ theme: e.target.value as Settings['theme'] })}>
-          <option value="system">Wie System</option>
-          <option value="light">Hell</option>
-          <option value="dark">Dunkel</option>
-        </select>
+        <Select<Settings['theme']> aria-label="Erscheinungsbild" value={s.theme} onChange={(v) => set({ theme: v })} options={[{ value: 'system', label: 'Wie System' }, { value: 'light', label: 'Hell' }, { value: 'dark', label: 'Dunkel' }]} />
       </Row>
       {updates?.state === 'store' ? (
         <Row label="Beim Anmelden starten" hint="Bei der Store-Version schaltest du das in Windows ein: Einstellungen → Apps → Autostart → Tagwerk. Tagwerk startet dann unauffällig im Hintergrund.">
@@ -190,39 +186,15 @@ function CalendarSettings() {
     <>
       <h3>Kalender</h3>
       <Row label="Arbeitszeit" hint="Freie Zeit und übervolle Tage werden innerhalb dieses Rahmens berechnet.">
-        <select className="select" style={{ width: 90 }} value={s.workHours.start} onChange={(e) => set({ workHours: { ...s.workHours, start: Math.min(Number(e.target.value), s.workHours.end - 1) } })} aria-label="Beginn">
-          {hours.map((h) => (
-            <option key={h} value={h}>
-              {String(h).padStart(2, '0')}:00
-            </option>
-          ))}
-        </select>
+        <Select aria-label="Beginn" style={{ width: 96 }} value={String(s.workHours.start)} onChange={(v) => set({ workHours: { ...s.workHours, start: Math.min(Number(v), s.workHours.end - 1) } })} options={hours.map((h) => ({ value: String(h), label: `${String(h).padStart(2, '0')}:00` }))} />
         bis
-        <select className="select" style={{ width: 90 }} value={s.workHours.end} onChange={(e) => set({ workHours: { ...s.workHours, end: Math.max(Number(e.target.value), s.workHours.start + 1) } })} aria-label="Ende">
-          {hours.slice(1).map((h) => (
-            <option key={h} value={h}>
-              {String(h).padStart(2, '0')}:00
-            </option>
-          ))}
-        </select>
+        <Select aria-label="Ende" style={{ width: 96 }} value={String(s.workHours.end)} onChange={(v) => set({ workHours: { ...s.workHours, end: Math.max(Number(v), s.workHours.start + 1) } })} options={hours.slice(1).map((h) => ({ value: String(h), label: `${String(h).padStart(2, '0')}:00` }))} />
       </Row>
       <Row label="Freie Zeit anzeigen ab" hint="Kürzere Lücken gelten nicht als Zeit für konzentriertes Arbeiten.">
-        <select className="select" value={s.focusMinMinutes} onChange={(e) => set({ focusMinMinutes: Number(e.target.value) })}>
-          {[30, 45, 60, 90, 120].map((m) => (
-            <option key={m} value={m}>
-              {m} Minuten
-            </option>
-          ))}
-        </select>
+        <Select aria-label="Freie Zeit anzeigen ab" value={String(s.focusMinMinutes)} onChange={(v) => set({ focusMinMinutes: Number(v) })} options={[30, 45, 60, 90, 120].map((m) => ({ value: String(m), label: `${m} Minuten` }))} />
       </Row>
       <Row label="Puffer bei Ortswechsel" hint="Darunter wird ein Übergang zwischen Terminen an verschiedenen Orten als zu knapp markiert.">
-        <select className="select" value={s.transitionBufferMinutes} onChange={(e) => set({ transitionBufferMinutes: Number(e.target.value) })}>
-          {[0, 5, 10, 15, 20, 30].map((m) => (
-            <option key={m} value={m}>
-              {m === 0 ? 'Aus' : `${m} Minuten`}
-            </option>
-          ))}
-        </select>
+        <Select aria-label="Puffer bei Ortswechsel" value={String(s.transitionBufferMinutes)} onChange={(v) => set({ transitionBufferMinutes: Number(v) })} options={[0, 5, 10, 15, 20, 30].map((m) => ({ value: String(m), label: m === 0 ? 'Aus' : `${m} Minuten` }))} />
       </Row>
     </>
   )
@@ -271,13 +243,7 @@ function Notifications() {
         <Switch label="Vor Terminen erinnern" checked={n.events} onChange={(v) => setN({ events: v })} />
       </Row>
       <Row label="Vorlaufzeit">
-        <select className="select" value={n.leadMinutes} disabled={!n.events} onChange={(e) => setN({ leadMinutes: Number(e.target.value) })}>
-          {[5, 10, 15, 30, 60].map((m) => (
-            <option key={m} value={m}>
-              {m === 60 ? '1 Stunde' : `${m} Minuten`} vorher
-            </option>
-          ))}
-        </select>
+        <Select aria-label="Vorlaufzeit" value={String(n.leadMinutes)} disabled={!n.events} onChange={(v) => setN({ leadMinutes: Number(v) })} options={[5, 10, 15, 30, 60].map((m) => ({ value: String(m), label: `${m === 60 ? '1 Stunde' : `${m} Minuten`} vorher` }))} />
       </Row>
       <Row label="Auch zum Beginn erinnern" hint="Zweiter Hinweis, wenn der Termin anfängt.">
         <Switch label="Auch zum Beginn erinnern" checked={n.eventsAtStart} disabled={!n.events} onChange={(v) => setN({ eventsAtStart: v })} />
@@ -323,13 +289,7 @@ function Notifications() {
       </Row>
       <Row label="Wann">
         <div className="row" style={{ gap: 8 }}>
-          <select className="select" style={{ width: 130 }} value={n.weeklyReview.day} disabled={!n.weeklyReview.enabled} onChange={(e) => setN({ weeklyReview: { ...n.weeklyReview, day: Number(e.target.value) } })} aria-label="Wochentag">
-            {[1, 2, 3, 4, 5, 6, 0].map((d) => (
-              <option key={d} value={d}>
-                {['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'][d]}
-              </option>
-            ))}
-          </select>
+          <Select aria-label="Wochentag" style={{ width: 140 }} value={String(n.weeklyReview.day)} disabled={!n.weeklyReview.enabled} onChange={(v) => setN({ weeklyReview: { ...n.weeklyReview, day: Number(v) } })} options={[1, 2, 3, 4, 5, 6, 0].map((d) => ({ value: String(d), label: ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'][d] }))} />
           <input type="time" className="input" style={{ width: 110 }} value={n.weeklyReview.time} disabled={!n.weeklyReview.enabled} onChange={(e) => setN({ weeklyReview: { ...n.weeklyReview, time: e.target.value } })} aria-label="Uhrzeit" />
         </div>
       </Row>
@@ -533,9 +493,7 @@ function ClaudeSettings() {
       </Row>
       {state.ok && <div className="row hint" style={{ padding: '8px 0' }}><Check size={14} color="var(--ok)" /> Claude ist verbunden.</div>}
       <Row label="Modell">
-        <select className="select" value={s.claude.model} onChange={(e) => set({ claude: { ...s.claude, model: e.target.value } })}>
-          {CLAUDE_MODELS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-        </select>
+        <Select aria-label="Modell" value={s.claude.model} onChange={(v) => set({ claude: { ...s.claude, model: v } })} options={CLAUDE_MODELS.map((m) => ({ value: m.id, label: m.label }))} />
       </Row>
       <Row label="E-Mail-Inhalte mitsenden" hint="Aus: Claude sieht nur Betreff, Absender und Status – Inhalte nur, wenn du eine Mail ausdrücklich zusammenfassen oder beantworten lässt.">
         <Switch label="E-Mail-Inhalte mitsenden" checked={s.claude.includeEmailBodies} onChange={(v) => set({ claude: { ...s.claude, includeEmailBodies: v } })} />
@@ -570,21 +528,10 @@ function Privacy() {
       <h3>Datenschutz & Aufbewahrung</h3>
       <p>Alle Daten werden ausschließlich lokal gespeichert. Protokolle enthalten keine Inhalte aus Mails, Notizen oder Gesprächen.</p>
       <Row label="Archivierte Aufgaben aufbewahren">
-        <select className="select" value={s.retention.archivedTasksDays} onChange={(e) => set({ retention: { archivedTasksDays: Number(e.target.value) } })}>
-          <option value={30}>30 Tage</option>
-          <option value={90}>90 Tage</option>
-          <option value={180}>6 Monate</option>
-          <option value={365}>1 Jahr</option>
-          <option value={0}>Unbegrenzt</option>
-        </select>
+        <Select aria-label="Archivierte Aufgaben aufbewahren" value={String(s.retention.archivedTasksDays)} onChange={(v) => set({ retention: { archivedTasksDays: Number(v) } })} options={[{ value: '30', label: '30 Tage' }, { value: '90', label: '90 Tage' }, { value: '180', label: '6 Monate' }, { value: '365', label: '1 Jahr' }, { value: '0', label: 'Unbegrenzt' }]} />
       </Row>
       <Row label="Gesprächsverlauf mit Claude aufbewahren">
-        <select className="select" value={s.claude.chatRetentionDays} onChange={(e) => set({ claude: { ...s.claude, chatRetentionDays: Number(e.target.value) } })}>
-          <option value={1}>1 Tag</option>
-          <option value={7}>7 Tage</option>
-          <option value={30}>30 Tage</option>
-          <option value={0}>Unbegrenzt</option>
-        </select>
+        <Select aria-label="Gesprächsverlauf mit Claude aufbewahren" value={String(s.claude.chatRetentionDays)} onChange={(v) => set({ claude: { ...s.claude, chatRetentionDays: Number(v) } })} options={[{ value: '1', label: '1 Tag' }, { value: '7', label: '7 Tage' }, { value: '30', label: '30 Tage' }, { value: '0', label: 'Unbegrenzt' }]} />
       </Row>
       <Row label="Gesprächsverlauf jetzt löschen" hint={chatCount ? `${chatCount} Nachrichten gespeichert` : 'Kein Verlauf vorhanden'}>
         <button className="btn small" disabled={!chatCount} onClick={() => mutate((d) => ({ ...d, chat: [] }), { toast: 'Verlauf gelöscht', undoable: true })}>Löschen</button>
@@ -888,19 +835,9 @@ function MailRulesEditor() {
         ))}
         {projects.length > 0 ? (
           <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
-            <select className="select" style={{ width: 'auto' }} value={field} onChange={(e) => setField(e.target.value as 'from' | 'subject')} aria-label="Feld">
-              <option value="from">Absender enthält</option>
-              <option value="subject">Betreff enthält</option>
-            </select>
+            <Select<'from' | 'subject'> aria-label="Feld" style={{ width: 'auto' }} value={field} onChange={setField} options={[{ value: 'from', label: 'Absender enthält' }, { value: 'subject', label: 'Betreff enthält' }]} />
             <input className="input" style={{ flex: 1, minWidth: 120 }} value={contains} onChange={(e) => setContains(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} placeholder={field === 'from' ? 'z. B. @uni-mannheim.de' : 'z. B. Hausarbeit'} aria-label="Enthält" />
-            <select className="select" style={{ width: 'auto' }} value={projectId} onChange={(e) => setProjectId(e.target.value)} aria-label="Projekt">
-              <option value="">Projekt …</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            <Select aria-label="Projekt" style={{ width: 'auto' }} value={projectId} placeholder="Projekt …" onChange={setProjectId} options={projects.map((p) => ({ value: p.id, label: p.name }))} />
             <button className="btn small" onClick={add} disabled={!contains.trim() || !projectId}>
               Hinzufügen
             </button>
