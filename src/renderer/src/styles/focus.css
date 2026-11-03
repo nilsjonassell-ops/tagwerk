@@ -84,7 +84,7 @@
 }
 .focus-ring .bar {
   transition: stroke-dashoffset 0.9s linear;
-  filter: drop-shadow(0 0 6px rgba(139, 109, 255, 0.45));
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 45%, transparent));
 }
 .focus-ring.break .bar {
   filter: drop-shadow(0 0 6px rgba(52, 197, 154, 0.45));
@@ -97,14 +97,14 @@
   z-index: 45;
   display: flex;
   flex-direction: column;
-  background: rgba(240, 242, 255, 0.55);
-  -webkit-backdrop-filter: saturate(170%) blur(40px);
-  backdrop-filter: saturate(170%) blur(40px);
-  animation: focus-in 0.6s var(--ease-out) both;
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  -webkit-backdrop-filter: saturate(140%) blur(24px);
+  backdrop-filter: saturate(140%) blur(24px);
+  animation: focus-in var(--dur-slow) var(--ease) both;
   overflow: hidden;
 }
 :root[data-theme='dark'] .focus-view {
-  background: rgba(8, 10, 26, 0.62);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
 }
 @keyframes focus-in {
   from {
@@ -121,15 +121,13 @@
   inset: -20%;
   pointer-events: none;
   background:
-    radial-gradient(35% 40% at 30% 35%, rgba(90, 125, 255, 0.35), transparent 70%),
-    radial-gradient(30% 36% at 70% 60%, rgba(255, 103, 173, 0.28), transparent 70%),
-    radial-gradient(30% 30% at 50% 50%, rgba(154, 107, 255, 0.25), transparent 70%);
-  animation: aura 18s ease-in-out infinite alternate;
+    radial-gradient(40% 45% at 30% 35%, color-mix(in srgb, var(--wash-1) 50%, transparent), transparent 70%),
+    radial-gradient(35% 40% at 70% 65%, color-mix(in srgb, var(--wash-2) 40%, transparent), transparent 70%);
 }
 .phase-break .focus-aura {
   background:
-    radial-gradient(35% 40% at 30% 35%, rgba(52, 197, 154, 0.3), transparent 70%),
-    radial-gradient(30% 36% at 70% 60%, rgba(90, 200, 250, 0.28), transparent 70%);
+    radial-gradient(40% 45% at 30% 35%, color-mix(in srgb, var(--ok) 22%, transparent), transparent 70%),
+    radial-gradient(35% 40% at 70% 65%, color-mix(in srgb, var(--ok) 12%, transparent), transparent 70%);
 }
 .status-running.phase-focus .focus-aura {
   animation-duration: 12s;
@@ -199,22 +197,39 @@
   height: 32px;
   padding: 0 14px;
   border: 0;
-  border-radius: 999px;
-  background: var(--surface-2);
+  border-radius: var(--r-pill);
+  background: var(--raised);
   box-shadow: inset 0 0 0 1px var(--line);
-  font-weight: 560;
-  transition: background 0.2s, box-shadow 0.2s, transform 0.25s var(--ease-spring), color 0.2s;
-}
-:root[data-theme='dark'] .chip {
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink-2);
+  font-weight: var(--fw-medium);
+  transition:
+    background var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
 }
 .chip:hover {
-  transform: translateY(-1px);
+  background: var(--hover);
+  color: var(--ink);
+}
+.chip:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
 }
 .chip.on {
-  background: var(--accent);
-  color: #fff;
-  box-shadow: 0 6px 16px -6px rgba(122, 96, 255, 0.6);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+.focus-duration {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.focus-duration .segmented button {
+  height: 32px;
+  padding: 0 14px;
+  font-size: var(--fs-md);
 }
 
 /* Start */
@@ -229,8 +244,8 @@
 .focus-setup-main,
 .focus-stats {
   background: var(--raised);
-  border-radius: 26px;
-  box-shadow: inset 0 0 0 1px var(--line-soft), var(--shadow-3);
+  border-radius: var(--r-xl);
+  box-shadow: 0 0 0 1px var(--line-soft), var(--shadow-2);
   padding: 28px 30px;
 }
 :root[data-theme='dark'] .focus-setup-main,
@@ -288,14 +303,13 @@
 }
 .focus-volume input[type='range'] {
   width: 220px;
-  accent-color: #8b6dff;
+  accent-color: var(--accent);
 }
 .focus-start {
   width: 100%;
-  height: 50px;
+  height: 48px;
   margin: 24px 0 10px;
   font-size: 16px;
-  border-radius: 16px;
 }
 .focus-stats {
   display: flex;
@@ -361,7 +375,7 @@
 }
 .focus-week .bar-wrap:last-child .bar {
   opacity: 1;
-  box-shadow: 0 0 12px rgba(139, 109, 255, 0.5);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 50%, transparent);
 }
 @keyframes grow {
   from {
@@ -406,7 +420,7 @@
   position: absolute;
   inset: 30px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(139, 109, 255, 0.22), transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%);
   animation: breathe-glow 5s ease-in-out infinite;
 }
 @keyframes breathe-glow {
@@ -462,7 +476,7 @@
 .focus-dots span.now {
   background: #8b6dff;
   transform: scale(1.3);
-  box-shadow: 0 0 0 4px rgba(139, 109, 255, 0.18);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 .focus-task-title {
   font-size: 20px;
@@ -551,7 +565,7 @@
   place-items: center;
   color: #fff;
   background: var(--accent);
-  box-shadow: 0 16px 40px -12px rgba(139, 109, 255, 0.7);
+  box-shadow: var(--shadow-3);
   animation: check-pop 0.6s var(--ease-snap) both;
 }
 .focus-badge svg {

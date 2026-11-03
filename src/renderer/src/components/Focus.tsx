@@ -1,7 +1,7 @@
 // Fokus-Modus: Start, laufende Runde, Übergänge und Abschluss als ruhige
 // Vollbild-Ansicht – plus kleine Anzeige, wenn die Ansicht minimiert ist.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CheckCircle2, Coffee, Minimize2, Pause, Play, Plus, SkipForward, Square, Target, Volume2, VolumeX, X, Flame, ListPlus, CloudRain, Waves, Wind, Users } from 'lucide-react'
 import { eventsOnDay, focusStats, isActive, sortTasks } from '@shared/analysis'
 import type { FocusSound } from '@shared/types'
@@ -10,7 +10,7 @@ import { useFocus, remaining, initFocus } from '@/lib/focus'
 import { playAmbient, setAmbientVolume, stopAmbient } from '@/lib/sound'
 import { addTask, newTask, toggleTask } from '@/lib/actions'
 import { durationLabel, fTime } from '@/lib/format'
-import { Select, Switch } from '@/components/ui'
+import { Segmented, Select, Switch } from '@/components/ui'
 
 const PRESETS = [15, 25, 45, 60, 90]
 const SOUNDS: { id: FocusSound; label: string; icon: typeof Waves }[] = [
@@ -211,6 +211,21 @@ function Setup() {
   const tooLong = untilNext !== null && untilNext < minutes
 
   const setF = (patch: Partial<typeof fs>) => update({ focus: { ...fs, ...patch } })
+  const begin = () => f.start({ taskId: taskId || undefined, minutes, pomodoro })
+  // Enter startet sofort – außer der Fokus liegt auf einem Bedienelement
+  const beginRef = useRef(begin)
+  beginRef.current = begin
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return
+      const t = e.target as HTMLElement | null
+      if (t?.closest?.('button, input, textarea, a, [role], #layer-root') || useStore.getState().dialog) return
+      e.preventDefault()
+      beginRef.current()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   const goalFrac = Math.min(1, stats.todayMinutes / Math.max(1, fs.dailyGoalMinutes))
   const maxDay = Math.max(30, ...stats.last7.map((d) => d.minutes))
 
@@ -221,15 +236,13 @@ function Setup() {
         <Select aria-label="Aufgabe" className="focus-task" value={taskId} onChange={setTaskId} searchable placeholder="Ohne bestimmte Aufgabe" options={[{ value: '', label: 'Ohne bestimmte Aufgabe' }, ...tasks.map((t) => ({ value: t.id, label: t.title }))]} />
 
         <div className="focus-label">Dauer</div>
-        <div className="focus-chips">
-          {PRESETS.map((m) => (
-            <button key={m} className={`chip ${!custom && minutes === m ? 'on' : ''}`} onClick={() => (setCustom(false), setMinutes(m))}>
-              {m} Min.
-            </button>
-          ))}
-          <button className={`chip ${custom ? 'on' : ''}`} onClick={() => setCustom(true)}>
-            Eigene
-          </button>
+        <div className="focus-duration">
+          <Segmented
+            label="Dauer"
+            value={custom ? 'custom' : String(minutes)}
+            onChange={(v) => (v === 'custom' ? setCustom(true) : (setCustom(false), setMinutes(Number(v))))}
+            options={[...PRESETS.map((m) => ({ id: String(m), label: `${m} Min.` })), { id: 'custom', label: 'Eigene' }]}
+          />
           {custom && (
             <input className="input" type="number" min={5} max={240} value={minutes} onChange={(e) => setMinutes(Math.max(5, Math.min(240, Number(e.target.value) || 5)))} style={{ width: 90 }} aria-label="Minuten" />
           )}
@@ -273,11 +286,11 @@ function Setup() {
 
         <SoundPicker />
 
-        <button className="btn primary focus-start" onClick={() => f.start({ taskId: taskId || undefined, minutes, pomodoro })}>
+        <button className="btn primary large focus-start" onClick={begin}>
           <Play /> Fokus starten · {durationLabel(minutes)}
         </button>
         <div className="hint" style={{ textAlign: 'center' }}>
-          Leertaste pausiert · Esc minimiert · Strg+Umschalt+F öffnet den Fokus jederzeit
+          Enter startet · Leertaste pausiert · Esc minimiert · Strg+Umschalt+F öffnet den Fokus jederzeit
         </div>
       </div>
 

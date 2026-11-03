@@ -158,6 +158,30 @@ const tests = {
     await p.context().close()
   },
 
+  async focus(b, url) {
+    const p = await start(b, url)
+    const launch = p.locator('.focus-launch')
+    ok((await launch.evaluate((el) => getComputedStyle(el).backgroundImage)) === 'none', 'Fokus-Knopf ohne Farbverlauf')
+    await p.keyboard.press('Control+Shift+F')
+    await p.waitForSelector('.focus-setup')
+    await p.locator('[role="combobox"][aria-label="Aufgabe"]').click()
+    await p.keyboard.type('Wochen')
+    await p.keyboard.press('Enter')
+    await sleep(200)
+    ok((await p.locator('[role="combobox"][aria-label="Aufgabe"]').innerText()).includes('Wochenbericht'), 'Aufgabe per Suche gewählt')
+    const dur = p.locator('[role="radiogroup"][aria-label="Dauer"]')
+    ok(await dur.count() === 1, 'Dauer als Auswahlgruppe')
+    await dur.locator('[role="radio"]:has-text("60")').click()
+    await p.keyboard.press('ArrowRight')
+    ok((await dur.locator('[aria-checked="true"]').innerText()).includes('90'), 'Pfeiltaste wechselt die Dauer (60 → 90)')
+    await p.mouse.click(640, 30)
+    await p.keyboard.press('Enter')
+    await sleep(500)
+    ok(await p.locator('.focus-setup').count() === 0, 'Enter startet den Fokus')
+    ok(/Wochenbericht/.test(await p.locator('.focus-view').innerText()), 'mit der gewählten Aufgabe')
+    await p.context().close()
+  },
+
   async noNative(b, url) {
     const p = await start(b, url)
     const count = () => p.evaluate(() => document.querySelectorAll('select').length)
