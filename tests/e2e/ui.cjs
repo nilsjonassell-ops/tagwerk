@@ -312,6 +312,70 @@ const tests = {
     }
   },
 
+  async sidebarAuto(b, url) {
+    const p = await start(b, url)
+    await p.keyboard.press('Control+1')
+    const geo = () => p.evaluate(() => {
+      const sb = document.querySelector('.sidebar').getBoundingClientRect()
+      const main = document.querySelector('.main').getBoundingClientRect()
+      return { sb: Math.round(sb.width), sbRight: Math.round(sb.right), mainLeft: Math.round(main.left), labels: getComputedStyle(document.querySelector('.sidebar .nav-item .label')).opacity }
+    })
+    ok(await p.locator('.sb-toggle').count() === 0, 'kein Öffnen/Schließen-Knopf')
+    await p.mouse.move(700, 400)
+    await sleep(700)
+    const rail = await geo()
+    ok(rail.sb <= 64 && rail.mainLeft <= 90, `eingeklappt am Rand (${rail.sb} px breit, Inhalt ab ${rail.mainLeft} px)`)
+    // Ausfahren: während der Animation nie Überlappung, danach volle Breite
+    await p.mouse.move(30, 300)
+    const frames = []
+    for (let i = 0; i < 12; i++) {
+      frames.push(await geo())
+      await sleep(35)
+    }
+    await sleep(300)
+    const open = await geo()
+    ok(open.sb >= 200, `fährt beim Überfahren aus (${open.sb} px)`)
+    ok(frames.every((f) => f.mainLeft >= f.sbRight), 'Inhalt rückt synchron mit – nie überlappt')
+    ok(open.mainLeft - open.sbRight <= 12 && open.mainLeft > rail.mainLeft + 120, `Inhalt rückt nach rechts (${rail.mainLeft} → ${open.mainLeft} px)`)
+    ok(Number(open.labels) > 0.9, 'Beschriftungen sichtbar')
+    // Bewegen innerhalb der Leiste: bleibt offen, kein Flackern
+    let closedWhileInside = false
+    for (const x of [40, 90, 140, 180, 120, 60, 20]) {
+      await p.mouse.move(x, 250 + x)
+      await sleep(60)
+      if ((await geo()).sb < 200) closedWhileInside = true
+    }
+    ok(!closedWhileInside, 'bleibt beim Bewegen innerhalb der Leiste offen')
+    // Verlassen: fährt wieder ein, Inhalt gleitet zurück
+    await p.mouse.move(800, 400)
+    await sleep(900)
+    const back = await geo()
+    ok(back.sb <= 64 && back.mainLeft <= 90, `fährt nach dem Verlassen wieder ein (${back.sb} px)`)
+    // Nach einem Klick auf einen Eintrag fährt sie trotzdem wieder ein (Fokus hält sie nicht fest)
+    await p.mouse.move(30, 300)
+    await sleep(400)
+    await p.locator('.sidebar .nav-item:has-text("Kalender")').click()
+    await p.mouse.move(800, 400)
+    await sleep(900)
+    ok((await geo()).sb <= 64, 'nach Klick auf „Kalender“ und Wegbewegen wieder eingefahren')
+    // Ganz am Fensterrand (Abstand links) reicht zum Ausfahren
+    await p.mouse.move(2, 400)
+    await sleep(500)
+    ok((await geo()).sb >= 200, 'Fensterrand links öffnet die Leiste')
+    await p.mouse.move(800, 400)
+    await sleep(900)
+    // Strg+B heftet an
+    await p.keyboard.press('Control+b')
+    await sleep(600)
+    await p.mouse.move(900, 300)
+    await sleep(800)
+    ok((await geo()).sb >= 200, 'Strg+B: dauerhaft ausgeklappt')
+    await p.keyboard.press('Control+b')
+    await sleep(800)
+    ok((await geo()).sb <= 64, 'Strg+B erneut: wieder automatisch')
+    await p.context().close()
+  },
+
   async noNative(b, url) {
     const p = await start(b, url)
     const count = () => p.evaluate(() => document.querySelectorAll('select').length)

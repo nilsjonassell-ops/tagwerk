@@ -1,41 +1,45 @@
 /* ==========================================================================
-   Tagwerk – Seitenleiste ein-/ausklappen
-   Eingeklappt bleibt ein schmaler Glasstreifen mit Symbolen. Beim Überfahren
-   gleitet die volle Leiste über den Inhalt, ohne dass das Hauptfenster springt.
+   Tagwerk – Seitenleiste „automatisch“
+   Eingeklappt bleibt ein schmaler Glasstreifen mit Symbolen am Rand. Beim Überfahren
+   fährt die Leiste aus und der Inhalt rückt mit: Leiste und Inhalt hängen an derselben
+   Rasterspalte, deshalb bewegen sie sich immer exakt gleichzeitig.
    Alle Symbole stehen in beiden Zuständen an exakt derselben Stelle.
    ========================================================================== */
 
 :root {
   --rail-w: 58px;
   --sb-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --sb-dur: 280ms;
 }
 
-/* Das Raster animiert die Breite der ersten Spalte – das Hauptfenster wächst mit */
+/* Das Raster animiert die Breite der ersten Spalte – die Leiste füllt sie, der Inhalt rückt mit */
 .app {
-  transition: grid-template-columns 0.5s var(--sb-ease);
+  transition: grid-template-columns var(--sb-dur) var(--sb-ease);
+}
+:root[data-motion='reduced'] .app {
+  transition: none;
 }
 .app.sb-collapsed {
   grid-template-columns: calc(var(--rail-w) + 10px) minmax(0, 1fr) auto;
 }
 
-/* Feste Breite statt „auto“, damit sie sich weich animieren lässt */
+/* Die Leiste füllt ihre Spalte – keine eigene Breitenanimation, damit nichts auseinanderläuft */
 .sidebar {
-  width: var(--sidebar-w);
-  justify-self: start;
+  justify-self: stretch;
   z-index: 30;
-  transition:
-    width 0.5s var(--sb-ease),
-    box-shadow 0.35s ease;
 }
-.sidebar.is-rail {
-  width: var(--rail-w);
+.sidebar.is-auto:not(.is-rail) {
+  box-shadow: var(--glass-rim), var(--glass-edge), var(--shadow-2);
 }
-.sidebar.is-rail.peek {
-  width: var(--sidebar-w);
-  transition:
-    width 0.38s var(--sb-ease),
-    box-shadow 0.35s ease;
-  box-shadow: 0 0 0 1px var(--line), var(--shadow-3);
+
+/* Unsichtbarer Randstreifen: auch der Abstand ganz links öffnet die Leiste */
+.sb-edge {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  z-index: 31;
 }
 
 /* Gleiche Symbol-Achse in beiden Zuständen (Mitte bei 28,5 px) */
@@ -70,13 +74,13 @@
 .sidebar .kbd-hint,
 .sidebar-section-label,
 .sidebar .count {
-  transition: opacity 0.28s ease 0.08s;
+  transition: opacity 0.2s ease 0.12s;
 }
-.sidebar.is-rail:not(.peek) .label,
-.sidebar.is-rail:not(.peek) .brand,
-.sidebar.is-rail:not(.peek) .focus-launch > span,
-.sidebar.is-rail:not(.peek) .kbd-hint,
-.sidebar.is-rail:not(.peek) .sidebar-section-label {
+.sidebar.is-rail .label,
+.sidebar.is-rail .brand,
+.sidebar.is-rail .focus-launch > span,
+.sidebar.is-rail .kbd-hint,
+.sidebar.is-rail .sidebar-section-label {
   opacity: 0;
   transition-delay: 0s;
   transition-duration: 0.14s;
@@ -87,7 +91,7 @@
 .sidebar .nav-item {
   position: relative;
 }
-.sidebar.is-rail:not(.peek) .nav-item .count {
+.sidebar.is-rail .nav-item .count {
   position: absolute;
   left: 27px;
   top: 3px;
@@ -104,7 +108,7 @@
   background: var(--accent);
   box-shadow: 0 0 0 2px var(--canvas);
 }
-.sidebar.is-rail:not(.peek) .nav-item .count.alert {
+.sidebar.is-rail .nav-item .count.alert {
   background: var(--alert);
 }
 
@@ -123,56 +127,13 @@
 }
 
 /* Laufende Fokus-Sitzung im Streifen nicht abschneiden: nur der Ring */
-.sidebar.is-rail:not(.peek) .focus-pill {
+.sidebar.is-rail .focus-pill {
   padding: 4px;
   overflow: hidden;
 }
-.sidebar.is-rail:not(.peek) .focus-pill > :not(.focus-pill-main),
-.sidebar.is-rail:not(.peek) .focus-pill-main > :not(svg):not(.ring) {
+.sidebar.is-rail .focus-pill > :not(.focus-pill-main),
+.sidebar.is-rail .focus-pill-main > :not(svg):not(.ring) {
   opacity: 0;
-}
-
-/* Umschalter oben rechts */
-.sb-toggle {
-  margin-left: auto;
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  border: 0;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--ink-3);
-  cursor: pointer;
-  transition:
-    background 0.18s ease,
-    color 0.18s ease,
-    opacity 0.25s ease 0.1s,
-    transform 0.25s var(--ease-spring, ease);
-}
-.sb-toggle svg {
-  width: 17px;
-  height: 17px;
-}
-.sb-toggle:hover {
-  background: var(--hover);
-  color: var(--ink);
-}
-.sb-toggle:active {
-  transform: scale(0.9);
-}
-.sidebar.is-rail:not(.peek) .sb-toggle {
-  opacity: 0;
-  pointer-events: none;
-  transition-delay: 0s;
-}
-
-/* Auf schmalen Fenstern gibt es den Streifen schon automatisch */
-@media (max-width: 1020px) {
-  .sb-toggle {
-    display: none;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

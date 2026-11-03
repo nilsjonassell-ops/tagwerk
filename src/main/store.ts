@@ -5,7 +5,7 @@ import { app } from 'electron'
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { DEFAULT_SETTINGS, type AppData, type Settings } from '@shared/types'
-import { normalizeAppearance } from '@shared/appearance'
+import { normalizeAppearance, normalizeSidebarMode } from '@shared/appearance'
 import { log } from './log'
 
 const dir = () => {
@@ -89,7 +89,8 @@ function mergeSettings(raw: Partial<Settings>): Settings {
     focus: { ...d.focus, ...raw.focus },
     mailInsights: { ...d.mailInsights, ...raw.mailInsights },
     mailRules: Array.isArray(raw.mailRules) ? raw.mailRules : d.mailRules,
-    ...normalizeAppearance(raw)
+    ...normalizeAppearance(raw),
+    sidebarMode: normalizeSidebarMode(raw.sidebarMode)
   }
   // Neue Ansichten/Karten aus Updates ergänzen, ohne die Nutzerreihenfolge zu verlieren.
   if (!Array.isArray(s.gmailHiddenCategories)) s.gmailHiddenCategories = [...d.gmailHiddenCategories]

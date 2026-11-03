@@ -9,34 +9,7 @@
 }
 @media (max-width: 1020px) {
   :root {
-    --sidebar-w: 64px;
     --panel-w: 340px;
-  }
-  .nav-item {
-    justify-content: center;
-    padding: 0;
-  }
-  .nav-item .label,
-  .nav-item .count,
-  .nav-item .kbd-hint,
-  .sidebar-section-label,
-  .sidebar .project-link,
-  .source-status .label,
-  .brand {
-    display: none;
-  }
-  .nav-item .count.alert {
-    display: none;
-  }
-  .sidebar-top {
-    justify-content: center;
-    padding: 0;
-  }
-  .platform-darwin .sidebar-top {
-    padding: 0;
-  }
-  .source-status {
-    justify-content: center;
   }
   .dash-grid {
     grid-template-columns: 1fr;

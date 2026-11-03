@@ -1,4 +1,4 @@
-import type { AccentId, MotionMode, Settings, ThemeMode } from './types'
+import type { AccentId, MotionMode, Settings, SidebarMode, ThemeMode } from './types'
 
 export const ACCENTS: { id: AccentId; label: string }[] = [
   { id: 'indigo', label: 'Indigo' },
@@ -26,4 +26,9 @@ export function normalizeAppearance(s: Partial<Pick<Settings, 'theme' | 'accent'
     accent: ACCENTS.some((a) => a.id === s.accent) ? (s.accent as AccentId) : 'indigo',
     motion: MOTIONS.includes(s.motion as MotionMode) ? (s.motion as MotionMode) : 'system'
   }
+}
+
+/** Seitenleiste: Standard „automatisch“ (Streifen am Rand, fährt beim Überfahren aus) */
+export function normalizeSidebarMode(v: unknown): SidebarMode {
+  return v === 'pinned' ? 'pinned' : 'auto'
 }

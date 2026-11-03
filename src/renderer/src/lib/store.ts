@@ -58,6 +58,8 @@ interface State {
   view: ViewId
   selection: Selection
   sidebarHidden: boolean
+  /** Seitenleiste im Modus „automatisch“ gerade ausgefahren */
+  sidebarOpen: boolean
   assistantOpen: boolean
   paletteOpen: boolean
   dialog: DialogState
@@ -145,6 +147,7 @@ export const useStore = create<State>((set, get) => ({
   view: 'today',
   selection: {},
   sidebarHidden: false,
+  sidebarOpen: false,
   assistantOpen: false,
   paletteOpen: false,
   dialog: null,

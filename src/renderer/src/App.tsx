@@ -14,6 +14,7 @@ import { Sidebar } from '@/components/Sidebar'
 import { AssistantPanel } from '@/components/Assistant'
 import { CommandPalette } from '@/components/CommandPalette'
 import { applyAppearance } from '@/lib/appearance'
+import { sidebarEnter, sidebarLeave, sidebarReset } from '@/lib/sidebarHover'
 import { ConfirmHost, Toasts } from '@/components/Overlays'
 import { EventDialog, MailNoteDialog, ProjectDialog, TaskDialog } from '@/components/Editors'
 import { SplitDialog } from '@/components/Suggestions'
@@ -32,7 +33,8 @@ export function App() {
   const loadError = useStore((s) => s.loadError)
   const view = useStore((s) => s.view)
   const sidebarHidden = useStore((s) => s.sidebarHidden)
-  const sidebarCollapsed = useStore((s) => !!s.settings.sidebarCollapsed)
+  const sidebarAuto = useStore((s) => s.settings.sidebarMode !== 'pinned')
+  const sidebarOpen = useStore((s) => s.sidebarOpen)
   const assistantOpen = useStore((s) => s.assistantOpen)
   const paletteOpen = useStore((s) => s.paletteOpen)
   const dialog = useStore((s) => s.dialog)
@@ -218,7 +220,8 @@ export function App() {
 
   const platform = window.tagwerk.platform.platform
   return (
-    <div className={`app platform-${platform} ${sidebarHidden ? 'sidebar-hidden' : ''} ${sidebarCollapsed ? 'sb-collapsed' : ''} ${assistantOpen ? 'panel-open' : ''}`}>
+    <div className={`app platform-${platform} ${sidebarHidden ? 'sidebar-hidden' : ''} ${sidebarAuto ? 'sb-auto' : ''} ${sidebarAuto && !sidebarOpen ? 'sb-collapsed' : ''} ${assistantOpen ? 'panel-open' : ''}`}>
+      {sidebarAuto && <div className="sb-edge" aria-hidden="true" onMouseEnter={sidebarEnter} onMouseLeave={sidebarLeave} />}
       <Sidebar />
       <main className="main" aria-label="Inhalt">
         {view === 'today' && <TodayView />}
@@ -286,8 +289,9 @@ function runCommand(cmd: string) {
     case 'toggle-assistant':
       return st.setAssistant(!st.assistantOpen)
     case 'toggle-sidebar':
-      // Ein-/Ausklappen (schmaler Symbol-Streifen) statt komplett verstecken
-      return void st.updateSettings({ sidebarCollapsed: !st.settings.sidebarCollapsed })
+      // Automatisch (Streifen am Rand) ↔ dauerhaft ausgeklappt
+      sidebarReset()
+      return void st.updateSettings({ sidebarMode: st.settings.sidebarMode === 'pinned' ? 'auto' : 'pinned' })
     case 'focus-open':
     case 'focus-start':
       return useFocus.getState().show(true)

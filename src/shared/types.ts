@@ -481,6 +481,8 @@ export type AccentId = 'indigo' | 'petrol' | 'blue' | 'green' | 'amber' | 'rose'
 /** Animationen: Windows-Einstellung folgen oder immer reduziert */
 export type MotionMode = 'system' | 'reduced'
 
+export type SidebarMode = 'auto' | 'pinned'
+
 export type ViewId = 'today' | 'calendar' | 'inbox' | 'tasks' | 'notes' | 'projects'
 
 export type DashboardCardId = 'brief' | 'schedule' | 'tasks' | 'mail' | 'focus' | 'weather'
@@ -492,8 +494,10 @@ export interface Settings {
   accent: AccentId
   motion: MotionMode
   launchAtLogin: boolean
-  /** Seitenleiste als schmaler Symbol-Streifen */
+  /** veraltet (bis 1.8): Seitenleiste als Streifen – ersetzt durch sidebarMode */
   sidebarCollapsed?: boolean
+  /** Seitenleiste: 'auto' = schmaler Streifen am Rand, fährt beim Überfahren aus; 'pinned' = immer ausgeklappt */
+  sidebarMode: SidebarMode
   closeToTray: boolean
   quickNoteShortcut: string
   notifications: {
@@ -586,6 +590,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   accent: 'indigo',
   motion: 'system',
+  sidebarMode: 'auto',
   launchAtLogin: false,
   closeToTray: true,
   quickNoteShortcut: 'CommandOrControl+Shift+Space',

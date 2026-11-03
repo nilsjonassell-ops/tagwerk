@@ -19,6 +19,7 @@ export const SYNCED_SETTINGS: (keyof Settings)[] = [
   'accent',
   'motion',
   'sidebarCollapsed',
+  'sidebarMode',
   'notifications',
   'sidebar',
   'dashboardCards',

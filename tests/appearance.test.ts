@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { normalizeAppearance, ACCENTS } from '../src/shared/appearance.ts'
+import { normalizeAppearance, normalizeSidebarMode, ACCENTS } from '../src/shared/appearance.ts'
 import { SYNCED_SETTINGS } from '../src/shared/cloud.ts'
 
 test('unbekannte Akzent- und Bewegungswerte fallen auf die Standards zurück', () => {
@@ -22,4 +22,11 @@ test('sieben Akzente, Indigo zuerst', () => {
 test('Akzent und Bewegung werden zwischen PCs übertragen', () => {
   assert.ok(SYNCED_SETTINGS.includes('accent'))
   assert.ok(SYNCED_SETTINGS.includes('motion'))
+})
+
+test('Seitenleiste: Standard ist automatisch, unbekannte Werte ebenfalls', () => {
+  assert.equal(normalizeSidebarMode(undefined), 'auto')
+  assert.equal(normalizeSidebarMode('x'), 'auto')
+  assert.equal(normalizeSidebarMode('pinned'), 'pinned')
+  assert.ok(SYNCED_SETTINGS.includes('sidebarMode'))
 })

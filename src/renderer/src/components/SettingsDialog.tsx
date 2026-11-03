@@ -180,6 +180,9 @@ function Appearance() {
         <Segmented label="Animationen" value={s.motion} onChange={(motion) => set({ motion })} options={[{ id: 'system', label: 'Wie Windows' }, { id: 'reduced', label: 'Reduziert' }]} />
       </Row>
       <h3 style={{ marginTop: 28 }}>Seitenleiste</h3>
+      <Row label="Verhalten" hint={`„Automatisch“: schmaler Streifen am Rand, fährt beim Überfahren aus und wieder ein. Umschalten auch mit ${modKey()}+B.`}>
+        <Segmented label="Seitenleiste" value={s.sidebarMode} onChange={(sidebarMode) => set({ sidebarMode })} options={[{ id: 'auto', label: 'Automatisch' }, { id: 'pinned', label: 'Immer ausgeklappt' }]} />
+      </Row>
       <p>Welche Bereiche in der Navigation erscheinen. Ausgeblendete bleiben über die Suche ({modKey()}+K) erreichbar.</p>
       <OrderList
         items={s.sidebar}
