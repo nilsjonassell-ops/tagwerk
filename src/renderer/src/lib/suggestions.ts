@@ -2,8 +2,8 @@
 // ignorieren, zurückstellen und rückgängig machen. Angelegt wird nur nach Bestätigung.
 
 import { useMemo } from 'react'
-import type { CalEvent, MailRule, MailSuggestion, SuggestionState, Task } from '@shared/types'
-import { detectAll, findDuplicate, suggestionBucket, suggestionWhen } from '@shared/mail-insights'
+import type { CalEvent, MailRule, MailSuggestion, SuggestionOption, SuggestionState, Task } from '@shared/types'
+import { cleanSubject, detectAll, findDuplicate, suggestionBucket, suggestionWhen } from '@shared/mail-insights'
 import { confirm, uid, useStore } from './store'
 import { deleteEvent, newTask, saveEvent, saveTask } from './actions'
 
@@ -48,11 +48,37 @@ export function useSuggestions() {
   const notes = useStore((s) => s.data.notes)
   const cfg = useStore((s) => s.settings.mailInsights)
   const rules = useStore((s) => s.settings.mailRules)
+  const review = useStore((s) => s.data.reviewQueue)
   return useMemo(() => {
-    if (!cfg?.enabled) return { open: [], snoozed: [], done: [], ignored: [], all: [] as SuggestionItem[] }
+    // Aus oder pausiert: keine Mail wird ausgewertet
+    // Vor dem Einstieg (Vorschau) läuft noch keine Prüfung
+    if (!cfg?.enabled || cfg.paused || !cfg.introDone) return { open: [], snoozed: [], done: [], ignored: [], all: [] as SuggestionItem[] }
     const now = new Date()
     const projOf = new Map(emails.map((m) => [m.threadId, m.projectId]))
-    const raw = detectAll(emails, { now, sources: cfg.sources, kinds: cfg.kinds })
+    const raw = detectAll(emails, { now, sources: cfg.sources, kinds: cfg.kinds, exclude: cfg.excludeSenders })
+    // „Zur Bearbeitung“ vorgemerkte Unterhaltungen erscheinen als eigene Aufgabe
+    for (const [threadId, r] of Object.entries(review ?? {})) {
+      const msgs = emails.filter((m) => m.threadId === threadId)
+      const last = [...msgs].reverse().find((m) => m.folder !== 'sent') ?? msgs.at(-1)
+      if (!last) continue
+      raw.unshift({
+        id: `ms:review:${threadId}`,
+        kind: 'task',
+        manual: true,
+        threadId,
+        mailId: last.id,
+        source: last.source,
+        from: last.from,
+        subject: last.subject,
+        mailDate: r.at,
+        title: `Bearbeiten: ${cleanSubject(last.subject)}`,
+        uncertain: false,
+        basis: 'Von dir „zur Bearbeitung“ vorgemerkt.',
+        phrase: '',
+        context: last.body.replace(/\s+/g, ' ').slice(0, 220),
+        hasAttachments: !!last.hasAttachments
+      })
+    }
     const all: SuggestionItem[] = raw.map((s) => {
       const rule = ruleFor(rules, s)
       return {
@@ -94,7 +120,7 @@ export function useSuggestions() {
       done: all.filter((s) => s.state?.status === 'done').sort((a, b) => (b.state!.at > a.state!.at ? 1 : -1)),
       ignored: all.filter((s) => s.state?.status === 'ignored')
     }
-  }, [emails, states, events, tasks, notes, cfg, rules])
+  }, [emails, states, events, tasks, notes, cfg, rules, review])
 }
 
 function setState(id: string, st: SuggestionState | null) {
@@ -149,14 +175,19 @@ export function taskFromSuggestion(s: SuggestionItem): Task {
 }
 
 /** Übernehmen: öffnet den passenden Dialog vorausgefüllt – angelegt wird erst dort. */
-export function acceptSuggestion(s: SuggestionItem) {
+export function acceptSuggestion(s: SuggestionItem, option?: SuggestionOption) {
   if (s.change) return void applyChange(s)
+  // Widersprüchliche Angaben: erst entscheiden, dann übernehmen
+  if (s.conflict && !option) {
+    S().toast('Wochentag und Datum widersprechen sich – öffne den Vorschlag und wähle, was gemeint ist.')
+    return
+  }
   if (s.kind === 'event') {
     S().openDialog({
       kind: 'event',
       suggestionId: s.id,
       series: s.recurrence,
-      preset: { title: s.title, start: s.start, end: s.end, allDay: s.allDay, projectId: s.projectId, notes: sourceNote(s), mailRef: s.threadId }
+      preset: { title: s.title, start: option?.start ?? s.start, end: option?.end ?? s.end, allDay: s.allDay, projectId: s.projectId, notes: sourceNote(s), mailRef: s.threadId }
     })
   } else if (s.kind === 'note') {
     S().openDialog({ kind: 'mailnote', suggestionId: s.id, title: s.title, body: `${s.noteBody ?? s.context}\n\n${sourceNote(s)}`, threadId: s.threadId, projectId: s.projectId })
@@ -311,4 +342,46 @@ export function addRule(field: MailRule['field'], contains: string, projectId: s
   void st.updateSettings({ mailRules: next })
   const p = st.data.projects.find((x) => x.id === projectId)
   st.toast(`Regel gespeichert: ${field === 'from' ? 'Mails von' : 'Betreff mit'} „${contains}“ → ${p?.name ?? 'Projekt'}`)
+}
+
+/** „Für diese Mail nicht wieder vorschlagen“: alle Vorschläge dieser Mail ausblenden (ohne Regel für andere Mails) */
+export function ignoreMail(mailId: string, all: SuggestionItem[]) {
+  const ids = all.filter((x) => x.mailId === mailId && !x.state).map((x) => x.id)
+  if (!ids.length) return
+  S().mutate((d) => ({ ...d, suggestions: { ...(d.suggestions ?? {}), ...Object.fromEntries(ids.map((id) => [id, { status: 'ignored' as const, at: nowIso() }])) } }))
+  S().toast(`Diese Mail wird nicht mehr vorgeschlagen (${ids.length})`, {
+    undo: () =>
+      S().mutate((d) => {
+        const m = { ...(d.suggestions ?? {}) }
+        for (const id of ids) delete m[id]
+        return { ...d, suggestions: m }
+      })
+  })
+}
+
+/** Absender bewusst von der Prüfung ausschließen (nur nach Rückfrage) */
+export async function excludeSender(address: string) {
+  const a = address.trim().toLowerCase()
+  if (!a) return
+  const ok = await confirm({ title: 'Absender ausschließen?', body: `Mails von „${a}“ werden ab jetzt nicht mehr auf Termine, Fristen und Aufgaben geprüft. Das kannst du in den Einstellungen jederzeit rückgängig machen.`, confirmLabel: 'Ausschließen' })
+  if (!ok) return
+  const st = S()
+  const mi = st.settings.mailInsights
+  await st.updateSettings({ mailInsights: { ...mi, excludeSenders: [...new Set([...(mi.excludeSenders ?? []), a])] } })
+  st.toast(`„${a}“ wird nicht mehr geprüft`)
+}
+
+/** „Zur Bearbeitung“: Unterhaltung als Aufgabe in „Aus Mails übernehmen“ vormerken */
+export function toggleReview(threadId: string) {
+  const on = !!S().data.reviewQueue?.[threadId]
+  S().mutate((d) => {
+    const m = { ...(d.reviewQueue ?? {}) }
+    if (on) delete m[threadId]
+    else m[threadId] = { at: nowIso() }
+    // Erneut vormerken öffnet den Vorschlag wieder
+    const sg = { ...(d.suggestions ?? {}) }
+    if (!on) delete sg[`ms:review:${threadId}`]
+    return { ...d, reviewQueue: m, suggestions: sg }
+  })
+  S().toast(on ? 'Nicht mehr zur Bearbeitung vorgemerkt' : 'Zur Bearbeitung vorgemerkt – unter „Vorschläge“')
 }

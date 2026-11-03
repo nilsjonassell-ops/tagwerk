@@ -8,9 +8,9 @@
 import type { AppData, CloudCollection, CloudPatch, FollowUp, ReplyMark, Settings, SuggestionState } from './types'
 
 export const CLOUD_COLLECTIONS: CloudCollection[] = ['tasks', 'notes', 'projects', 'docs', 'events', 'focusLog']
-export type CloudGroup = CloudCollection | 'replyMarks' | 'suggestions' | 'followUps' | 'settings'
-export const CLOUD_GROUPS: CloudGroup[] = [...CLOUD_COLLECTIONS, 'replyMarks', 'suggestions', 'followUps', 'settings']
-const MAP_GROUPS = new Set<CloudGroup>(['replyMarks', 'suggestions', 'followUps', 'settings'])
+export type CloudGroup = CloudCollection | 'replyMarks' | 'suggestions' | 'followUps' | 'reviewQueue' | 'settings'
+export const CLOUD_GROUPS: CloudGroup[] = [...CLOUD_COLLECTIONS, 'replyMarks', 'suggestions', 'followUps', 'reviewQueue', 'settings']
+const MAP_GROUPS = new Set<CloudGroup>(['replyMarks', 'suggestions', 'followUps', 'reviewQueue', 'settings'])
 
 /** Einstellungen, die auf allen PCs gleich sein sollen (Gerätespezifisches wie Autostart bleibt lokal). */
 export const SYNCED_SETTINGS: (keyof Settings)[] = [
@@ -76,6 +76,7 @@ export function extractRecords(data: AppData, settings: Settings): Record<CloudG
     replyMarks: { ...(data.replyMarks ?? {}) },
     suggestions: { ...(data.suggestions ?? {}) },
     followUps: { ...(data.followUps ?? {}) },
+    reviewQueue: { ...(data.reviewQueue ?? {}) },
     settings: s
   }
 }
@@ -94,7 +95,11 @@ export function hashValue(v: unknown): string {
 }
 
 /** Lokale Änderungen seit dem letzten Stand mit Zeitstempel versehen. Gibt true zurück, wenn sich etwas geändert hat. */
-export function trackChanges(book: SyncBook, cur: Record<CloudGroup, Record<string, unknown>>, now: number, defaults?: Partial<Settings>): boolean {
+/**
+ * baseline: erster Abgleich dieses PCs (neu verbunden oder nach dem Trennen). Vorhandenes gilt dann als „alt“ –
+ * sonst würde ein wieder verbundener PC neuere Änderungen der anderen PCs überschreiben.
+ */
+export function trackChanges(book: SyncBook, cur: Record<CloudGroup, Record<string, unknown>>, now: number, defaults?: Partial<Settings>, baseline = false): boolean {
   let changed = false
   for (const g of CLOUD_GROUPS) {
     const snap = (book.snap[g] ??= {})
@@ -107,7 +112,7 @@ export function trackChanges(book: SyncBook, cur: Record<CloudGroup, Record<stri
         // Eine noch nie angefasste Standard-Einstellung (frisch installierter PC) ist „uralt“ –
         // sonst würde sie die Einstellungen der anderen PCs überschreiben.
         const untouchedDefault = !meta[id] && g === 'settings' && !!defaults && h === hashValue(defaults[id as keyof Settings])
-        meta[id] = { t: untouchedDefault ? 1 : Math.max(now, (meta[id]?.t ?? 0) + 1) }
+        meta[id] = { t: untouchedDefault ? 1 : baseline && !meta[id] ? 2 : Math.max(now, (meta[id]?.t ?? 0) + 1) }
         changed = true
       }
     }
@@ -128,13 +133,41 @@ export interface MergeResult {
   changed: boolean
 }
 
+const str = (v: unknown) => typeof v === 'string'
+/** Pflichtfelder je Sammlung – beschädigte oder fremde Einträge werden verworfen statt die App zu stören */
+const REQUIRED: Record<CloudCollection, string[]> = {
+  tasks: ['title', 'status', 'priority', 'createdAt'],
+  events: ['title', 'start', 'end'],
+  notes: ['title', 'body', 'createdAt'],
+  projects: ['name'],
+  docs: ['title'],
+  focusLog: ['start', 'end']
+}
+
+/** Ist der Wert eines anderen Geräts plausibel? */
+export function validRecord(g: CloudGroup, id: string, v: unknown, defaults?: Partial<Settings>): boolean {
+  if (v === null || typeof v !== 'object') return g === 'settings' ? !defaults || sameType(v, defaults[id as keyof Settings]) : false
+  if (g === 'settings') return !defaults || sameType(v, defaults[id as keyof Settings])
+  if (MAP_GROUPS.has(g)) return !Array.isArray(v)
+  const o = v as Record<string, unknown>
+  if (o.id !== id) return false
+  return REQUIRED[g as CloudCollection].every((k) => str(o[k])) && (g !== 'events' || !Number.isNaN(new Date(o.start as string).getTime()))
+}
+function sameType(a: unknown, b: unknown): boolean {
+  if (b === undefined) return a === undefined || ['string', 'number', 'boolean'].includes(typeof a)
+  if (Array.isArray(b)) return Array.isArray(a)
+  if (b === null) return a === null
+  return typeof a === typeof b && Array.isArray(a) === Array.isArray(b)
+}
+
 /** Stände anderer Geräte einarbeiten: je Eintrag gewinnt die jüngere Änderung. */
-export function mergeRemote(book: SyncBook, docs: DeviceDoc[]): MergeResult {
+export function mergeRemote(book: SyncBook, docs: DeviceDoc[], defaults?: Partial<Settings>): MergeResult {
   const patch: CloudPatch = { upsert: {}, remove: {} }
   const settings: Partial<Settings> = {}
   const marks = { set: {} as Record<string, ReplyMark>, remove: [] as string[] }
   const sugg = { set: {} as Record<string, SuggestionState>, remove: [] as string[] }
   const fups = { set: {} as Record<string, FollowUp>, remove: [] as string[] }
+  const rq = { set: {} as Record<string, { at: string }>, remove: [] as string[] }
   let changed = false
   let settingsChanged = false
   for (const doc of docs) {
@@ -144,7 +177,8 @@ export function mergeRemote(book: SyncBook, docs: DeviceDoc[]): MergeResult {
       const snap = (book.snap[g] ??= {})
       const meta = (book.meta[g] ??= {})
       for (const [id, r] of Object.entries(recs)) {
-        if (!r || typeof r.t !== 'number') continue
+        if (!r || typeof r.t !== 'number' || !Number.isFinite(r.t) || r.t > Date.now() + 7 * 86400_000) continue
+        if (!r.d && !validRecord(g, id, r.v, defaults)) continue
         if (!MAP_GROUPS.has(g) && isDemo(id)) continue
         if (g === 'settings' && !SYNCED_SETTINGS.includes(id as keyof Settings)) continue
         const local = meta[id]
@@ -158,6 +192,7 @@ export function mergeRemote(book: SyncBook, docs: DeviceDoc[]): MergeResult {
           if (g === 'replyMarks') marks.remove.push(id)
           else if (g === 'suggestions') sugg.remove.push(id)
           else if (g === 'followUps') fups.remove.push(id)
+          else if (g === 'reviewQueue') rq.remove.push(id)
           else (patch.remove[g] ??= []).push(id)
           changed = true
         } else {
@@ -171,6 +206,7 @@ export function mergeRemote(book: SyncBook, docs: DeviceDoc[]): MergeResult {
           } else if (g === 'replyMarks') marks.set[id] = r.v as ReplyMark
           else if (g === 'suggestions') sugg.set[id] = r.v as SuggestionState
           else if (g === 'followUps') fups.set[id] = r.v as FollowUp
+          else if (g === 'reviewQueue') rq.set[id] = r.v as { at: string }
           else {
             const list = (patch.upsert[g] ??= [])
             const i = list.findIndex((x) => x.id === id)
@@ -188,6 +224,7 @@ export function mergeRemote(book: SyncBook, docs: DeviceDoc[]): MergeResult {
   if (Object.keys(marks.set).length || marks.remove.length) patch.replyMarks = marks
   if (Object.keys(sugg.set).length || sugg.remove.length) patch.suggestions = sugg
   if (Object.keys(fups.set).length || fups.remove.length) patch.followUps = fups
+  if (Object.keys(rq.set).length || rq.remove.length) patch.reviewQueue = rq
   return { patch, settings: settingsChanged ? settings : null, changed: changed || settingsChanged }
 }
 
@@ -242,6 +279,12 @@ export function applyCloudPatch(d: AppData, p: CloudPatch): AppData {
     for (const k of p.followUps.remove) delete m[k]
     Object.assign(m, p.followUps.set)
     next = { ...next, followUps: m }
+  }
+  if (p.reviewQueue) {
+    const m = { ...(d.reviewQueue ?? {}) }
+    for (const k of p.reviewQueue.remove) delete m[k]
+    Object.assign(m, p.reviewQueue.set)
+    next = { ...next, reviewQueue: m }
   }
   return next
 }

@@ -4,8 +4,11 @@ import { AlarmClock, ArrowRight, CalendarCheck, CalendarPlus, Check, CheckSquare
 import type { SuggestionKind } from '@shared/types'
 import { useStore } from '@/lib/store'
 import { SOURCE_LABEL } from '@/lib/accounts'
-import { acceptMany, acceptSuggestion, addRule, canBulk, canMerge, createSplit, ignoreSuggestion, mergeSuggestions, reopenSuggestion, snoozeOptions, snoozeSuggestion, splitParts, undoAccepted, useSuggestions, type SuggestionItem } from '@/lib/suggestions'
-import { Dialog } from './ui'
+import { acceptMany, acceptSuggestion, addRule, excludeSender, ignoreMail, canBulk, canMerge, createSplit, ignoreSuggestion, mergeSuggestions, reopenSuggestion, snoozeOptions, snoozeSuggestion, splitParts, undoAccepted, useSuggestions, type SuggestionItem } from '@/lib/suggestions'
+import { Dialog, Switch } from './ui'
+import { useAccounts } from '@/lib/accounts'
+import { detectAll } from '@shared/mail-insights'
+import { Ban, EyeOff, Info, Pause } from 'lucide-react'
 import { Empty } from './ui'
 
 type KindFilter = 'all' | SuggestionKind | 'uncertain'
@@ -15,7 +18,7 @@ const KIND_FILTERS: { id: KindFilter; label: string }[] = [
   { id: 'deadline', label: 'Fristen' },
   { id: 'task', label: 'Aufgaben' },
   { id: 'note', label: 'Notizen' },
-  { id: 'uncertain', label: 'Unsicher' }
+  { id: 'uncertain', label: 'Wartet auf Prüfung' }
 ]
 const BUCKETS: { id: SuggestionItem['bucket']; label: string }[] = [
   { id: 'today', label: 'Heute prüfen' },
@@ -47,7 +50,14 @@ function KindIcon({ kind }: { kind: SuggestionKind }) {
 
 /** Komplette Ansicht im Posteingang */
 export function SuggestionsPane() {
-  const { open, snoozed, done, ignored } = useSuggestions()
+  const cfg = useStore((s) => s.settings.mailInsights)
+  if (!cfg.introDone) return <SuggestionsIntro />
+  return <SuggestionsList />
+}
+
+function SuggestionsList() {
+  const { open, snoozed, done, ignored, all } = useSuggestions()
+  const cfg = useStore((s) => s.settings.mailInsights)
   const go = useStore((s) => s.go)
   const openDialog = useStore((s) => s.openDialog)
   const [kind, setKind] = useState<KindFilter>('all')
@@ -97,7 +107,7 @@ export function SuggestionsPane() {
       if (e.key === 'j' || e.key === 'ArrowDown') move(1)
       else if (e.key === 'k' || e.key === 'ArrowUp') move(-1)
       else if (!s) return
-      else if (e.key === 'Enter') acceptSuggestion(s)
+      else if (e.key === 'Enter') (s.conflict ? setExpanded(s.id) : acceptSuggestion(s))
       else if (e.key === 'i' || e.key === 'Delete') {
         ignoreSuggestion(s)
         move(1)
@@ -122,9 +132,13 @@ export function SuggestionsPane() {
       <div className="sg-head">
         <div>
           <h2>Aus Mails übernehmen</h2>
-          <p className="hint">Erkannt in deinen E-Mails – angelegt wird erst, wenn du es bestätigst.</p>
+          <CheckStatus />
         </div>
         <div className="row" style={{ gap: 6 }}>
+          <label className="row sg-pause" title="Prüfung anhalten – Vorhandenes bleibt erhalten">
+            <span className="hint">Prüfung</span>
+            <Switch label="Prüfung an" checked={!cfg.paused} onChange={(v) => void useStore.getState().updateSettings({ mailInsights: { ...cfg, paused: !v } })} />
+          </label>
           {mergeable.length > 1 && (
             <button className={`btn small ${picking ? 'primary' : 'ghost'}`} onClick={() => (setPicking(!picking), setPicked(new Set()))}>
               <ListChecks /> {picking ? 'Auswahl beenden' : 'Mehrere übernehmen'}
@@ -201,6 +215,7 @@ export function SuggestionsPane() {
                 <SuggestionCard
                   key={s.id}
                   s={s}
+                  all={all}
                   selected={s.id === current?.id}
                   expanded={expanded === s.id}
                   onSelect={() => setSel(s.id)}
@@ -279,6 +294,7 @@ function createdLabel(s: SuggestionItem): string {
 
 function SuggestionCard(p: {
   s: SuggestionItem
+  all: SuggestionItem[]
   selected: boolean
   expanded: boolean
   onSelect: () => void
@@ -345,11 +361,19 @@ function SuggestionCard(p: {
               <Tag /> {projectLabel(s.projectId)}
             </span>
           )}
-          {s.uncertain && (
+          {s.conflict ? (
+            <span className="tag alert" title={s.reason}>
+              widersprüchlich
+            </span>
+          ) : s.uncertain ? (
             <span className="tag attention" title={s.reason}>
               unsicher
             </span>
-          )}
+          ) : !s.change && !s.manual ? (
+            <span className="sg-ok" title={s.basis}>
+              <Check /> eindeutig
+            </span>
+          ) : null}
           {s.duplicate && (
             <span className="tag" title={`Ähnlich: ${s.duplicate.title}`}>
               <Copy /> schon vorhanden?
@@ -369,9 +393,26 @@ function SuggestionCard(p: {
         </div>
         {p.expanded && (
           <div className="sg-details" onClick={(e) => e.stopPropagation()}>
-            {s.reason && (
+            <div className="sg-basis">
+              <Info /> {s.basis}
+            </div>
+            {s.reason && !s.conflict && (
               <div className="sg-reason">
                 <Clock /> {s.reason} – bitte vor dem Übernehmen prüfen.
+              </div>
+            )}
+            {s.conflict && (
+              <div className="sg-conflict">
+                <div className="sg-reason">
+                  <Clock /> {s.conflict.label}. Was ist gemeint?
+                </div>
+                <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                  {s.conflict.options.map((o) => (
+                    <button key={o.label} className="btn small" onClick={() => acceptSuggestion(s, o)}>
+                      <CalendarPlus /> {o.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
             {s.kind === 'note' && s.noteBody ? <pre className="sg-note selectable">{s.noteBody}</pre> : <blockquote className="selectable">„{s.context}“</blockquote>}
@@ -390,13 +431,27 @@ function SuggestionCard(p: {
                 </button>
               )}
               <RuleQuick s={s} />
+              {!s.manual && (
+                <button className="link" onClick={() => ignoreMail(s.mailId, p.all)} title="Alle Vorschläge aus dieser einen Mail ausblenden – andere Mails sind nicht betroffen">
+                  <EyeOff /> Für diese Mail nicht wieder vorschlagen
+                </button>
+              )}
+              {s.from.email && (
+                <button className="link" onClick={() => void excludeSender(s.from.email)} title="Mails dieses Absenders nicht mehr prüfen (nach Rückfrage)">
+                  <Ban /> Absender ausschließen …
+                </button>
+              )}
             </div>
           </div>
         )}
       </div>
       <div className="sg-actions" onClick={(e) => e.stopPropagation()}>
-        <button className="btn small primary" onClick={() => acceptSuggestion(s)} title="Prüfen und übernehmen (Enter)">
-          {s.change ? <RefreshCw /> : s.kind === 'event' ? <CalendarPlus /> : s.kind === 'note' ? <StickyNote /> : <CheckSquare />} {s.change ? 'Aktualisieren' : 'Übernehmen'}
+        <button
+          className="btn small primary"
+          onClick={() => (s.conflict ? !p.expanded && p.onToggle() : acceptSuggestion(s))}
+          title={s.conflict ? 'Erst entscheiden, welches Datum gemeint ist' : 'Prüfen und übernehmen (Enter)'}
+        >
+          {s.change ? <RefreshCw /> : s.kind === 'event' ? <CalendarPlus /> : s.kind === 'note' ? <StickyNote /> : <CheckSquare />} {s.change ? 'Aktualisieren' : s.conflict ? 'Entscheiden' : 'Übernehmen'}
         </button>
         <div className="sg-more">
           <button className="btn ghost small icon-btn" onClick={() => p.setSnoozeOpen(!p.snoozeOpen)} title="Später (L)" aria-label="Später" aria-expanded={p.snoozeOpen}>
@@ -476,7 +531,17 @@ function MiniRow({ s, note, action }: { s: SuggestionItem; note?: string; action
 /** Kompakte Vorschläge zu einer geöffneten Mail (ersetzt die frühere reine Terminerkennung) */
 export function ThreadSuggestions({ threadId }: { threadId: string }) {
   const { open, done } = useSuggestions()
-  const items = open.filter((s) => s.threadId === threadId)
+  const cfg = useStore((st) => st.settings.mailInsights)
+  const emails = useStore((st) => st.data.emails)
+  const states = useStore((st) => st.data.suggestions)
+  // Vor dem Einstieg in die Vorschläge: wie bisher nur erkannte Termine dieser Mail anbieten (seit 1.6.0 vorhanden)
+  const early = useMemo<SuggestionItem[]>(() => {
+    if (cfg.introDone || !cfg.enabled || cfg.paused) return []
+    return detectAll(emails.filter((m) => m.threadId === threadId), { kinds: ['event'], exclude: cfg.excludeSenders })
+      .filter((s) => !states?.[s.id])
+      .map((s) => ({ ...s, bucket: 'today' as const, duplicate: null }))
+  }, [cfg, emails, states, threadId])
+  const items = cfg.introDone ? open.filter((s) => s.threadId === threadId) : early
   const finished = done.filter((s) => s.threadId === threadId)
   if (!items.length && !finished.length) return null
   return (
@@ -613,5 +678,96 @@ export function SplitDialog({ suggestionId }: { suggestionId: string }) {
         </button>
       </div>
     </Dialog>
+  )
+}
+
+/** „Prüft Gmail, Outlook · zuletzt 11:53“ bzw. pausiert */
+function CheckStatus() {
+  const cfg = useStore((s) => s.settings.mailInsights)
+  const google = useStore((s) => s.google)
+  const gSync = useStore((s) => s.googleSync)
+  const ms = useAccounts((s) => s.ms)
+  const oSync = useAccounts((s) => s.outlookSync)
+  const demo = useStore((s) => s.data.sources.demo)
+  if (cfg.paused)
+    return (
+      <p className="hint row" style={{ gap: 6 }}>
+        <Pause size={13} /> Pausiert – es werden keine Mails ausgewertet.
+      </p>
+    )
+  const boxes = [google.connected && google.caps.gmailRead && (!cfg.sources.length || cfg.sources.includes('google')) && 'Gmail', ms.connected && ms.caps.mail && (!cfg.sources.length || cfg.sources.includes('outlook')) && 'Outlook', demo && (!cfg.sources.length || cfg.sources.includes('demo')) && 'Beispiel-Mails'].filter(Boolean)
+  const last = Math.max(gSync.lastSync ? new Date(gSync.lastSync).getTime() : 0, oSync.lastSync ? new Date(oSync.lastSync).getTime() : 0)
+  return (
+    <p className="hint">
+      {boxes.length ? `Prüft ${boxes.join(', ')}` : 'Kein Postfach verbunden'}
+      {last ? ` · zuletzt geprüft ${new Date(last).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}` : ''} · angelegt wird erst, wenn du bestätigst.
+    </p>
+  )
+}
+
+/** Erstes Aktivieren: mit wenigen Arten beginnen und vorab sehen, was erkannt würde */
+function SuggestionsIntro() {
+  const cfg = useStore((s) => s.settings.mailInsights)
+  const emails = useStore((s) => s.data.emails)
+  const [kinds, setKinds] = useState<SuggestionKind[]>(['event', 'deadline'])
+  const preview = useMemo(() => detectAll(emails, { kinds, sources: cfg.sources, exclude: cfg.excludeSenders }).slice(0, 5), [emails, kinds, cfg.sources, cfg.excludeSenders])
+  const toggleKind = (k: SuggestionKind, on: boolean) => setKinds(on ? [...new Set([...kinds, k])] : kinds.filter((x) => x !== k))
+  const start = () => void useStore.getState().updateSettings({ mailInsights: { ...cfg, kinds, introDone: true, paused: false } })
+  const names: [SuggestionKind, string, string][] = [
+    ['event', 'Termine', '„Treffen am 12.11. um 17 Uhr“'],
+    ['deadline', 'Fristen', '„bis spätestens Mittwoch“'],
+    ['task', 'Aufgaben', '„Könntest du … schicken?“'],
+    ['note', 'Infos für Notizen', 'Buchungsnummer, Raum, Link']
+  ]
+  return (
+    <section className="suggest-pane sg-intro" aria-label="Vorschläge aus Mails einrichten">
+      <div className="sg-head">
+        <div>
+          <h2>Aus Mails übernehmen</h2>
+          <p className="hint">Tagwerk liest deine Mails lokal auf diesem PC und schlägt Termine, Fristen, Aufgaben und Infos vor – ohne KI, ohne Server. Angelegt wird nur, was du bestätigst.</p>
+        </div>
+      </div>
+      <div className="sg-scroll">
+        <div className="sg-intro-kinds">
+          <b>Womit möchtest du beginnen?</b>
+          <span className="hint">Du kannst später jederzeit weitere Arten einschalten.</span>
+          <div className="sg-intro-grid">
+            {names.map(([k, label, ex]) => (
+              <label key={k} className={`sg-intro-kind ${kinds.includes(k) ? 'on' : ''}`}>
+                <input type="checkbox" className="box-check" checked={kinds.includes(k)} onChange={(e) => toggleKind(k, e.target.checked)} />
+                <KindIcon kind={k} />
+                <span>
+                  <b>{label}</b>
+                  <small>{ex}</small>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="sg-group-head">Vorschau aus deinen Mails {preview.length ? <span className="count">{preview.length}</span> : null}</div>
+        {preview.length ? (
+          preview.map((s) => (
+            <div key={s.id} className="sg-mini sg-preview">
+              <KindIcon kind={s.kind} />
+              <span className="sg-mini-text">
+                <b>{s.title}</b>
+                <span className="hint">
+                  {whenLabel({ ...s, bucket: 'later', duplicate: null } as SuggestionItem) ?? KIND_LABEL[s.kind]} · {s.from.name || s.from.email}
+                  {s.uncertain ? ' · unsicher' : ''}
+                </span>
+              </span>
+            </div>
+          ))
+        ) : (
+          <p className="hint" style={{ padding: '0 8px' }}>In den Mails der letzten 30 Tage wurde dafür noch nichts gefunden.</p>
+        )}
+        <div className="row" style={{ gap: 10, margin: '16px 8px' }}>
+          <button className="btn primary" onClick={start} disabled={!kinds.length}>
+            <Check /> Prüfung starten
+          </button>
+          <span className="hint">Konten, Arten und ausgeschlossene Absender änderst du unter Einstellungen → Allgemein.</span>
+        </div>
+      </div>
+    </section>
   )
 }

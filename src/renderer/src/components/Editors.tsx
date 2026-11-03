@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Trash2, AlertTriangle } from 'lucide-react'
-import { eventsOnDay, findConflicts, ymd } from '@shared/analysis'
+import { eventsOnDay, findConflicts, planTasks, ymd } from '@shared/analysis'
 import type { CalEvent, Person, Priority, Project, ProjectStatus, Recurrence, Task, TaskStatus } from '@shared/types'
 import { uid, useStore } from '@/lib/store'
 import { addTask, deleteEvent, deleteTask, newTask, saveEvent, saveTask } from '@/lib/actions'
@@ -28,6 +28,14 @@ export function TaskDialog({ id, preset, suggestionId, mergeIds }: { id?: string
   const prepPossible = fromMail && daysLeft >= 3
   const [prep, setPrep] = useState(() => fromMail && preset?.priority === 'high')
   const [prepDays, setPrepDays] = useState(2)
+  // Freier Kalenderblock bis zur Fälligkeit – nur ein Vorschlag, reserviert wird erst mit Häkchen
+  const slot = useMemo(() => {
+    if (!fromMail || !t.due) return null
+    const days = Math.max(1, Math.min(10, daysLeft + 1))
+    return planTasks([t], data.events, new Date(), { workHours: useStore.getState().settings.workHours, bufferMinutes: useStore.getState().settings.transitionBufferMinutes, days, limit: 1 })[0] ?? null
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromMail, t.due, t.priority, data.events])
+  const [reserve, setReserve] = useState(false)
 
   const submit = () => {
     setTouched(true)
@@ -37,6 +45,8 @@ export function TaskDialog({ id, preset, suggestionId, mergeIds }: { id?: string
       saveTask(clean)
       useStore.getState().toast('Aufgabe gespeichert')
     } else {
+      const createdTasks: string[] = [clean.id]
+      const createdEvents: string[] = []
       addTask(clean, !fromMail)
       if (suggestionId) markCreated(suggestionId, 'task', clean.id)
       for (const m of mergeIds ?? []) markCreated(m, 'task', clean.id)
@@ -44,12 +54,31 @@ export function TaskDialog({ id, preset, suggestionId, mergeIds }: { id?: string
       if (prepPossible && prep && clean.due) {
         const d = new Date(`${clean.due}T12:00:00`)
         d.setDate(d.getDate() - Math.min(prepDays, daysLeft - 1))
-        addTask(newTask({ title: `Vorbereiten: ${clean.title}`, due: ymd(d), priority: 'medium', projectId: clean.projectId, origin: clean.origin, notes: `Vorlauf für die Frist am ${new Date(`${clean.due}T12:00:00`).toLocaleDateString('de-DE')}.` }), false)
+        const prepTask = newTask({ title: `Vorbereiten: ${clean.title}`, due: ymd(d), priority: 'medium', projectId: clean.projectId, origin: clean.origin, notes: `Vorlauf für die Frist am ${new Date(`${clean.due}T12:00:00`).toLocaleDateString('de-DE')}.` })
+        addTask(prepTask, false)
+        createdTasks.push(prepTask.id)
         extra = ' + Vorbereitung'
+      }
+      if (reserve && slot && !slot.late) {
+        const st = useStore.getState()
+        const block: CalEvent = { id: uid('e'), title: clean.title, start: slot.start.toISOString(), end: slot.end.toISOString(), attendees: [], taskId: clean.id, projectId: clean.projectId, mailRef: clean.origin?.kind === 'email' ? clean.origin.refId : undefined, source: 'local' }
+        st.mutate((d) => ({ ...d, events: [...d.events, block] }))
+        createdEvents.push(block.id)
+        extra += ' + Zeitblock'
       }
       if (fromMail) {
         const st = useStore.getState()
-        st.toast(`Aufgabe „${clean.title.slice(0, 40)}“${extra} angelegt`, { action: clean.due ? { label: 'Einplanen', run: () => st.openDialog({ kind: 'plan' }) } : undefined })
+        const sIds = [suggestionId, ...(mergeIds ?? [])].filter(Boolean) as string[]
+        st.toast(`Aufgabe „${clean.title.slice(0, 40)}“${extra} angelegt`, {
+          action: clean.due && !createdEvents.length ? { label: 'Einplanen', run: () => st.openDialog({ kind: 'plan' }) } : undefined,
+          // Rückgängig: genau das Angelegte entfernen und den Vorschlag wieder öffnen
+          undo: () =>
+            st.mutate((d) => {
+              const sg = { ...(d.suggestions ?? {}) }
+              for (const id of sIds) delete sg[id]
+              return { ...d, tasks: d.tasks.filter((x) => !createdTasks.includes(x.id)), events: d.events.filter((e) => !createdEvents.includes(e.id)), suggestions: sg }
+            })
+        })
       }
     }
     close()
@@ -159,6 +188,14 @@ export function TaskDialog({ id, preset, suggestionId, mergeIds }: { id?: string
             <span className="hint">Danach kannst du beides in freie Zeit einplanen.</span>
           </div>
         )}
+        {slot && !slot.late && (
+          <label className="prep-row">
+            <input type="checkbox" className="box-check" checked={reserve} onChange={(e) => setReserve(e.target.checked)} />
+            <span>
+              Freier Block: <b>{slot.start.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' })}, {fTime.format(slot.start)}–{fTime.format(slot.end)} Uhr</b> im Kalender reservieren
+            </span>
+          </label>
+        )}
         {mergeIds && mergeIds.length > 1 && <div className="hint">Fasst {mergeIds.length} Vorschläge zu einer Aufgabe zusammen – Details stehen in den Notizen.</div>}
         {t.origin?.kind === 'email' ? <MailLink threadId={t.origin.refId} /> : t.origin && <div className="hint">Herkunft: {t.origin.label}</div>}
         <button type="submit" hidden />
@@ -244,14 +281,30 @@ export function EventDialog({ id, preset, suggestionId, series }: { id?: string;
   }, [data.events, start, end, location, allDay])
 
   const [wholeSeries, setWholeSeries] = useState(false)
+  // Optional: Notiz mit den wichtigen Maildetails zum Termin
+  const [withNote, setWithNote] = useState(false)
   const seriesList = useMemo(() => (series && !existing ? seriesStarts(new Date(start), series) : []), [series, existing, start])
   const submit = async () => {
     setTouched(true)
     if (invalidTitle) return
     if (!existing && target !== settings.lastEventTarget) void useStore.getState().updateSettings({ lastEventTarget: target })
     const many = wholeSeries && seriesList.length > 1
-    const ok = await saveEvent(draft, !existing, { target: existing ? undefined : target, notify, quiet: many, onCreated: (newId) => suggestionId && markCreated(suggestionId, 'event', newId) })
+    let createdId = ''
+    const ok = await saveEvent(draft, !existing, {
+      target: existing ? undefined : target,
+      notify,
+      quiet: many,
+      onCreated: (newId) => {
+        createdId = newId
+        if (suggestionId) markCreated(suggestionId, 'event', newId)
+      }
+    })
     if (!ok) return
+    if (withNote && createdId) {
+      const now = new Date().toISOString()
+      const st = useStore.getState()
+      st.mutate((d) => ({ ...d, notes: [{ id: uid('n'), title: `Zum Termin: ${draft.title}`, body: draft.notes ?? '', kind: 'note', eventId: createdId, projectId: draft.projectId, mailRef: draft.mailRef, createdAt: now, updatedAt: now }, ...d.notes] }))
+    }
     if (many) {
       const dur = new Date(draft.end).getTime() - new Date(draft.start).getTime()
       let n = 1
@@ -443,6 +496,11 @@ export function EventDialog({ id, preset, suggestionId, series }: { id?: string;
               </label>
             </div>
           </div>
+        )}
+        {!existing && draft.mailRef && (
+          <label className="row" style={{ gap: 8 }}>
+            <input type="checkbox" className="box-check" checked={withNote} onChange={(e) => setWithNote(e.target.checked)} /> Notiz mit den Maildetails zum Termin anlegen
+          </label>
         )}
         {draft.mailRef && <MailLink threadId={draft.mailRef} />}
         <button type="submit" hidden />

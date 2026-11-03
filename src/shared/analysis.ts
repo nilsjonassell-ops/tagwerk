@@ -509,7 +509,8 @@ export function planTasks(tasks: Task[], events: CalEvent[], now: Date, opts: Pl
     let placed: PlanSlot | null = null
     for (const day of days) {
       const onDay = eventsOnDay(busy, day)
-      const from = ymd(day) === ymd(now) ? now : undefined
+      // Heute: ab der nächsten Viertelstunde (15:55 → 16:00), nicht ab der krummen Minute
+      const from = ymd(day) === ymd(now) ? new Date(Math.ceil(now.getTime() / (15 * MIN)) * 15 * MIN) : undefined
       const slot = freeBlocks(onDay, day, opts.workHours, minutes, from)[0]
       if (slot) {
         const start = slot.start

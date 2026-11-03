@@ -467,13 +467,28 @@ function addExternalNote(text: string) {
 
 // ---------- IPC ----------
 
+/** Nur Aufrufe aus Tagwerks eigenen Fenstern (lokale Dateien bzw. Entwicklungsserver) */
+function trustedSender(e: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): boolean {
+  const url = e.senderFrame?.url ?? ''
+  return url.startsWith('file://') || (!!devUrl && url.startsWith(devUrl))
+}
+const handle = (channel: string, fn: (e: Electron.IpcMainInvokeEvent, ...args: any[]) => unknown) => // eslint-disable-line @typescript-eslint/no-explicit-any
+  ipcMain.handle(channel, (e, ...args) => {
+    if (!trustedSender(e)) throw new Error('Nicht erlaubt')
+    return fn(e, ...args)
+  })
+const on = (channel: string, fn: (e: Electron.IpcMainEvent, ...args: any[]) => void) => // eslint-disable-line @typescript-eslint/no-explicit-any
+  ipcMain.on(channel, (e, ...args) => {
+    if (trustedSender(e)) fn(e, ...args)
+  })
+
 function registerIpc() {
-  ipcMain.handle('data:load', () => store.loadData())
-  ipcMain.handle('data:save', (_e, data: AppData) => {
+  handle('data:load', () => store.loadData())
+  handle('data:save', (_e, data: AppData) => {
     store.saveData(data)
     buildTrayMenu()
   })
-  ipcMain.handle('data:export', async () => {
+  handle('data:export', async () => {
     const win = BrowserWindow.getFocusedWindow() ?? mainWindow
     const res = await dialog.showSaveDialog(win!, {
       title: 'Daten exportieren',
@@ -484,15 +499,15 @@ function registerIpc() {
     writeFileSync(res.filePath, JSON.stringify(store.loadData(), null, 2), 'utf8')
     return { ok: true, path: res.filePath }
   })
-  ipcMain.handle('data:wipe', async () => {
+  handle('data:wipe', async () => {
     await google.disconnect().catch(() => {})
     google.wipeGoogle()
     store.wipe()
     secrets.wipeAll()
   })
 
-  ipcMain.handle('settings:get', () => store.getSettings())
-  ipcMain.handle('settings:set', (_e, patch: Partial<Settings>) => {
+  handle('settings:get', () => store.getSettings())
+  handle('settings:set', (_e, patch: Partial<Settings>) => {
     const prev = store.getSettings()
     const next = store.setSettings(patch)
     if (patch.theme) nativeTheme.themeSource = next.theme
@@ -507,8 +522,8 @@ function registerIpc() {
     return next
   })
 
-  ipcMain.handle('claude:status', async () => ({ configured: secrets.hasKey(), encrypted: await secrets.encryptionAvailable() }))
-  ipcMain.handle('claude:setKey', async (_e, key: string) => {
+  handle('claude:status', async () => ({ configured: secrets.hasKey(), encrypted: await secrets.encryptionAvailable() }))
+  handle('claude:setKey', async (_e, key: string) => {
     const v = await verifyKey(String(key ?? ''), store.getSettings().claude.model, store.getSettings().claude.workspaceId)
     if (!v.ok) return v
     try {
@@ -518,10 +533,10 @@ function registerIpc() {
       return { ok: false, error: (err as Error).message }
     }
   })
-  ipcMain.handle('claude:clearKey', () => secrets.clear())
-  ipcMain.handle('claude:send', (_e, req: ClaudeRequest) => sendToClaude(req))
+  handle('claude:clearKey', () => secrets.clear())
+  handle('claude:send', (_e, req: ClaudeRequest) => sendToClaude(req))
 
-  ipcMain.handle('ics:import', async () => {
+  handle('ics:import', async () => {
     const win = BrowserWindow.getFocusedWindow() ?? mainWindow
     const res = await dialog.showOpenDialog(win!, {
       title: 'Kalenderdatei importieren',
@@ -541,49 +556,49 @@ function registerIpc() {
     }
   })
 
-  ipcMain.handle('microsoft:status', () => microsoft.msStatus())
-  ipcMain.handle('microsoft:setClient', (_e, id: string) => microsoft.setClient(String(id ?? '')))
-  ipcMain.handle('microsoft:clearClient', () => microsoft.clearClient())
-  ipcMain.handle('microsoft:connect', async (_e, o: MicrosoftConnectOptions) => {
+  handle('microsoft:status', () => microsoft.msStatus())
+  handle('microsoft:setClient', (_e, id: string) => microsoft.setClient(String(id ?? '')))
+  handle('microsoft:clearClient', () => microsoft.clearClient())
+  handle('microsoft:connect', async (_e, o: MicrosoftConnectOptions) => {
     const r = await microsoft.connect({ notes: !!o?.notes, mail: !!o?.mail, calendar: !!o?.calendar, sync: !!o?.sync })
     showMain()
     if (r.ok && r.status.caps.sync) void cloudSyncNow()
     mainWindow?.webContents.send('cloud:status', cloudStatus())
     return r
   })
-  ipcMain.handle('microsoft:cancelConnect', () => microsoft.cancelConnect())
-  ipcMain.handle('microsoft:disconnect', async () => {
+  handle('microsoft:cancelConnect', () => microsoft.cancelConnect())
+  handle('microsoft:disconnect', async () => {
     const r = await microsoft.disconnect()
     resetCloud()
     mainWindow?.webContents.send('cloud:status', cloudStatus())
     return r
   })
-  ipcMain.handle('cloud:status', () => cloudStatus())
-  ipcMain.handle('cloud:setEnabled', (_e, on: boolean) => setCloudEnabled(!!on))
-  ipcMain.handle('cloud:sync', () => cloudSyncNow())
-  ipcMain.handle('cloud:ack', () => cloudAck())
-  ipcMain.handle('microsoft:sync', (_e, o?: { only?: string }) => microsoft.outlookSync(o?.only === 'mail' || o?.only === 'calendar' ? { only: o.only } : undefined))
-  ipcMain.handle('microsoft:mailAction', (_e, ids: string[], action: OutlookMailAction) => {
+  handle('cloud:status', () => cloudStatus())
+  handle('cloud:setEnabled', (_e, on: boolean) => setCloudEnabled(!!on))
+  handle('cloud:sync', () => cloudSyncNow())
+  handle('cloud:ack', () => cloudAck())
+  handle('microsoft:sync', (_e, o?: { only?: string }) => microsoft.outlookSync(o?.only === 'mail' || o?.only === 'calendar' ? { only: o.only } : undefined))
+  handle('microsoft:mailAction', (_e, ids: string[], action: OutlookMailAction) => {
     const ok: OutlookMailAction[] = ['read', 'unread', 'archive', 'unarchive', 'trash', 'untrash', 'flag', 'unflag']
     if (!ok.includes(action)) return { ok: false, error: 'Unbekannte Aktion' }
     return microsoft.mailAction(Array.isArray(ids) ? ids.map(String) : [], action)
   })
-  ipcMain.handle('microsoft:reply', (_e, id: string, body: string) => microsoft.reply(String(id), String(body ?? '')))
-  ipcMain.handle('microsoft:createEvent', (_e, ev: CalEvent, notify: boolean) => microsoft.createEvent(ev, !!notify))
-  ipcMain.handle('microsoft:updateEvent', (_e, ev: CalEvent) => microsoft.updateEvent(ev))
-  ipcMain.handle('microsoft:deleteEvent', (_e, id: string) => microsoft.deleteEvent(String(id)))
-  ipcMain.handle('icloud:status', () => icloud.icloudStatus())
-  ipcMain.handle('icloud:connect', (_e, id: string, pw: string) => icloud.connect(String(id ?? ''), String(pw ?? '')))
-  ipcMain.handle('icloud:disconnect', () => icloud.disconnect())
-  ipcMain.handle('icloud:setCalendars', (_e, ids: string[], def?: string) => icloud.setCalendars(Array.isArray(ids) ? ids.map(String) : [], def ? String(def) : undefined))
-  ipcMain.handle('icloud:sync', () => icloud.sync())
-  ipcMain.handle('icloud:createEvent', (_e, ev: CalEvent, cal?: string) => icloud.createEvent(ev, cal ? String(cal) : undefined))
-  ipcMain.handle('icloud:updateEvent', (_e, ev: CalEvent) => icloud.updateEvent(ev))
-  ipcMain.handle('icloud:deleteEvent', (_e, ev: CalEvent) => icloud.deleteEvent(ev))
-  ipcMain.handle('microsoft:sections', () => microsoft.sections())
-  ipcMain.handle('microsoft:pages', (_e, sectionId?: string) => microsoft.pages(sectionId ? String(sectionId) : undefined))
-  ipcMain.handle('microsoft:pageText', (_e, id: string) => microsoft.pageText(String(id)))
-  ipcMain.handle('microsoft:savePage', (_e, r: OneNoteSaveRequest) => {
+  handle('microsoft:reply', (_e, id: string, body: string) => microsoft.reply(String(id), String(body ?? '')))
+  handle('microsoft:createEvent', (_e, ev: CalEvent, notify: boolean) => microsoft.createEvent(ev, !!notify))
+  handle('microsoft:updateEvent', (_e, ev: CalEvent) => microsoft.updateEvent(ev))
+  handle('microsoft:deleteEvent', (_e, id: string) => microsoft.deleteEvent(String(id)))
+  handle('icloud:status', () => icloud.icloudStatus())
+  handle('icloud:connect', (_e, id: string, pw: string) => icloud.connect(String(id ?? ''), String(pw ?? '')))
+  handle('icloud:disconnect', () => icloud.disconnect())
+  handle('icloud:setCalendars', (_e, ids: string[], def?: string) => icloud.setCalendars(Array.isArray(ids) ? ids.map(String) : [], def ? String(def) : undefined))
+  handle('icloud:sync', () => icloud.sync())
+  handle('icloud:createEvent', (_e, ev: CalEvent, cal?: string) => icloud.createEvent(ev, cal ? String(cal) : undefined))
+  handle('icloud:updateEvent', (_e, ev: CalEvent) => icloud.updateEvent(ev))
+  handle('icloud:deleteEvent', (_e, ev: CalEvent) => icloud.deleteEvent(ev))
+  handle('microsoft:sections', () => microsoft.sections())
+  handle('microsoft:pages', (_e, sectionId?: string) => microsoft.pages(sectionId ? String(sectionId) : undefined))
+  handle('microsoft:pageText', (_e, id: string) => microsoft.pageText(String(id)))
+  handle('microsoft:savePage', (_e, r: OneNoteSaveRequest) => {
     const n = r?.note ?? ({} as OneNoteSaveRequest['note'])
     const str = (v: unknown, max: number) => (typeof v === 'string' ? v.slice(0, max) : undefined)
     return microsoft.savePage({
@@ -601,35 +616,35 @@ function registerIpc() {
     })
   })
   // OneNote-Seite in der Desktop-App (onenote:) oder im Browser öffnen – nur diese Ziele
-  ipcMain.handle('microsoft:open', (_e, url: string) => {
+  handle('microsoft:open', (_e, url: string) => {
     const u = String(url ?? '')
     if (/^onenote:https:\/\//i.test(u) || /^https:\/\/([a-z0-9-]+\.)*(onenote\.com|onedrive\.live\.com|live\.com|sharepoint\.com|office\.com)\//i.test(u)) shell.openExternal(u)
   })
-  ipcMain.handle('google:status', () => google.googleStatus())
-  ipcMain.handle('google:setClient', (_e, c: { clientId: string; clientSecret: string }) => google.setClient({ clientId: String(c?.clientId ?? ''), clientSecret: String(c?.clientSecret ?? '') }))
-  ipcMain.handle('google:importClientFile', () => google.importClientFile())
-  ipcMain.handle('google:clearClient', () => google.clearClient())
-  ipcMain.handle('google:connect', async (_e, o: GoogleConnectOptions) => {
+  handle('google:status', () => google.googleStatus())
+  handle('google:setClient', (_e, c: { clientId: string; clientSecret: string }) => google.setClient({ clientId: String(c?.clientId ?? ''), clientSecret: String(c?.clientSecret ?? '') }))
+  handle('google:importClientFile', () => google.importClientFile())
+  handle('google:clearClient', () => google.clearClient())
+  handle('google:connect', async (_e, o: GoogleConnectOptions) => {
     const r = await google.connect({ calendar: !!o?.calendar, gmail: !!o?.gmail, write: !!o?.write })
     // Nach der Anmeldung im Browser zurück zu Tagwerk
     showMain()
     return r
   })
-  ipcMain.handle('google:cancelConnect', () => google.cancelConnect())
-  ipcMain.handle('google:disconnect', () => google.disconnect())
-  ipcMain.handle('google:sync', (_e, o?: { only?: string }) => google.sync(o?.only === 'gmail' || o?.only === 'calendar' ? { only: o.only } : undefined))
-  ipcMain.handle('google:createEvent', (_e, ev: CalEvent, notify: boolean) => google.createEvent(ev, !!notify))
-  ipcMain.handle('google:updateEvent', (_e, ev: CalEvent, notify: boolean) => google.updateEvent(ev, !!notify))
-  ipcMain.handle('google:trashThread', (_e, id: string, restore: boolean) => google.trashThread(String(id), !!restore))
-  ipcMain.handle('google:deleteEvent', (_e, id: string, notify: boolean) => google.deleteEvent(String(id), !!notify))
-  ipcMain.handle('google:modifyThread', (_e, id: string, add: string[], remove: string[]) =>
+  handle('google:cancelConnect', () => google.cancelConnect())
+  handle('google:disconnect', () => google.disconnect())
+  handle('google:sync', (_e, o?: { only?: string }) => google.sync(o?.only === 'gmail' || o?.only === 'calendar' ? { only: o.only } : undefined))
+  handle('google:createEvent', (_e, ev: CalEvent, notify: boolean) => google.createEvent(ev, !!notify))
+  handle('google:updateEvent', (_e, ev: CalEvent, notify: boolean) => google.updateEvent(ev, !!notify))
+  handle('google:trashThread', (_e, id: string, restore: boolean) => google.trashThread(String(id), !!restore))
+  handle('google:deleteEvent', (_e, id: string, notify: boolean) => google.deleteEvent(String(id), !!notify))
+  handle('google:modifyThread', (_e, id: string, add: string[], remove: string[]) =>
     google.modifyThread(String(id), Array.isArray(add) ? add.map(String) : [], Array.isArray(remove) ? remove.map(String) : [])
   )
-  ipcMain.handle('google:send', (_e, p: GoogleSendParams) => google.send(p))
+  handle('google:send', (_e, p: GoogleSendParams) => google.send(p))
 
-  ipcMain.handle('weather:get', (_e, city: string) => getWeather(String(city ?? '')))
+  handle('weather:get', (_e, city: string) => getWeather(String(city ?? '')))
 
-  ipcMain.handle('app:notify', (_e, req: NotifyRequest) => {
+  handle('app:notify', (_e, req: NotifyRequest) => {
     if (!req || typeof req !== 'object') return { shown: false }
     const kinds = ['event', 'mail', 'brief', 'focus', 'system', 'test'] as const
     const kind = kinds.includes(req.kind as (typeof kinds)[number]) ? req.kind : 'system'
@@ -638,19 +653,19 @@ function registerIpc() {
     return notify({ title: String(req.title ?? ''), body: String(req.body ?? ''), kind, target, lines })
   })
 
-  ipcMain.handle('quicknote:save', (_e, text: string) => {
+  handle('quicknote:save', (_e, text: string) => {
     const t = String(text ?? '').trim()
     if (t) addExternalNote(t)
     quickWindow?.close()
   })
-  ipcMain.on('quicknote:close', () => quickWindow?.close())
-  ipcMain.handle('update:status', () => updateStatus())
-  ipcMain.handle('update:check', () => checkUpdate())
-  ipcMain.on('update:install', () => {
+  on('quicknote:close', () => quickWindow?.close())
+  handle('update:status', () => updateStatus())
+  handle('update:check', () => checkUpdate())
+  on('update:install', () => {
     quitting = true
     installNow()
   })
-  ipcMain.on('focus:signal', (_e, sig: FocusSignal) => {
+  on('focus:signal', (_e, sig: FocusSignal) => {
     if (!sig || typeof sig !== 'object') return
     setFocus({
       active: !!sig.active,
@@ -672,6 +687,8 @@ function init() {
 
   // Oberfläche braucht keine Gerätezugriffe (Kamera, Mikrofon, Standort …).
   session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(false))
+  // Auch Pop-up- und Hilfsfenster: keine Navigation weg von Tagwerk, neue Fenster nur als https-Link im Browser
+  app.on('web-contents-created', (_e, wc) => hardenContents(wc))
 
   registerIpc()
   buildAppMenu()

@@ -47,7 +47,26 @@ export async function icloudStatus(): Promise<ICloudStatus> {
   return publicStatus(account())
 }
 
+/** Zugangsdaten gehen nur an iCloud (bzw. im Test an den Test-Server) – nie an eine Adresse aus fremden Daten */
+function allowedUrl(url: string): boolean {
+  try {
+    const u = new URL(url)
+    const root = new URL(ROOT)
+    if (u.host === root.host && u.protocol === root.protocol) return true
+    return u.protocol === 'https:' && (u.hostname === 'icloud.com' || u.hostname.endsWith('.icloud.com'))
+  } catch {
+    return false
+  }
+}
+
+/** Gehört die Adresse zu einem Kalender dieses Kontos? */
+function inOwnCalendar(a: Account, href: string, calendarId?: string): boolean {
+  const cals = a.calendars.filter((c) => !calendarId || c.id === calendarId)
+  return cals.some((c) => href.startsWith(c.id.endsWith('/') ? c.id : `${c.id}/`))
+}
+
 async function dav(url: string, method: string, auth: { appleId: string; password: string }, body?: string, headers: Record<string, string> = {}): Promise<Response> {
+  if (!allowedUrl(url)) throw new DavError('unknown', 'Unerwartete Kalender-Adresse – aus Sicherheitsgründen abgebrochen.')
   let res: Response
   try {
     res = await net.fetch(url, {
@@ -210,6 +229,8 @@ export function createEvent(ev: CalEvent, calendarId?: string): Promise<MsResult
   return wrap(async (a) => {
     const calId = calendarId ?? a.defaultCalendarId ?? a.calendars.find((c) => c.enabled && !c.readOnly)?.id
     if (!calId) throw new DavError('unknown', 'Kein beschreibbarer Apple-Kalender gefunden.')
+    const cal = a.calendars.find((c) => c.id === calId)
+    if (!cal || cal.readOnly) throw new DavError('unknown', 'Dieser Apple-Kalender ist nicht (mehr) beschreibbar.')
     const uid = `${randomUUID()}@tagwerk`
     const href = absolute(`${encodeURIComponent(uid)}.ics`, calId.endsWith('/') ? calId : `${calId}/`)
     await dav(href, 'PUT', a, eventToIcs(ev, uid), { 'if-none-match': '*' })
@@ -221,6 +242,7 @@ export function createEvent(ev: CalEvent, calendarId?: string): Promise<MsResult
 export function updateEvent(ev: CalEvent): Promise<MsResult<CalEvent>> {
   return wrap(async (a) => {
     if (!ev.remoteId || !ev.calendarId) throw new DavError('not-found', 'Termin ohne iCloud-Kennung.')
+    if (!inOwnCalendar(a, ev.remoteId, ev.calendarId)) throw new DavError('not-found', 'Der Termin gehört zu keinem deiner Apple-Kalender.')
     // UID der Ressource beibehalten
     const cur = await dav(ev.remoteId, 'GET', a)
     const text = await cur.text()
@@ -234,6 +256,7 @@ export function updateEvent(ev: CalEvent): Promise<MsResult<CalEvent>> {
 export function deleteEvent(ev: CalEvent): Promise<MsResult<null>> {
   return wrap(async (a) => {
     if (!ev.remoteId) throw new DavError('not-found', 'Termin ohne iCloud-Kennung.')
+    if (!inOwnCalendar(a, ev.remoteId)) throw new DavError('not-found', 'Der Termin gehört zu keinem deiner Apple-Kalender.')
     await dav(ev.remoteId, 'DELETE', a, undefined, ev.etag ? { 'if-match': ev.etag } : {})
     await absorbOwnChange(a)
     return null

@@ -157,3 +157,35 @@ test('Serie: „jeden Dienstag um 18 Uhr bis 15.12.“ und „immer donnerstags�
   assert.equal(b[0].recurrence?.label, 'wöchentlich')
   assert.equal(run('Kurs', 'Der Kurs findet alle zwei Wochen am 10.11. um 9 Uhr statt.')[0].recurrence?.freq, 'biweekly')
 })
+
+test('Widerspruch: „Donnerstag, 13.11.“ (13.11. ist ein Freitag) → beide Möglichkeiten', () => {
+  const [a] = run('Treffen', 'Wir treffen uns am Donnerstag, 13.11., um 15 Uhr.')
+  assert.equal(a.kind, 'event')
+  assert.equal(a.uncertain, true)
+  assert.match(a.reason!, /Widersprüchlich/)
+  assert.equal(a.conflict?.options.length, 2)
+  assert.equal(new Date(a.conflict!.options[0].start!).getDate(), 13)
+  assert.equal(new Date(a.conflict!.options[1].start!).getDate(), 12)
+  assert.equal(new Date(a.conflict!.options[1].start!).getHours(), 15)
+})
+
+test('Unverbindlich: „vielleicht treffen wir uns Freitag um 18 Uhr“ → Aufgabe zur Klärung', () => {
+  const a = run('Kino?', 'Hey, vielleicht treffen wir uns am 13.11. um 18 Uhr im Kino?')
+  assert.equal(a.length, 1)
+  assert.equal(a[0].kind, 'task')
+  assert.match(a[0].title, /^Termin klären: Kino\?/)
+  assert.equal(a[0].uncertain, true)
+})
+
+test('Jeder Vorschlag erklärt kurz, worauf er beruht', () => {
+  assert.match(run('Übergabe', 'Die Übergabe ist am 12.11. um 17 Uhr.')[0].basis, /ausdrücklich in der Mail/)
+  assert.match(run('Übergabe', 'Passt Ihnen der 12.11. um 17 Uhr?')[0].basis, /als Frage/)
+  assert.match(run('Abgabe', 'Bitte gib die Arbeit bis spätestens 20.11. ab.').find((x) => x.kind === 'deadline')!.basis, /Frist aus dem Nachrichtentext/)
+})
+
+test('Ausgeschlossene Absender werden nicht geprüft', async () => {
+  const { detectAll } = await import('../src/shared/mail-insights.ts')
+  const m = mail('Newsletter', 'Webinar am 12.11. um 17 Uhr', { from: { name: 'News', email: 'news@liste.example.de' } })
+  assert.equal(detectAll([m], { now: NOW }).length, 1)
+  assert.equal(detectAll([m], { now: NOW, exclude: ['@liste.example.de'] }).length, 0)
+})

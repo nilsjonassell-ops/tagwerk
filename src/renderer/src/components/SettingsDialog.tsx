@@ -815,12 +815,18 @@ function MailInsightsSettings() {
   const setMi = (patch: Partial<Settings['mailInsights']>) => set({ mailInsights: { ...mi, ...patch } })
   const on = (list: string[], id: string, v: boolean) => (v ? [...new Set([...list, id])] : list.filter((x) => x !== id))
   const label = (src: string) => (src === 'google' ? 'Gmail' : src === 'outlook' ? 'Outlook' : src === 'demo' ? 'Demo-Postfach' : src)
+  const cloudOn = useAccounts((st) => st.cloud.available && st.cloud.enabled)
   return (
     <>
       <div className="settings-group">Vorschläge aus E-Mails</div>
       <Row label="Mails auswerten" hint="Tagwerk erkennt lokal auf diesem PC Termine, Fristen, Aufgaben und Infos in deinen Mails und schlägt sie im Posteingang unter „Aus Mails übernehmen“ vor. Ohne KI, ohne Server – angelegt wird nur, was du bestätigst.">
         <Switch label="Mails auswerten" checked={mi.enabled} onChange={(v) => setMi({ enabled: v })} />
       </Row>
+      {mi.enabled && (
+        <Row label="Prüfung pausieren" hint="Vorhandene Vorschläge bleiben erhalten, neue Mails werden nicht ausgewertet.">
+          <Switch label="Prüfung pausieren" checked={!!mi.paused} onChange={(v) => setMi({ paused: v })} />
+        </Row>
+      )}
       {mi.enabled && sources.length > 0 && (
         <Row label="Geprüfte Postfächer" hint="Keins ausgewählt = alle.">
           <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
@@ -832,7 +838,13 @@ function MailInsightsSettings() {
           </div>
         </Row>
       )}
+      {mi.enabled && <ExcludeEditor list={mi.excludeSenders ?? []} onChange={(excludeSenders) => setMi({ excludeSenders })} />}
       {mi.enabled && <MailRulesEditor />}
+      {mi.enabled && (
+        <Row label="Auf mehreren PCs" hint={cloudOn ? 'Was du übernommen, ignoriert oder zurückgestellt hast, gleicht der Cloud-Speicher (dein OneDrive) mit deinen anderen PCs ab.' : 'Ohne Cloud-Speicher gilt der Bearbeitungsstand nur auf diesem PC. Einschalten unter Datenquellen → Microsoft → Cloud-Speicher.'}>
+          <span className="hint">{cloudOn ? 'wird abgeglichen' : 'nur dieser PC'}</span>
+        </Row>
+      )}
       {mi.enabled && (
         <Row label="Erkennen">
           <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
@@ -896,6 +908,41 @@ function MailRulesEditor() {
         ) : (
           <span className="hint">Lege zuerst ein Projekt an.</span>
         )}
+      </div>
+    </Row>
+  )
+}
+
+/** Absender oder Mailinglisten von der Prüfung ausschließen */
+function ExcludeEditor({ list, onChange }: { list: string[]; onChange: (l: string[]) => void }) {
+  const [v, setV] = useState('')
+  const add = () => {
+    const x = v.trim().toLowerCase()
+    if (!x) return
+    onChange([...new Set([...list, x])])
+    setV('')
+  }
+  return (
+    <Row label="Nicht prüfen" hint="Absender, Domains oder Mailinglisten (z. B. „newsletter@“, „@liste.uni.de“), deren Mails nie ausgewertet werden.">
+      <div style={{ display: 'grid', gap: 6, width: '100%' }}>
+        {list.length > 0 && (
+          <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+            {list.map((x) => (
+              <span key={x} className="tag">
+                {x}
+                <button className="tag-x" onClick={() => onChange(list.filter((y) => y !== x))} aria-label={`${x} wieder prüfen`} title="Wieder prüfen">
+                  <X size={11} />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="row" style={{ gap: 6 }}>
+          <input className="input" style={{ flex: 1 }} value={v} onChange={(e) => setV(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} placeholder="Adresse oder @domain" aria-label="Absender ausschließen" />
+          <button className="btn small" onClick={add} disabled={!v.trim()}>
+            Ausschließen
+          </button>
+        </div>
       </div>
     </Row>
   )

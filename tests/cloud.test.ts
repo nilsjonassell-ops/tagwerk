@@ -103,3 +103,39 @@ test('Patch lässt unbeteiligte Einträge und Reihenfolge in Ruhe', () => {
   assert.deepEqual(next.tasks.map((t) => t.id + ':' + t.title), ['t-4:neu', 't-1:a', 't-2:B!'])
   assert.equal(next.notes, d.notes)
 })
+
+test('Beschädigte oder fremde Einträge aus der Cloud werden verworfen', () => {
+  const b = device('B')
+  const bad = {
+    v: 1 as const,
+    id: 'X',
+    name: 'X',
+    at: '',
+    recs: {
+      tasks: { 't-ok': { t: 5, v: task('t-ok', 'gut') }, 't-bad': { t: 5, v: { id: 't-bad' } }, 't-wrongid': { t: 5, v: task('t-other', 'x') }, 't-future': { t: Date.now() + 365 * 86400_000, v: task('t-future', 'zukunft') } },
+      events: { 'e-bad': { t: 5, v: { id: 'e-bad', title: 'x', start: 'kein Datum', end: 'x' } } },
+      settings: { theme: { t: 5, v: 42 }, userName: { t: 5, v: 'Nils' } }
+    }
+  }
+  const r = mergeRemote(b.book, [bad], DEFAULT_SETTINGS)
+  assert.deepEqual((r.patch.upsert.tasks ?? []).map((t) => t.id), ['t-ok'])
+  assert.equal(r.patch.upsert.events, undefined)
+  assert.deepEqual(r.settings, { userName: 'Nils' }, 'theme: 42 hat den falschen Typ')
+})
+
+test('Wieder verbundener PC überschreibt keine neueren Änderungen der anderen PCs', () => {
+  const a = device('A')
+  a.data.tasks = [task('t-1', 'Alt')]
+  const b = device('B')
+  sync(a, [b], 1000)
+  sync(b, [a], 1100)
+  // B ändert später den Titel
+  b.data.tasks = [{ ...b.data.tasks[0], title: 'Neu von B' }]
+  sync(b, [a], 5000)
+  // A war getrennt (Abgleichsbuch zurückgesetzt) und verbindet sich mit altem Stand neu
+  a.book = { snap: {}, meta: {} }
+  trackChanges(a.book, extractRecords(a.data, a.settings), 9000, DEFAULT_SETTINGS, true)
+  const docs = [buildDoc(b.book, extractRecords(b.data, b.settings), 'B', 'B', 9000)]
+  a.data = applyCloudPatch(a.data, mergeRemote(a.book, docs).patch)
+  assert.equal(a.data.tasks[0].title, 'Neu von B')
+})

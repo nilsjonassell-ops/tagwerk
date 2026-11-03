@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Archive, CheckSquare, FlaskConical, Inbox as InboxIcon, Mail, MailOpen, Reply, Search, Send, Sparkles, Star, Trash2, X, AlertCircle, Clock, Loader2, Flag, CalendarPlus, ChevronDown, Layers, ListChecks, StickyNote, AlarmClock } from 'lucide-react'
+import { Archive, CheckSquare, FlaskConical, Inbox as InboxIcon, Mail, MailOpen, Reply, Search, Send, Sparkles, Star, Trash2, X, AlertCircle, Clock, Loader2, Flag, CalendarPlus, ChevronDown, Layers, ListChecks, ListPlus, StickyNote, AlarmClock } from 'lucide-react'
 import { groupThreads, type Thread } from '@shared/analysis'
 import { SuggestionsPane, ThreadSuggestions, useOpenSuggestionCount } from '@/components/Suggestions'
-import { activeFollowUp, setFollowUp, snoozeOptions } from '@/lib/suggestions'
+import { activeFollowUp, setFollowUp, snoozeOptions, toggleReview } from '@/lib/suggestions'
 import { cleanSubject, detectMailSuggestions } from '@shared/mail-insights'
 import type { Source } from '@shared/types'
 import { SOURCE_LABEL } from '@/lib/accounts'
@@ -35,6 +35,7 @@ export function InboxView() {
   const [filter, setFilter] = useState<Filter>('all')
   const suggestCount = useOpenSuggestionCount()
   const insightsOn = useStore((s) => s.settings.mailInsights?.enabled !== false)
+  const introDone = useStore((s) => !!s.settings.mailInsights?.introDone)
   // „Zur Mail“ aus den Vorschlägen: zurück in den normalen Posteingang
   useEffect(() => {
     if (selectedId && filter === 'suggest') setFilter('all')
@@ -99,6 +100,8 @@ export function InboxView() {
         const n = threads[Math.max(0, idx - 1)]
         if (n) select('inbox', n.id)
         e.preventDefault()
+      } else if (e.key === 'b' && selected) {
+        toggleReview(selected.id)
       } else if (e.key === 's' && selected) {
         toggleStar(selected.id)
       } else if (e.key === 'a' && selected && selected.folder === 'inbox') {
@@ -143,7 +146,7 @@ export function InboxView() {
               <button className="nav-item nav-suggest" aria-current={filter === 'suggest' ? 'page' : undefined} onClick={() => (setFilter('suggest'), select('inbox', undefined))}>
                 <ListChecks aria-hidden="true" />
                 <span className="label" title="Aus Mails übernehmen: erkannte Termine, Fristen, Aufgaben und Infos">Vorschläge</span>
-                {suggestCount ? <span className="count accent">{suggestCount}</span> : null}
+                {suggestCount ? <span className="count accent">{suggestCount}</span> : !introDone ? <span className="count accent">neu</span> : null}
               </button>
             )}
             {FILTERS.map((f) => (
@@ -226,6 +229,7 @@ export function InboxView() {
 
 function ThreadRow({ t, selected, onClick, showAccount }: { t: Thread; selected: boolean; onClick: () => void; showAccount?: boolean }) {
   const hasFollowUp = useStore((s) => !!activeFollowUp(t.id, s.data))
+  const inReview = useStore((s) => !!s.data.reviewQueue?.[t.id])
   const google = useStore((s) => s.google)
   const isGmail = t.messages.some((m) => m.source === 'google')
   const canModify = !isGmail || google.caps.gmailWrite
@@ -265,6 +269,9 @@ function ThreadRow({ t, selected, onClick, showAccount }: { t: Thread; selected:
         </button>
         <button className={`mc-btn ${t.starred ? 'on star' : ''}`} onClick={(e) => act(e, () => toggleStar(t.id))} disabled={!canModify} title={t.starred ? 'Nicht mehr merken (S)' : 'Merken (S)'} aria-pressed={t.starred}>
           <Star />
+        </button>
+        <button className={`mc-btn ${inReview ? 'on' : ''}`} onClick={(e) => act(e, () => toggleReview(t.id))} title={inReview ? 'Nicht mehr zur Bearbeitung vormerken (B)' : 'Zur Bearbeitung vormerken – erscheint unter „Vorschläge“ (B)'} aria-pressed={inReview}>
+          <ListPlus />
         </button>
         {t.folder === 'inbox' && (
           <button className="mc-btn" onClick={(e) => act(e, () => archiveThread(t.id))} disabled={!canModify} title="Archivieren (E)">
@@ -548,6 +555,10 @@ function TakeOverMenu({ thread, onTask }: { thread: Thread; onTask: () => void }
           </button>
           <button role="menuitem" onClick={run(() => noteFromThread(thread))}>
             <span className="row" style={{ gap: 8 }}><StickyNote size={15} /> Als Notiz merken</span>
+          </button>
+          <button role="menuitem" onClick={run(() => toggleReview(thread.id))}>
+            <span className="row" style={{ gap: 8 }}><ListPlus size={15} /> {useStore.getState().data.reviewQueue?.[thread.id] ? 'Nicht mehr zur Bearbeitung' : 'Zur Bearbeitung'}</span>
+            <span className="hint">B</span>
           </button>
         </div>
       )}

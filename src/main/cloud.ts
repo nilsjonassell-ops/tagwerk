@@ -83,7 +83,7 @@ function onLocalChange() {
   const s = load()
   if (!s.enabled || !available() || awaitingAck) return
   const cur = current()
-  if (cur && trackChanges(s, cur, Date.now(), DEFAULT_SETTINGS)) save()
+  if (cur && trackChanges(s, cur, Date.now(), DEFAULT_SETTINGS, !s.lastSync)) save()
   if (debounce) clearTimeout(debounce)
   debounce = setTimeout(() => void syncNow(), DEBOUNCE_MS)
 }
@@ -123,7 +123,7 @@ export async function syncNow(): Promise<CloudStatus> {
   try {
     const cur0 = current()
     if (!cur0) return cloudStatus()
-    if (!awaitingAck && trackChanges(s, cur0, Date.now(), DEFAULT_SETTINGS)) save()
+    if (!awaitingAck && trackChanges(s, cur0, Date.now(), DEFAULT_SETTINGS, !s.lastSync)) save()
 
     // 1. Stände der anderen PCs holen (nur geänderte Dateien)
     const files = await listRemote()
@@ -141,10 +141,10 @@ export async function syncNow(): Promise<CloudStatus> {
 
     // 2. Einarbeiten
     if (docs.length) {
-      const { patch, settings, changed } = mergeRemote(s, docs)
+      const { patch, settings, changed } = mergeRemote(s, docs, DEFAULT_SETTINGS)
       if (changed) {
         const data = store.loadData()
-        const hasPatch = Object.keys(patch.upsert).length || Object.keys(patch.remove).length || patch.replyMarks || patch.suggestions || patch.followUps
+        const hasPatch = Object.keys(patch.upsert).length || Object.keys(patch.remove).length || patch.replyMarks || patch.suggestions || patch.followUps || patch.reviewQueue
         if (data && hasPatch) {
           // Die Oberfläche übernimmt den Stand auf ihre aktuellen Daten; bis dahin keine lokalen Änderungen werten
           if (awaitingAck) clearTimeout(awaitingAck)

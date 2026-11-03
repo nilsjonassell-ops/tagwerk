@@ -164,7 +164,7 @@ function waitForCode(id: string, challenge: string, state: string, scopes: strin
         res.writeHead(200, html).end(page('Nicht verbunden', 'Der Zugriff wurde nicht erteilt. Du kannst dieses Fenster schließen.'))
         return finish(new MsError('unknown', err === 'access_denied' ? 'Du hast den Zugriff abgelehnt.' : `Microsoft hat die Anmeldung abgebrochen${url.searchParams.get('error_description') ? `: ${url.searchParams.get('error_description')!.slice(0, 160)}` : '.'}`))
       }
-      res.writeHead(200, html).end(page('Verbunden', 'Tagwerk ist jetzt mit OneNote verbunden. Du kannst dieses Fenster schließen.'))
+      res.writeHead(200, html).end(page('Verbunden', 'Tagwerk ist jetzt mit deinem Microsoft-Konto verbunden. Du kannst dieses Fenster schließen.'))
       finish(null, code)
     }
     const finish = (e: Error | null, code?: string) => {
@@ -248,7 +248,7 @@ async function getAccessToken(): Promise<string> {
   if (accessToken && accessToken.exp - 60_000 > Date.now()) return accessToken.token
   const id = clientId()
   const a = account()
-  if (!id || !a) throw new MsError('not-connected', 'OneNote ist nicht verbunden.')
+  if (!id || !a) throw new MsError('not-connected', 'Microsoft ist nicht verbunden.')
   if (a.expired) throw new MsError('expired', 'Die Microsoft-Anmeldung ist abgelaufen. Bitte neu verbinden.')
   try {
     const tok = await tokenRequest({ client_id: id, refresh_token: a.refreshToken, grant_type: 'refresh_token', scope: accountScopes(a).join(' ') })
@@ -286,13 +286,13 @@ async function graph(path: string, init: RequestInit = {}, raw = false, retried 
     accessToken = null
     return graph(path, init, raw, true)
   }
-  if (res.status === 404) throw new MsError('not-found', 'Nicht gefunden – die Seite wurde in OneNote vielleicht gelöscht.')
-  if (res.status === 429) throw new MsError('unknown', 'OneNote bittet um eine kurze Pause. Gleich noch einmal versuchen.')
+  if (res.status === 404) throw new MsError('not-found', 'Nicht gefunden – der Eintrag wurde in Outlook oder OneNote vielleicht gelöscht.')
+  if (res.status === 429) throw new MsError('unknown', 'Microsoft bittet um eine kurze Pause. Gleich noch einmal versuchen.')
   if (!res.ok && !raw) {
     const j = (await res.json().catch(() => ({}))) as { error?: { message?: string; code?: string } }
     // Persönliche Konten ohne OneNote-Notizbuch liefern einen eigenen Fehler
     if (j.error?.code === '10008' || /exceeded the maximum number of sections/i.test(j.error?.message ?? '')) throw new MsError('unknown', 'Dein OneNote ist zu groß für eine Gesamtabfrage. Wähle einen Abschnitt aus.')
-    throw new MsError('unknown', `OneNote-Fehler (${(j.error?.message ?? String(res.status)).slice(0, 140)}).`)
+    throw new MsError('unknown', `Microsoft-Fehler (${(j.error?.message ?? String(res.status)).slice(0, 140)}).`)
   }
   return res
 }
@@ -329,7 +329,7 @@ async function wrap<T>(fn: () => Promise<T>): Promise<MsResult<T>> {
   } catch (e) {
     if (e instanceof MsError) return { ok: false, error: e.message, code: e.code }
     log.warn('onenote failed', { msg: (e as Error).message?.slice(0, 80) })
-    return { ok: false, error: 'OneNote ist gerade nicht erreichbar.', code: 'unknown' }
+    return { ok: false, error: 'Microsoft ist gerade nicht erreichbar.', code: 'unknown' }
   }
 }
 

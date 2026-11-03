@@ -87,3 +87,11 @@ test('Antwortbedarf: nur bei Frage oder Bitte', () => {
   assert.equal(asksForReply('Hast du morgen Zeit?'), true)
   assert.equal(asksForReply('Could you send the slides'), true)
 })
+
+test('Antwort-Kopfzeilen: keine eingeschleusten Zeilen aus fremden Message-IDs', async () => {
+  const { buildReplyMime } = await import('../src/main/google-map.ts')
+  const mime = buildReplyMime({ from: 'ich@example.org', to: [{ name: 'A', email: 'a@example.org' }], subject: 'Hallo', body: 'x', inReplyTo: '<id@x>\r\nBcc: boese@example.org', references: '<r@x>\nBcc: b@example.org' })
+  const head = mime.split('\r\n\r\n')[0]
+  assert.ok(!/^Bcc:/im.test(head), 'kein Bcc-Header')
+  assert.equal(head.split('\r\n').filter((l) => l.startsWith('In-Reply-To:')).length, 1)
+})

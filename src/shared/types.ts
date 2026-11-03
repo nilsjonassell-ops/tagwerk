@@ -153,6 +153,19 @@ export interface MailSuggestion {
   followUps?: number
   /** Wiederkehrender Termin („jeden Dienstag“, „alle zwei Wochen bis 15.12.“) */
   recurrence?: SuggestionRecurrence
+  /** Kurz und verständlich: worauf die Erkennung beruht */
+  basis: string
+  /** Widersprüchliche Angaben (z. B. Wochentag passt nicht zum Datum) – ich entscheide */
+  conflict?: { label: string; options: SuggestionOption[] }
+  /** Von mir selbst „zur Bearbeitung“ vorgemerkt */
+  manual?: boolean
+}
+
+export interface SuggestionOption {
+  label: string
+  start?: string
+  end?: string
+  due?: string
 }
 
 export interface SuggestionRecurrence {
@@ -255,6 +268,7 @@ export interface CloudPatch {
   replyMarks?: { set: Record<string, ReplyMark>; remove: string[] }
   suggestions?: { set: Record<string, SuggestionState>; remove: string[] }
   followUps?: { set: Record<string, FollowUp>; remove: string[] }
+  reviewQueue?: { set: Record<string, { at: string }>; remove: string[] }
 }
 
 export interface CloudApi {
@@ -451,6 +465,8 @@ export interface AppData {
   suggestions?: Record<string, SuggestionState>
   /** Wiedervorlagen je Unterhaltung */
   followUps?: Record<string, FollowUp>
+  /** „Zur Bearbeitung“ vorgemerkte Unterhaltungen */
+  reviewQueue?: Record<string, { at: string }>
   sources: {
     demo: boolean
     icsImports: IcsImport[]
@@ -532,7 +548,17 @@ export interface Settings {
   /** Gmail-Kategorien, die Tagwerk nicht in den Posteingang holt */
   gmailHiddenCategories: GmailCategory[]
   /** Vorschläge aus E-Mails: an/aus, geprüfte Konten (leer = alle) und Arten */
-  mailInsights: { enabled: boolean; sources: Source[]; kinds: SuggestionKind[] }
+  mailInsights: {
+    enabled: boolean
+    /** Prüfung vorübergehend angehalten (Vorhandenes bleibt sichtbar) */
+    paused?: boolean
+    sources: Source[]
+    kinds: SuggestionKind[]
+    /** Absender oder Domains (z. B. „newsletter@…“, „@liste.de“), die nie geprüft werden */
+    excludeSenders?: string[]
+    /** Einstieg mit Vorschau abgeschlossen */
+    introDone?: boolean
+  }
   /** Regeln Absender/Betreff → Projekt */
   mailRules: MailRule[]
   onboarded: boolean

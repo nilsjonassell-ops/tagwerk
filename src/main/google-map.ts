@@ -278,13 +278,15 @@ function formatAddress(p: Person): string {
 /** Baut eine RFC-5322-Antwort (UTF-8, base64) mit korrekter Thread-Verkettung. */
 export function buildReplyMime(p: { from: string; to: Person[]; subject: string; body: string; inReplyTo?: string; references?: string }): string {
   const subject = /^(re|aw):/i.test(p.subject.trim()) ? p.subject.trim() : `Re: ${p.subject.trim()}`
-  const refs = [p.references, p.inReplyTo].filter(Boolean).join(' ').trim()
+  // Kopfzeilen dürfen keine Zeilenumbrüche enthalten (sonst ließen sich z. B. Bcc-Empfänger einschleusen)
+  const h = (v: string | undefined) => (v ?? '').replace(/[\r\n\0]+/g, ' ').trim()
+  const refs = h([p.references, p.inReplyTo].filter(Boolean).join(' '))
   const b64 = Buffer.from(p.body.replace(/\r?\n/g, '\r\n'), 'utf8').toString('base64').replace(/.{1,76}/g, '$&\r\n')
   const headers = [
-    `From: ${p.from}`,
-    `To: ${p.to.map(formatAddress).join(', ')}`,
-    `Subject: ${encodeWord(subject)}`,
-    ...(p.inReplyTo ? [`In-Reply-To: ${p.inReplyTo}`] : []),
+    `From: ${h(p.from)}`,
+    `To: ${h(p.to.map(formatAddress).join(', '))}`,
+    `Subject: ${encodeWord(h(subject))}`,
+    ...(p.inReplyTo ? [`In-Reply-To: ${h(p.inReplyTo)}`] : []),
     ...(refs ? [`References: ${refs}`] : []),
     'MIME-Version: 1.0',
     'Content-Type: text/plain; charset="UTF-8"',

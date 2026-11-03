@@ -70,6 +70,26 @@ function allDates(text: string, base: Date): Found<Date>[] {
 }
 
 const WD = 'montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag'
+const WD_LIST = WD.split('|')
+// Unverbindlich: „vielleicht treffen wir uns“, „wie wäre es mit …“ → kein fester Termin
+const TENTATIVE = /(?<![\p{L}])(vielleicht|eventuell|evtl\.|möglicherweise|unter\s+umständen|wenn\s+es\s+(?:klappt|passt)|falls\s+(?:es\s+)?(?:klappt|passt)|wie\s+wäre\s+es|wie\s+wär'?s|hättest\s+du\s+(?:lust|zeit)|hätten\s+sie\s+zeit|könnten\s+wir\s+uns|sollen\s+wir\s+uns|lust\s+auf)(?![\p{L}])/iu
+
+/** Wochentag passt nicht zum Datum („Donnerstag, 13.11.“ – der 13.11. ist ein Freitag) */
+export function weekdayConflict(s: string, base: Date): { named: number; explicit: Date; alt: Date; label: string } | null {
+  const wd = new RegExp(`(?<![\\p{L}])(${WD})(?![\\p{L}])`, 'iu').exec(s)
+  if (!wd) return null
+  // WD_LIST beginnt mit Montag, getDay() mit Sonntag = 0
+  const named = (WD_LIST.indexOf(wd[1].toLowerCase()) + 1) % 7
+  const explicit = findDates(s, base).find((d) => /\d/.test(s.slice(d.index, d.index + d.length)) && !/^\s*in\s/iu.test(s.slice(d.index, d.index + d.length)))
+  if (!explicit || explicit.value.getDay() === named) return null
+  // Der genannte Wochentag in derselben Woche wie das Datum (näheste Abweichung)
+  let diff = ((named - explicit.value.getDay()) + 7) % 7
+  if (diff > 3) diff -= 7
+  const alt = new Date(explicit.value)
+  alt.setDate(alt.getDate() + diff)
+  const f = (d: Date) => d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'numeric' })
+  return { named, explicit: explicit.value, alt, label: `„${wd[1]}“ passt nicht zum ${f(explicit.value)}` }
+}
 
 /** Wiederholung im Satz: „jeden Dienstag“, „immer donnerstags“, „alle zwei Wochen“, „monatlich“ – mit „bis …“ als Ende */
 export function recurrenceOf(s: string, base: Date): SuggestionRecurrence | undefined {
@@ -153,7 +173,9 @@ export function detectMailSuggestions(m: Email, opts: DetectOptions = {}): MailS
   const today = startOfDay(now)
   const subject = cleanSubject(m.subject)
   // Mailtext zuerst (genauere Titel), Betreff zuletzt als Ergänzung
-  const body = sentences(m.body)
+  // Nur der Anfang sehr langer Mails (Newsletter, Verläufe) – das Wichtige steht oben, und die Oberfläche bleibt schnell
+  const text = (m.body ?? '').slice(0, 20_000)
+  const body = sentences(text)
   const sents = [...body, m.subject.replace(/^((re|aw|fwd?|wg)\s*:\s*)+/gi, '')]
   const out: MailSuggestion[] = []
   const common = { threadId: m.threadId, mailId: m.id, source: m.source, from: m.from, subject: m.subject, mailDate: m.date, hasAttachments: !!m.hasAttachments }
@@ -173,22 +195,69 @@ export function detectMailSuggestions(m: Email, opts: DetectOptions = {}): MailS
       const found = deadline ? [] : findAppointments(sd, base, now)
       // Bei einer Serie zählt nur der erste Termin (das Enddatum ist kein eigener Termin)
       const appts = rec ? found.slice(0, 1) : found
-      if (appts.length && kinds.has('event')) {
-        for (const a of appts) {
-          if (has('event', a.start)) continue
-          const d = dates.find((x) => a.phrase.includes(s.slice(x.index, x.index + x.length)))
-          const why = d ? uncertainty(s.slice(d.index, d.index + d.length), new Date(a.start)) : undefined
-          const vague = /\b(gegen|ca\.|circa|ungefähr|etwa)\b/iu.test(a.phrase)
+      // Unverbindlich („vielleicht treffen wir uns Freitag um 18 Uhr“) → Aufgabe zur Klärung statt festem Termin
+      if (appts.length && TENTATIVE.test(s) && !isSubject && kinds.has('task')) {
+        const a = appts[0]
+        const title = `Termin klären: ${short(subject, 70)}`
+        if (!has('task', title))
           out.push({
             ...common,
-            id: `ms:${m.id}:event:${a.start}`,
+            id: `ms:${m.id}:task:${hashStr(s)}`,
+            kind: 'task',
+            title,
+            uncertain: true,
+            reason: `Unverbindlich formuliert – möglicher Termin ${fmtDay(new Date(a.start))}, ${new Date(a.start).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`,
+            basis: 'Unverbindlich formuliert („vielleicht“, „wie wäre es …“) – deshalb kein fester Termin, sondern eine Aufgabe zur Klärung.',
+            phrase: a.phrase,
+            context: short(s, 220)
+          })
+        return
+      }
+      if (appts.length && kinds.has('event')) {
+        // Bei Serien ist ein zweites Datum das Ende, kein Widerspruch
+        const clash = rec ? null : weekdayConflict(sd, base)
+        for (const a of clash ? appts.slice(0, 1) : appts) {
+          if (has('event', a.start)) continue
+          const d = dates.find((x) => a.phrase.includes(sd.slice(x.index, x.index + x.length)))
+          const why = d ? uncertainty(sd.slice(d.index, d.index + d.length), new Date(a.start)) : undefined
+          const vague = /\b(gegen|ca\.|circa|ungefähr|etwa)\b/iu.test(a.phrase)
+          const question = /\?\s*$/.test(s)
+          let start = a.start
+          let end = a.end
+          let conflict: MailSuggestion['conflict']
+          if (clash) {
+            const at = (day: Date) => {
+              const x = new Date(day)
+              const src = new Date(a.start)
+              x.setHours(src.getHours(), src.getMinutes(), 0, 0)
+              return x
+            }
+            const dur = new Date(a.end).getTime() - new Date(a.start).getTime()
+            const opt = (day: Date) => ({ label: `${day.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' })}, ${at(day).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`, start: at(day).toISOString(), end: new Date(at(day).getTime() + dur).toISOString() })
+            conflict = { label: clash.label, options: [opt(clash.explicit), opt(clash.alt)] }
+            start = conflict.options[0].start!
+            end = conflict.options[0].end!
+          }
+          out.push({
+            ...common,
+            id: `ms:${m.id}:event:${start}`,
             kind: 'event',
             title: subject,
-            start: a.start,
-            end: a.end,
-            uncertain: !!why || vague,
-            reason: why ?? (vague ? `Uhrzeit ungefähr: „${a.phrase}“` : undefined),
+            start,
+            end,
+            uncertain: !!why || vague || question || !!conflict,
+            reason: conflict ? `Widersprüchlich: ${conflict.label}` : why ?? (vague ? `Uhrzeit ungefähr: „${a.phrase}“` : question ? 'Als Frage formuliert – noch nicht zugesagt' : undefined),
+            basis: conflict
+              ? 'Wochentag und Datum widersprechen sich – bitte wähle, was gemeint ist.'
+              : why
+                ? `Datum aus „${d ? sd.slice(d.index, d.index + d.length) : a.phrase}“ berechnet, Uhrzeit steht in der Mail.`
+                : question
+                  ? 'Datum und Uhrzeit stehen in der Mail, aber als Frage – der Termin ist noch nicht zugesagt.'
+                  : isSubject
+                    ? 'Datum und Uhrzeit stehen ausdrücklich im Betreff.'
+                    : 'Datum und Uhrzeit stehen ausdrücklich in der Mail.',
             recurrence: rec,
+            conflict,
             phrase: a.phrase,
             context: isSubject ? `Betreff: ${s}` : short(s, 220)
           })
@@ -213,6 +282,7 @@ export function detectMailSuggestions(m: Email, opts: DetectOptions = {}): MailS
           dueTime: t ? `${pad(t.value.h)}:${pad(t.value.m)}` : undefined,
           uncertain: !!uncertainty(phrase, day),
           reason: uncertainty(phrase, day),
+          basis: `Frist aus dem ${isSubject ? 'Betreff' : 'Nachrichtentext'} abgeleitet („${short(s.slice(Math.max(0, (DEADLINE.exec(s)?.index ?? 0)), (DEADLINE.exec(s)?.index ?? 0) + 40).trim(), 40)}“).`,
           phrase,
           context: isSubject ? `Betreff: ${s}` : short(s, 220)
         })
@@ -231,6 +301,7 @@ export function detectMailSuggestions(m: Email, opts: DetectOptions = {}): MailS
           due,
           uncertain: !!uncertainty(phrase, day),
           reason: uncertainty(phrase, day),
+          basis: 'Bitte mit Datum im Nachrichtentext erkannt.',
           phrase,
           context: short(s, 220)
         })
@@ -251,6 +322,7 @@ export function detectMailSuggestions(m: Email, opts: DetectOptions = {}): MailS
           allDay: true,
           uncertain: true,
           reason: `Keine Uhrzeit genannt${uncertainty(phrase, day) ? ` · ${uncertainty(phrase, day)}` : ''}`,
+          basis: 'Datum und Anlass („Klausur“, „Termin“ …) stehen in der Mail, eine Uhrzeit fehlt.',
           phrase,
           context: isSubject ? `Betreff: ${s}` : short(s, 220)
         })
@@ -261,13 +333,13 @@ export function detectMailSuggestions(m: Email, opts: DetectOptions = {}): MailS
     if (!isSubject && request && kinds.has('task') && out.filter((x) => x.kind === 'task').length < 2) {
       const title = requestTitle(s, m.subject)
       if (has('task', title)) return
-      out.push({ ...common, id: `ms:${m.id}:task:${hashStr(s)}`, kind: 'task', title, uncertain: false, phrase: s, context: short(s, 220) })
+      out.push({ ...common, id: `ms:${m.id}:task:${hashStr(s)}`, kind: 'task', title, uncertain: false, basis: 'Bitte um eine Tätigkeit im Nachrichtentext erkannt.', phrase: s, context: short(s, 220) })
     }
   })
 
   // Infos für eine Notiz: Nummern, Ort/Raum, Meeting-Link, Beträge
   if (kinds.has('note')) {
-    const text = stripQuoted(m.body)
+    const text = stripQuoted((m.body ?? '').slice(0, 20_000))
     const lines: string[] = []
     const add = (l: string) => !lines.includes(l) && lines.push(l)
     for (const x of text.matchAll(REF)) add(`${cap(x[1].toLowerCase())}nummer: ${x[2]}`)
@@ -283,6 +355,7 @@ export function detectMailSuggestions(m: Email, opts: DetectOptions = {}): MailS
         title: `Infos: ${short(subject, 80)}`,
         noteBody: lines.slice(0, 8).join('\n'),
         uncertain: false,
+        basis: 'Nummern, Ort, Link oder Betrag stehen wörtlich in der Mail.',
         phrase: lines[0],
         context: lines.slice(0, 3).join(' · ')
       })
@@ -292,7 +365,7 @@ export function detectMailSuggestions(m: Email, opts: DetectOptions = {}): MailS
 }
 
 /** Alle Vorschläge aus den eingegangenen Mails der letzten Tage. */
-export function detectAll(emails: Email[], opts: DetectOptions & { days?: number; sources?: string[] } = {}): MailSuggestion[] {
+export function detectAll(emails: Email[], opts: DetectOptions & { days?: number; sources?: string[]; exclude?: string[] } = {}): MailSuggestion[] {
   const now = opts.now ?? new Date()
   const since = now.getTime() - (opts.days ?? 30) * DAY
   const list: MailSuggestion[] = []
@@ -303,6 +376,7 @@ export function detectAll(emails: Email[], opts: DetectOptions & { days?: number
   for (const m of sorted) {
     if (m.folder === 'sent' || new Date(m.date).getTime() < since) continue
     if (opts.sources?.length && !opts.sources.includes(m.source)) continue
+    if (isExcluded(m.from.email, opts.exclude)) continue
     for (const s of detectMailSuggestions(m, opts)) {
       const key = `${s.threadId}|${s.kind === 'task' && s.due ? 'deadline' : s.kind}|${s.start ?? s.due ?? s.title}`
       const first = seen.get(key)
@@ -365,4 +439,10 @@ export function findDuplicate(
     return n ? { kind: 'note', id: n.id, title: n.title } : null
   }
   return null
+}
+
+/** Ausgeschlossener Absender? Einträge sind Adressen oder Teile davon („@newsletter.de“, „noreply@“). */
+export function isExcluded(email: string, list?: string[]): boolean {
+  const e = (email ?? '').toLowerCase()
+  return !!e && (list ?? []).some((x) => x.trim() && e.includes(x.trim().toLowerCase()))
 }

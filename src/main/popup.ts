@@ -22,12 +22,15 @@ let items: PopupItem[] = []
 
 export function initPopup(d: Deps) {
   deps = d
-  ipcMain.on('popup:ready', () => {
+  const ok = (e: Electron.IpcMainEvent) => (e.senderFrame?.url ?? '').startsWith('file://') || !!process.env.ELECTRON_RENDERER_URL
+  ipcMain.on('popup:ready', (e) => {
+    if (!ok(e)) return
     ready = true
     send()
   })
-  ipcMain.on('popup:size', (_e, h: number) => place(Math.ceil(Number(h) || 0)))
-  ipcMain.on('popup:action', (_e, id: string, action: PopupAction['id'] | 'dismiss') => {
+  ipcMain.on('popup:size', (e, h: number) => ok(e) && place(Math.min(2000, Math.ceil(Number(h) || 0))))
+  ipcMain.on('popup:action', (e, id: string, action: PopupAction['id'] | 'dismiss') => {
+    if (!ok(e)) return
     const item = items.find((i) => i.id === id)
     if (!item) return
     items = items.filter((i) => i.id !== id)

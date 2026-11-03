@@ -61,6 +61,12 @@ Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, N
   - **Unterhaltungen** werden gruppiert; **Aufteilen** („Formular und Ausweiskopie“ → zwei Aufgaben) und **Zusammenführen** mehrerer Vorschläge zu einer Aufgabe.
   - **Vorlauf:** Bei Fristen ≥ 3 Tage wird eine Vorbereitungsaufgabe (1–7 Tage vorher) vorgeschlagen, danach „Einplanen“ in freie Zeit.
   - **Regeln Absender/Betreff → Projekt** (in den Einstellungen oder direkt an der Karte „Projekt für Absender merken“).
+  - **Erklärung je Vorschlag** („Datum und Uhrzeit stehen ausdrücklich in der Mail“, „Frist aus dem Nachrichtentext abgeleitet“), Status „eindeutig / unsicher / widersprüchlich“; bei **Widerspruch** (z. B. „Donnerstag, 13.11.“ – der 13.11. ist ein Freitag) beide Möglichkeiten nebeneinander zur Auswahl.
+  - **Unverbindliches** („vielleicht treffen wir uns …“, „wie wäre es …“) wird kein fester Termin, sondern eine Aufgabe „Termin klären“.
+  - **„Zur Bearbeitung“** (Taste B, an Mailkarte und in der Mail) merkt eine Mail als Aufgabe in den Vorschlägen vor.
+  - **„Für diese Mail nicht wieder vorschlagen“** und **„Absender ausschließen …“** (nur nach Rückfrage); Ausschlussliste für Absender/Mailinglisten in den Einstellungen.
+  - **Pause-Schalter** und Status („Prüft Outlook, Gmail · zuletzt geprüft 12:42“); **Einstieg mit Vorschau**: beim ersten Öffnen Arten wählen (Termine + Fristen vorausgewählt) und vorab sehen, was erkannt würde.
+  - Termin übernehmen: optional **Notiz mit den Maildetails**; Aufgabe übernehmen: **freier Kalenderblock** wird vorgeschlagen (reserviert erst mit Häkchen); Rückgängig direkt im Hinweis.
 - **Wiedervorlage** an jeder Mail (Wecker-Symbol): erinnert per Pop-up, falls bis zum gewählten Zeitpunkt keine neue Nachricht in der Unterhaltung kam; Kennzeichen in Liste und Mail.
 - Live: neue Mails kommen innerhalb von 1–3 Sekunden.
 
