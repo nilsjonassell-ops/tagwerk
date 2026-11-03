@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Archive, CheckSquare, FlaskConical, Inbox as InboxIcon, Mail, MailOpen, Reply, Search, Send, Sparkles, Star, Trash2, X, AlertCircle, Clock, Loader2, Flag, CalendarPlus, CalendarCheck, Layers } from 'lucide-react'
+import { Archive, CheckSquare, FlaskConical, Inbox as InboxIcon, Mail, MailOpen, Reply, Search, Send, Sparkles, Star, Trash2, X, AlertCircle, Clock, Loader2, Flag, CalendarPlus, ChevronDown, Layers, ListChecks, StickyNote } from 'lucide-react'
 import { groupThreads, type Thread } from '@shared/analysis'
-import { findAppointments, type Appointment } from '@shared/parse-de'
+import { SuggestionsPane, ThreadSuggestions, useOpenSuggestionCount } from '@/components/Suggestions'
+import { cleanSubject, detectMailSuggestions } from '@shared/mail-insights'
 import type { Source } from '@shared/types'
 import { SOURCE_LABEL } from '@/lib/accounts'
 
@@ -12,7 +13,7 @@ import { archiveThread, deleteThread, markThread, sendReply, setReplyMark, taskF
 import { draftReply, summarizeThread } from '@/lib/assistant'
 import { AccountStatus, Empty, ViewHeader } from '@/components/ui'
 
-type Filter = 'important' | 'starred' | 'unread' | 'reply' | 'all' | 'sent' | 'archive'
+type Filter = 'important' | 'starred' | 'unread' | 'reply' | 'all' | 'sent' | 'archive' | 'suggest'
 
 const FILTERS: { id: Filter; label: string; icon: typeof Mail }[] = [
   { id: 'all', label: 'Alle', icon: InboxIcon },
@@ -31,6 +32,13 @@ export function InboxView() {
   const openDialog = useStore((s) => s.openDialog)
   const google = useStore((s) => s.google)
   const [filter, setFilter] = useState<Filter>('all')
+  const suggestCount = useOpenSuggestionCount()
+  const insightsOn = useStore((s) => s.settings.mailInsights?.enabled !== false)
+  // „Zur Mail“ aus den Vorschlägen: zurück in den normalen Posteingang
+  useEffect(() => {
+    if (selectedId && filter === 'suggest') setFilter('all')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId])
   const [query, setQuery] = useState('')
   const [projectFilter, setProjectFilter] = useState<string>('')
   // Konto-Filter (nur sichtbar, wenn mehr als ein Postfach Mails liefert)
@@ -80,7 +88,7 @@ export function InboxView() {
   // Tastatur: j/k zum Navigieren, e archivieren, r antworten
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement)?.closest?.('input, textarea, select, [role=dialog]') || e.metaKey || e.ctrlKey) return
+      if ((e.target as HTMLElement)?.closest?.('input, textarea, select, [role=dialog]') || e.metaKey || e.ctrlKey || filter === 'suggest') return
       const idx = threads.findIndex((t) => t.id === selectedId)
       if (e.key === 'j' || e.key === 'ArrowDown') {
         const n = threads[Math.min(threads.length - 1, idx + 1)]
@@ -104,7 +112,7 @@ export function InboxView() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [threads, selectedId, selected, select])
+  }, [threads, selectedId, selected, select, filter])
 
   return (
     <>
@@ -130,6 +138,13 @@ export function InboxView() {
       <div className="view-body" style={{ overflow: 'hidden' }}>
         <div className="split">
           <nav className="filters" aria-label="Filter">
+            {insightsOn && (
+              <button className="nav-item nav-suggest" aria-current={filter === 'suggest' ? 'page' : undefined} onClick={() => (setFilter('suggest'), select('inbox', undefined))}>
+                <ListChecks aria-hidden="true" />
+                <span className="label" title="Aus Mails übernehmen: erkannte Termine, Fristen, Aufgaben und Infos">Vorschläge</span>
+                {suggestCount ? <span className="count accent">{suggestCount}</span> : null}
+              </button>
+            )}
             {FILTERS.map((f) => (
               <button key={f.id} className="nav-item" aria-current={filter === f.id ? 'page' : undefined} onClick={() => setFilter(f.id)}>
                 <f.icon aria-hidden="true" />
@@ -167,6 +182,10 @@ export function InboxView() {
             ))}
           </nav>
 
+          {filter === 'suggest' ? (
+            <SuggestionsPane />
+          ) : (
+          <>
           <div className="list-pane">
             <div className="search-box">
               <div className="search-input">
@@ -195,6 +214,8 @@ export function InboxView() {
                 Wähle links eine E-Mail. Mit <kbd>J</kbd> und <kbd>K</kbd> springst du durch die Liste.
               </Empty>
             </div>
+          )}
+          </>
           )}
         </div>
       </div>
@@ -326,9 +347,7 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
               </button>
             </>
           )}
-          <button className="btn small" onClick={onTask}>
-            <CheckSquare /> Aufgabe
-          </button>
+          <TakeOverMenu thread={thread} onTask={onTask} />
           <div style={{ flex: 1 }} />
           {thread.folder !== 'sent' && (
             <button className={`btn small ghost icon-btn ${thread.needsReply ? 'is-on-reply' : ''}`} onClick={() => setReplyMark(thread.id, !thread.needsReply)} title={thread.needsReply ? 'Aus „Antwort offen“ entfernen (A)' : 'Als „Antwort offen“ markieren (A)'} aria-label="Antwort offen umschalten" aria-pressed={thread.needsReply}>
@@ -339,8 +358,8 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
             <Star />
           </button>
           {thread.folder === 'inbox' && (
-            <button className="btn small ghost" onClick={() => archiveThread(thread.id)} title={readOnlyHint ?? 'Archivieren (E)'} disabled={!canModify}>
-              <Archive /> Archivieren
+            <button className="btn small ghost icon-btn" onClick={() => archiveThread(thread.id)} title={readOnlyHint ?? 'Archivieren (E)'} aria-label="Archivieren" disabled={!canModify}>
+              <Archive />
             </button>
           )}
           <button className="btn small ghost icon-btn danger-hover" onClick={() => deleteThread(thread.id)} title={readOnlyHint ?? 'Löschen (Entf)'} aria-label="Löschen" disabled={!canModify}>
@@ -350,7 +369,7 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
             <Mail />
           </button>
         </div>
-        <MailAppointments thread={thread} />
+        <ThreadSuggestions threadId={thread.id} />
         {aiOn && !claude.configured && (
           <div className="hint" style={{ marginTop: 8 }}>
             Zusammenfassen und Entwerfen brauchen Claude.{' '}
@@ -455,60 +474,78 @@ function Reader({ thread, onTask }: { thread: Thread; onTask: () => void }) {
 }
 
 /** Erkannte Termine in der letzten eingegangenen Mail – ein Klick legt sie im Kalender an. */
-function MailAppointments({ thread }: { thread: Thread }) {
-  const events = useStore((s) => s.data.events)
-  const openDialog = useStore((s) => s.openDialog)
-  const [hidden, setHidden] = useState(false)
-  const last = [...thread.messages].reverse().find((m) => m.folder !== 'sent')
-  const found = useMemo<Appointment[]>(
-    () => (last ? findAppointments(`${last.subject}. ${last.body}`, new Date(last.date), new Date()) : []),
-    [last?.id] // eslint-disable-line react-hooks/exhaustive-deps
-  )
-  if (!last || hidden || found.length === 0) return null
-  const fmt = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: 'numeric', month: 'short' })
-  const t = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' })
-  const title = thread.subject.replace(/^(re|aw|fwd|wg|antw):\s*/gi, '').trim() || 'Termin'
+
+/** „Termin daraus“: erkannter Termin, sonst Betreff mit nächster voller Stunde */
+function eventFromThread(thread: Thread) {
+  const last = [...thread.messages].reverse().find((m) => m.folder !== 'sent') ?? thread.latest
+  const found = detectMailSuggestions(last, { kinds: ['event'] })[0]
+  const who = `${last.from.name || last.from.email}${last.from.email ? ` <${last.from.email}>` : ''}`
+  useStore.getState().openDialog({
+    kind: 'event',
+    suggestionId: found?.id,
+    preset: {
+      title: cleanSubject(thread.subject),
+      start: found?.start,
+      end: found?.end,
+      allDay: found?.allDay,
+      projectId: thread.projectId,
+      mailRef: thread.id,
+      notes: `Aus der E-Mail von ${who}${found ? `:\n„${found.context}“` : ''}`
+    }
+  })
+}
+
+/** „Als Notiz merken“: erkannte Infos oder der Anfang der Mail */
+function noteFromThread(thread: Thread) {
+  const last = [...thread.messages].reverse().find((m) => m.folder !== 'sent') ?? thread.latest
+  const found = detectMailSuggestions(last, { kinds: ['note'] })[0]
+  const excerpt = last.body.replace(/\n{3,}/g, '\n\n').trim().slice(0, 600)
+  useStore.getState().openDialog({
+    kind: 'mailnote',
+    suggestionId: found?.id,
+    title: cleanSubject(thread.subject),
+    body: `${found?.noteBody ? `${found.noteBody}\n\n` : ''}${excerpt}\n\n– E-Mail von ${last.from.name || last.from.email}, ${new Date(last.date).toLocaleDateString('de-DE')}`,
+    threadId: thread.id,
+    projectId: thread.projectId
+  })
+}
+
+/** „Übernehmen ▾“ in der geöffneten Mail: Termin, Aufgabe oder Notiz daraus */
+function TakeOverMenu({ thread, onTask }: { thread: Thread; onTask: () => void }) {
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (!open) return
+    const off = (e: MouseEvent) => !(e.target as HTMLElement).closest?.('.takeover') && setOpen(false)
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    document.addEventListener('mousedown', off)
+    document.addEventListener('keydown', esc)
+    return () => {
+      document.removeEventListener('mousedown', off)
+      document.removeEventListener('keydown', esc)
+    }
+  }, [open])
+  const run = (fn: () => void) => () => {
+    setOpen(false)
+    fn()
+  }
   return (
-    <div className="mail-suggest" role="note" aria-label="Erkannte Termine">
-      {found.map((a) => {
-        const exists = events.some((e) => Math.abs(new Date(e.start).getTime() - new Date(a.start).getTime()) < 60_000)
-        return (
-          <div key={a.start} className="ms-row">
-            <span className="ms-icon">{exists ? <CalendarCheck /> : <CalendarPlus />}</span>
-            <span className="ms-text">
-              <b>
-                {fmt.format(new Date(a.start))} · {t.format(new Date(a.start))}–{t.format(new Date(a.end))} Uhr
-              </b>
-              <span>„{a.context}“</span>
-            </span>
-            {exists ? (
-              <span className="tag ok">Im Kalender</span>
-            ) : (
-              <button
-                className="btn small primary"
-                onClick={() =>
-                  openDialog({
-                    kind: 'event',
-                    preset: {
-                      title,
-                      start: a.start,
-                      end: a.end,
-                      projectId: thread.projectId,
-                      // Absender nur in den Notizen – Einladungen verschickt Tagwerk nie ungefragt
-                      notes: `Aus der E-Mail von ${last.from.name || last.from.email}${last.from.email ? ` <${last.from.email}>` : ''}: „${a.context}“`
-                    }
-                  })
-                }
-              >
-                <CalendarPlus /> Termin anlegen
-              </button>
-            )}
-          </div>
-        )
-      })}
-      <button className="ms-close" onClick={() => setHidden(true)} aria-label="Vorschläge ausblenden" title="Ausblenden">
-        <X />
+    <span className="takeover">
+      <button className="btn small" onClick={() => setOpen(!open)} aria-expanded={open} aria-haspopup="menu" title="Termin, Aufgabe oder Notiz aus dieser Mail">
+        <CalendarPlus /> Übernehmen <ChevronDown className="chev" />
       </button>
-    </div>
+      {open && (
+        <div className="sg-snooze" role="menu" aria-label="Übernehmen als">
+          <button role="menuitem" onClick={run(() => eventFromThread(thread))}>
+            <span className="row" style={{ gap: 8 }}><CalendarPlus size={15} /> Termin daraus</span>
+          </button>
+          <button role="menuitem" onClick={run(onTask)}>
+            <span className="row" style={{ gap: 8 }}><CheckSquare size={15} /> Aufgabe daraus</span>
+          </button>
+          <button role="menuitem" onClick={run(() => noteFromThread(thread))}>
+            <span className="row" style={{ gap: 8 }}><StickyNote size={15} /> Als Notiz merken</span>
+          </button>
+        </div>
+      )}
+    </span>
   )
 }

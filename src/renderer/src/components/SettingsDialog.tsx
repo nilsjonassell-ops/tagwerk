@@ -4,7 +4,7 @@ import {
   ArrowDown, ArrowUp, Bell, CalendarDays, CalendarPlus, CloudSun, Database, Eye, EyeOff, FlaskConical, KeyRound, LayoutDashboard, Monitor, Shield, Sparkles, Trash2, Loader2, Check, Download
 } from 'lucide-react'
 import { createDemoData, removeDemo } from '@shared/demo'
-import { CLAUDE_MODELS, type DashboardCardId, type Settings } from '@shared/types'
+import { CLAUDE_MODELS, type DashboardCardId, type Settings, type Source, type SuggestionKind } from '@shared/types'
 import { confirm, useStore } from '@/lib/store'
 import { VIEW_META } from './Sidebar'
 import { GoogleSettings } from './GoogleSettings'
@@ -127,6 +127,7 @@ function General() {
       >
         <input className="input" value={shortcut} onChange={(e) => setShortcut(e.target.value)} onBlur={saveShortcut} onKeyDown={(e) => e.key === 'Enter' && saveShortcut()} aria-label="Tastenkombination für Schnellnotiz" />
       </Row>
+      <MailInsightsSettings />
       <VersionRow />
     </>
   )
@@ -666,5 +667,52 @@ export function ShortcutsDialog() {
         ))}
       </div>
     </Dialog>
+  )
+}
+
+/** Vorschläge aus E-Mails: an/aus, Konten, Arten */
+function MailInsightsSettings() {
+  const [s, set] = useSettings()
+  const emails = useStore((st) => st.data.emails)
+  const mi = s.mailInsights
+  const sources = [...new Set(emails.map((m) => m.source))]
+  const kinds: { id: SuggestionKind; label: string }[] = [
+    { id: 'event', label: 'Termine' },
+    { id: 'deadline', label: 'Fristen' },
+    { id: 'task', label: 'Aufgaben' },
+    { id: 'note', label: 'Infos für Notizen' }
+  ]
+  const setMi = (patch: Partial<Settings['mailInsights']>) => set({ mailInsights: { ...mi, ...patch } })
+  const on = (list: string[], id: string, v: boolean) => (v ? [...new Set([...list, id])] : list.filter((x) => x !== id))
+  const label = (src: string) => (src === 'google' ? 'Gmail' : src === 'outlook' ? 'Outlook' : src === 'demo' ? 'Demo-Postfach' : src)
+  return (
+    <>
+      <div className="settings-group">Vorschläge aus E-Mails</div>
+      <Row label="Mails auswerten" hint="Tagwerk erkennt lokal auf diesem PC Termine, Fristen, Aufgaben und Infos in deinen Mails und schlägt sie im Posteingang unter „Aus Mails übernehmen“ vor. Ohne KI, ohne Server – angelegt wird nur, was du bestätigst.">
+        <Switch label="Mails auswerten" checked={mi.enabled} onChange={(v) => setMi({ enabled: v })} />
+      </Row>
+      {mi.enabled && sources.length > 0 && (
+        <Row label="Geprüfte Postfächer" hint="Keins ausgewählt = alle.">
+          <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
+            {sources.map((src) => (
+              <label key={src} className="row" style={{ gap: 6 }}>
+                <input type="checkbox" className="box-check" checked={!mi.sources.length || mi.sources.includes(src)} onChange={(e) => setMi({ sources: on(mi.sources.length ? mi.sources : sources, src, e.target.checked).length === sources.length ? [] : on(mi.sources.length ? mi.sources : sources, src, e.target.checked) as Source[] })} /> {label(src)}
+              </label>
+            ))}
+          </div>
+        </Row>
+      )}
+      {mi.enabled && (
+        <Row label="Erkennen">
+          <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
+            {kinds.map((k) => (
+              <label key={k.id} className="row" style={{ gap: 6 }}>
+                <input type="checkbox" className="box-check" checked={mi.kinds.includes(k.id)} onChange={(e) => setMi({ kinds: on(mi.kinds, k.id, e.target.checked) as SuggestionKind[] })} /> {k.label}
+              </label>
+            ))}
+          </div>
+        </Row>
+      )}
+    </>
   )
 }

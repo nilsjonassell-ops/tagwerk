@@ -14,7 +14,7 @@ import { Sidebar } from '@/components/Sidebar'
 import { AssistantPanel } from '@/components/Assistant'
 import { CommandPalette } from '@/components/CommandPalette'
 import { ConfirmHost, Toasts } from '@/components/Overlays'
-import { EventDialog, ProjectDialog, TaskDialog } from '@/components/Editors'
+import { EventDialog, MailNoteDialog, ProjectDialog, TaskDialog } from '@/components/Editors'
 import { OnboardingDialog, SettingsDialog, ShortcutsDialog } from '@/components/SettingsDialog'
 import { TodayView } from '@/views/Today'
 import { CalendarView } from '@/views/Calendar'
@@ -237,8 +237,9 @@ export function App() {
       {assistantOpen && settings.claude.enabled ? <AssistantPanel /> : <div />}
 
       {paletteOpen && <CommandPalette />}
-      {dialog?.kind === 'task' && <TaskDialog key={dialog.id ?? 'new'} id={dialog.id} preset={dialog.preset} />}
-      {dialog?.kind === 'event' && <EventDialog key={dialog.id ?? 'new'} id={dialog.id} preset={dialog.preset} />}
+      {dialog?.kind === 'task' && <TaskDialog key={dialog.id ?? dialog.suggestionId ?? 'new'} id={dialog.id} preset={dialog.preset} suggestionId={dialog.suggestionId} />}
+      {dialog?.kind === 'event' && <EventDialog key={dialog.id ?? dialog.suggestionId ?? 'new'} id={dialog.id} preset={dialog.preset} suggestionId={dialog.suggestionId} />}
+      {dialog?.kind === 'mailnote' && <MailNoteDialog key={dialog.suggestionId ?? dialog.threadId} {...dialog} />}
       {dialog?.kind === 'project' && <ProjectDialog id={dialog.id} />}
       {dialog?.kind === 'settings' && <SettingsDialog section={dialog.section} />}
       {dialog?.kind === 'shortcuts' && <ShortcutsDialog />}

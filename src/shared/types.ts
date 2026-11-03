@@ -66,6 +66,8 @@ export interface CalEvent {
   calendarId?: string
   etag?: string
   calendarName?: string
+  /** Aus dieser Mail-Unterhaltung übernommen */
+  mailRef?: string
 }
 
 export type MailFolder = 'inbox' | 'sent' | 'archive'
@@ -95,6 +97,8 @@ export interface Email {
   /** RFC-822 Message-ID und References für korrekte Antwort-Verkettung */
   rfcMessageId?: string
   references?: string
+  /** Mail hat Anhänge (werden nie automatisch geladen oder gespeichert) */
+  hasAttachments?: boolean
 }
 
 export interface Note {
@@ -110,6 +114,52 @@ export interface Note {
   updatedAt: string
   /** Zuletzt nach OneNote gespeichert */
   oneNote?: { pageId: string; sectionId: string; webUrl?: string; clientUrl?: string; savedAt: string }
+  /** Aus dieser Mail-Unterhaltung übernommen */
+  mailRef?: string
+}
+
+// ---------- Vorschläge aus E-Mails ----------
+
+export type SuggestionKind = 'event' | 'deadline' | 'task' | 'note'
+
+/** Wird bei jedem Anzeigen neu aus den Mails berechnet – gespeichert wird nur der Bearbeitungsstand. */
+export interface MailSuggestion {
+  id: string
+  kind: SuggestionKind
+  threadId: string
+  mailId: string
+  source: Source
+  from: Person
+  subject: string
+  mailDate: string
+  title: string
+  /** Termin */
+  start?: string
+  end?: string
+  allDay?: boolean
+  /** Frist (YYYY-MM-DD, HH:MM) */
+  due?: string
+  dueTime?: string
+  /** Notiz */
+  noteBody?: string
+  /** Angabe ist berechnet oder unvollständig – vor dem Übernehmen prüfen */
+  uncertain: boolean
+  reason?: string
+  /** Fundstelle und Satz drumherum */
+  phrase: string
+  context: string
+  hasAttachments?: boolean
+  /** Weitere Mails derselben Unterhaltung mit derselben Angabe (Erinnerung, Nachtrag) */
+  followUps?: number
+}
+
+export interface SuggestionState {
+  status: 'done' | 'ignored' | 'snoozed'
+  at: string
+  /** Wiedervorlage */
+  until?: string
+  /** Was daraus angelegt wurde */
+  created?: { kind: 'event' | 'task' | 'note'; id: string }
 }
 
 // ---------- OneNote (Microsoft Graph) ----------
@@ -180,6 +230,7 @@ export interface CloudPatch {
   upsert: Partial<Record<CloudCollection, { id: string }[]>>
   remove: Partial<Record<CloudCollection, string[]>>
   replyMarks?: { set: Record<string, ReplyMark>; remove: string[] }
+  suggestions?: { set: Record<string, SuggestionState>; remove: string[] }
 }
 
 export interface CloudApi {
@@ -372,6 +423,8 @@ export interface AppData {
   focusLog?: FocusEntry[]
   /** Von Hand gesetztes „Antwort offen“ je Unterhaltung (überlebt den Gmail-Abgleich) */
   replyMarks?: Record<string, ReplyMark>
+  /** Bearbeitungsstand der Vorschläge aus Mails (übernommen, ignoriert, zurückgestellt) */
+  suggestions?: Record<string, SuggestionState>
   sources: {
     demo: boolean
     icsImports: IcsImport[]
@@ -452,6 +505,8 @@ export interface Settings {
   }
   /** Gmail-Kategorien, die Tagwerk nicht in den Posteingang holt */
   gmailHiddenCategories: GmailCategory[]
+  /** Vorschläge aus E-Mails: an/aus, geprüfte Konten (leer = alle) und Arten */
+  mailInsights: { enabled: boolean; sources: Source[]; kinds: SuggestionKind[] }
   onboarded: boolean
 }
 
@@ -519,6 +574,7 @@ export const DEFAULT_SETTINGS: Settings = {
     dailyGoalMinutes: 120
   },
   gmailHiddenCategories: ['promotions', 'social'],
+  mailInsights: { enabled: true, sources: [], kinds: ['event', 'deadline', 'task', 'note'] },
   onboarded: false
 }
 

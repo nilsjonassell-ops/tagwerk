@@ -1,0 +1,427 @@
+/* ==========================================================================
+   „Aus Mails übernehmen“ – ruhige Vorschlagskarten
+   Karte: Symbol · Titel · Zeit/Frist · Absender und Betreff klein.
+   Übernehmen ist immer sichtbar, Später/Ignorieren erst beim Überfahren.
+   ========================================================================== */
+
+.split > .suggest-pane {
+  grid-column: 2 / -1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+.sg-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 22px 6px;
+}
+.sg-head h2 {
+  margin: 0;
+  font-size: var(--fs-xl);
+  font-weight: 680;
+  letter-spacing: -0.01em;
+}
+.sg-head .hint {
+  margin: 2px 0 0;
+}
+.sg-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 8px 22px 10px;
+}
+.sg-filters .chip {
+  height: 28px;
+  padding: 0 12px;
+  font-size: 12.5px;
+}
+.sg-filters .chip .count {
+  font-size: 11px;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+.sg-bulk {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 22px 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--grad-soft);
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.sg-bulk > span {
+  flex: 1;
+}
+.sg-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 14px 18px;
+}
+.sg-group {
+  margin-top: 6px;
+}
+.sg-group-head,
+.sg-collapse-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 8px 6px;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.sg-group-head .count,
+.sg-collapse-head .count {
+  font-weight: 560;
+  letter-spacing: 0;
+}
+
+.sg-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 3px 0;
+  padding: 11px 12px 11px 12px;
+  border-radius: 14px;
+  cursor: default;
+  transition:
+    background 0.22s ease,
+    box-shadow 0.25s ease;
+}
+.sg-card:hover {
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7), 0 6px 18px -12px rgba(60, 60, 160, 0.35);
+}
+.sg-card.selected {
+  background: linear-gradient(115deg, rgba(222, 232, 255, 0.92), rgba(240, 236, 255, 0.85) 60%, rgba(255, 238, 247, 0.8));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9), 0 10px 26px -14px rgba(77, 124, 255, 0.45);
+}
+:root[data-theme='dark'] .sg-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+:root[data-theme='dark'] .sg-card.selected {
+  background: linear-gradient(115deg, rgba(77, 124, 255, 0.2), rgba(139, 109, 255, 0.16) 60%, rgba(255, 111, 174, 0.12));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+.sg-pick {
+  margin-top: 8px;
+}
+.sg-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+.sg-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.sg-icon.k-event {
+  background: linear-gradient(135deg, #4d7cff, #8b6dff);
+}
+.sg-icon.k-deadline {
+  background: linear-gradient(135deg, #ff8a5c, #ff6fae);
+}
+.sg-icon.k-task {
+  background: linear-gradient(135deg, #2fb58a, #4d9cff);
+}
+.sg-icon.k-note {
+  background: linear-gradient(135deg, #f2b33d, #ff8a5c);
+}
+.sg-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sg-title b {
+  display: block;
+  font-size: 14px;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sg-card.expanded .sg-title b {
+  white-space: normal;
+}
+.sg-when {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.sg-when .tag {
+  height: 19px;
+  font-size: 11px;
+}
+.sg-when .tag svg {
+  width: 11px;
+  height: 11px;
+}
+.sg-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.sg-from {
+  flex-shrink: 0;
+  font-weight: 560;
+}
+.sg-subj {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sg-subj::before {
+  content: '· ';
+}
+.sg-details {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  animation: rise 0.3s var(--ease-out, ease) both;
+}
+.sg-details blockquote {
+  margin: 0;
+  padding: 6px 10px;
+  border-left: 3px solid rgba(139, 109, 255, 0.5);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--ink-2);
+  background: rgba(139, 109, 255, 0.06);
+}
+.sg-note {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(242, 179, 61, 0.1);
+  font: 12.5px/1.5 var(--font-ui);
+  white-space: pre-wrap;
+}
+.sg-reason {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--attention);
+}
+.sg-reason svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.sg-details .link {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.sg-details .link svg {
+  width: 13px;
+  height: 13px;
+}
+.sg-actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.sg-actions .btn.primary {
+  white-space: nowrap;
+}
+.sg-more {
+  display: flex;
+  gap: 0;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.sg-card:hover .sg-more,
+.sg-card.selected .sg-more,
+.sg-card:focus-within .sg-more {
+  opacity: 1;
+}
+.sg-snooze {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  min-width: 220px;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--glass-solid, #fff);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--glass-shadow-lg), inset 0 0 0 1px var(--glass-edge);
+  display: grid;
+  gap: 2px;
+  animation: rise 0.2s var(--ease-out, ease) both;
+}
+:root[data-theme='dark'] .sg-snooze {
+  background: rgba(36, 38, 60, 0.96);
+  box-shadow: var(--glass-shadow-lg), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.sg-snooze > button {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  text-align: left;
+}
+.sg-snooze > button:hover {
+  background: var(--grad-soft);
+}
+.sg-snooze-custom {
+  display: flex;
+  gap: 6px;
+  padding: 6px 4px 2px;
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+}
+.sg-snooze-custom .input {
+  flex: 1;
+  height: 30px;
+}
+.sg-collapse {
+  margin-top: 8px;
+}
+.sg-collapse-head {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+.sg-collapse-head svg {
+  width: 14px;
+  height: 14px;
+}
+.sg-mini {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 12px;
+}
+.sg-mini .sg-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  opacity: 0.75;
+}
+.sg-mini .sg-icon svg {
+  width: 13px;
+  height: 13px;
+}
+.sg-mini-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
+.sg-mini-text b {
+  font-weight: 560;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sg-keys {
+  margin: 18px 8px 0;
+  text-align: center;
+}
+.nav-item.nav-suggest {
+  margin-bottom: 6px;
+}
+.nav-item .count.accent {
+  background: var(--grad);
+  color: #fff;
+  padding: 0 6px;
+  border-radius: 999px;
+}
+
+/* Vorschläge in der geöffneten Mail */
+.mail-suggest .ms-row .sg-icon {
+  width: 30px;
+  height: 30px;
+}
+.mail-suggest .ms-row.done {
+  opacity: 0.7;
+}
+.mail-suggest .ms-row.done .ms-icon {
+  background: linear-gradient(135deg, #2fb58a, #4d9cff);
+}
+.mail-suggest {
+  padding-right: 12px;
+}
+
+/* Verweis auf die Quellmail in Dialogen und Notizen */
+.mail-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--grad-soft);
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  justify-self: start;
+}
+.mail-link:hover {
+  color: var(--ink);
+}
+.mail-link svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+.takeover {
+  position: relative;
+  display: inline-flex;
+}
+.takeover .sg-snooze {
+  left: 0;
+  right: auto;
+  min-width: 200px;
+}
+.takeover .chev {
+  width: 13px;
+  height: 13px;
+  margin-left: -2px;
+  opacity: 0.6;
+}

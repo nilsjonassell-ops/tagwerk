@@ -81,6 +81,8 @@ export interface SaveEventOptions {
   notify?: boolean
   /** Keine Einzelmeldung (z. B. beim Einplanen mehrerer Blöcke) */
   quiet?: boolean
+  /** Neuer Termin angelegt – mit seiner endgültigen ID (bei Google/Outlook/Apple vergibt das Konto die ID) */
+  onCreated?: (id: string) => void
 }
 
 const googleFail = (what: string, err: string) => S().toast(`${what}: ${err}`, { tone: 'error' })
@@ -103,7 +105,8 @@ export async function saveEvent(ev: CalEvent, isNew: boolean, opts: SaveEventOpt
   if (isNew && opts.target === 'google') {
     const r = await window.tagwerk.google.createEvent({ ...ev, source: 'google' }, !!opts.notify)
     if (!r.ok) return googleFail('Termin nicht angelegt', r.error), false
-    S().mutate((d) => ({ ...d, events: [...d.events, { ...r.value, projectId: ev.projectId, taskId: ev.taskId }] }), opts.quiet ? undefined : { toast: `„${short(ev.title)}“ in Google Kalender angelegt` })
+    S().mutate((d) => ({ ...d, events: [...d.events, { ...r.value, projectId: ev.projectId, taskId: ev.taskId, mailRef: ev.mailRef }] }), opts.quiet ? undefined : { toast: `„${short(ev.title)}“ in Google Kalender angelegt` })
+    opts.onCreated?.(r.value.id)
     return true
   }
 
@@ -111,13 +114,15 @@ export async function saveEvent(ev: CalEvent, isNew: boolean, opts: SaveEventOpt
   if (isNew && opts.target === 'outlook') {
     const r = await window.tagwerk.microsoft.createEvent({ ...ev, source: 'outlook' }, !!opts.notify)
     if (!r.ok) return googleFail('Termin nicht angelegt', r.error), false
-    S().mutate((d) => ({ ...d, events: [...d.events, { ...r.value, projectId: ev.projectId, taskId: ev.taskId }] }), opts.quiet ? undefined : { toast: `„${short(ev.title)}“ im Outlook-Kalender angelegt` })
+    S().mutate((d) => ({ ...d, events: [...d.events, { ...r.value, projectId: ev.projectId, taskId: ev.taskId, mailRef: ev.mailRef }] }), opts.quiet ? undefined : { toast: `„${short(ev.title)}“ im Outlook-Kalender angelegt` })
+    opts.onCreated?.(r.value.id)
     return true
   }
   if (isNew && opts.target?.startsWith('icloud:')) {
     const r = await window.tagwerk.icloud.createEvent({ ...ev, source: 'icloud' }, opts.target.slice(7))
     if (!r.ok) return googleFail('Termin nicht angelegt', r.error), false
-    S().mutate((d) => ({ ...d, events: [...d.events, { ...r.value, projectId: ev.projectId, taskId: ev.taskId }] }), opts.quiet ? undefined : { toast: `„${short(ev.title)}“ in Apple Kalender (${r.value.calendarName}) angelegt` })
+    S().mutate((d) => ({ ...d, events: [...d.events, { ...r.value, projectId: ev.projectId, taskId: ev.taskId, mailRef: ev.mailRef }] }), opts.quiet ? undefined : { toast: `„${short(ev.title)}“ in Apple Kalender (${r.value.calendarName}) angelegt` })
+    opts.onCreated?.(r.value.id)
     return true
   }
 
@@ -149,7 +154,7 @@ export async function saveEvent(ev: CalEvent, isNew: boolean, opts: SaveEventOpt
   if (!isNew && (prev?.source === 'outlook' || prev?.source === 'icloud')) {
     const r = prev.source === 'outlook' ? await window.tagwerk.microsoft.updateEvent(ev) : await window.tagwerk.icloud.updateEvent(ev)
     if (!r.ok) return googleFail('Termin nicht gespeichert', r.error), false
-    const saved = { ...r.value, id: r.value.id, projectId: ev.projectId, taskId: ev.taskId }
+    const saved = { ...r.value, id: r.value.id, projectId: ev.projectId, taskId: ev.taskId, mailRef: ev.mailRef }
     S().mutate((d) => ({ ...d, events: d.events.map((e) => (e.id === ev.id ? saved : e)) }), opts.quiet ? undefined : { toast: prev.source === 'outlook' ? 'Im Outlook-Kalender gespeichert' : 'In Apple Kalender gespeichert' })
     return true
   }
@@ -157,7 +162,7 @@ export async function saveEvent(ev: CalEvent, isNew: boolean, opts: SaveEventOpt
   if (!isNew && prev?.source === 'google') {
     const r = await window.tagwerk.google.updateEvent(ev, notify)
     if (!r.ok) return googleFail('Termin nicht gespeichert', r.error), false
-    const saved = { ...r.value, id: ev.id, projectId: ev.projectId }
+    const saved = { ...r.value, id: ev.id, projectId: ev.projectId, mailRef: ev.mailRef }
     S().mutate((d) => ({ ...d, events: d.events.map((e) => (e.id === ev.id ? saved : e)) }), { toast: 'In Google Kalender gespeichert' })
     return true
   }
@@ -166,6 +171,7 @@ export async function saveEvent(ev: CalEvent, isNew: boolean, opts: SaveEventOpt
     (d) => ({ ...d, events: isNew ? [...d.events, ev] : d.events.map((e) => (e.id === ev.id ? ev : e)) }),
     opts.quiet ? undefined : { toast: isNew ? `Termin „${short(ev.title)}“ angelegt` : 'Termin gespeichert', undoable: true }
   )
+  if (isNew) opts.onCreated?.(ev.id)
   return true
 }
 

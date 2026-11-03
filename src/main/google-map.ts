@@ -257,6 +257,7 @@ export function mapGoogleThread(t: GThread, me: string): Email[] {
       replied: repliedByMe,
       folder: fromMe ? 'sent' : inInbox ? 'inbox' : 'archive',
       rfcMessageId: header(m.payload, 'Message-ID') || header(m.payload, 'Message-Id'),
+      hasAttachments: hasAttachment(m.payload) || undefined,
       references: header(m.payload, 'References'),
       source: 'google'
     } satisfies Email
@@ -290,4 +291,12 @@ export function buildReplyMime(p: { from: string; to: Person[]; subject: string;
     'Content-Transfer-Encoding: base64'
   ]
   return `${headers.join('\r\n')}\r\n\r\n${b64}`
+}
+
+/** Echte Anhänge (Dateiname gesetzt, kein eingebettetes Bild im Text) */
+function hasAttachment(p?: GPart): boolean {
+  if (!p) return false
+  if (p.filename && !/^image\//.test(p.mimeType ?? '')) return true
+  if (p.filename && p.mimeType?.startsWith('image/') && (p.body as { attachmentId?: string } | undefined)?.attachmentId && !(p.headers ?? []).some((h) => /content-id/i.test(h.name))) return true
+  return (p.parts ?? []).some(hasAttachment)
 }

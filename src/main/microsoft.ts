@@ -384,7 +384,7 @@ export function savePage(req: OneNoteSaveRequest): Promise<MsResult<OneNotePage>
 
 // ---------- Outlook Mail ----------
 
-const MAIL_SELECT = '$select=id,conversationId,subject,body,from,sender,toRecipients,receivedDateTime,sentDateTime,isRead,importance,inferenceClassification,flag,internetMessageId'
+const MAIL_SELECT = '$select=id,conversationId,subject,body,from,sender,toRecipients,receivedDateTime,sentDateTime,isRead,importance,inferenceClassification,flag,internetMessageId,hasAttachments'
 // Nur Text statt HTML, Zeiten in UTC
 const PREFER = { prefer: 'outlook.body-content-type="text", outlook.timezone="UTC"' }
 

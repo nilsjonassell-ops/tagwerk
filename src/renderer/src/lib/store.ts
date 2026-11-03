@@ -33,8 +33,9 @@ export interface Selection {
 }
 
 export type DialogState =
-  | { kind: 'task'; id?: string; preset?: Partial<import('@shared/types').Task> }
-  | { kind: 'event'; id?: string; preset?: Partial<import('@shared/types').CalEvent> }
+  | { kind: 'task'; id?: string; preset?: Partial<import('@shared/types').Task>; suggestionId?: string }
+  | { kind: 'event'; id?: string; preset?: Partial<import('@shared/types').CalEvent>; suggestionId?: string }
+  | { kind: 'mailnote'; suggestionId?: string; title: string; body: string; threadId: string; projectId?: string }
   | { kind: 'project'; id?: string }
   | { kind: 'settings'; section?: string }
   | { kind: 'shortcuts' }
@@ -221,7 +222,7 @@ export const useStore = create<State>((set, get) => ({
           const local = new Map(next.events.filter((e) => e.source === 'google').map((e) => [e.remoteId, e]))
           const merged = r.events.map((e) => {
             const old = local.get(e.remoteId)
-            return old ? { ...e, projectId: e.projectId ?? old.projectId, taskId: e.taskId ?? old.taskId } : e
+            return old ? { ...e, projectId: e.projectId ?? old.projectId, taskId: e.taskId ?? old.taskId, mailRef: e.mailRef ?? old.mailRef } : e
           })
           next = { ...next, events: [...next.events.filter((e) => e.source !== 'google'), ...merged] }
         }

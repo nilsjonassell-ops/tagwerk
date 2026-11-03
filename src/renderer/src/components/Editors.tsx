@@ -5,12 +5,14 @@ import type { CalEvent, Person, Priority, Project, ProjectStatus, Recurrence, Ta
 import { uid, useStore } from '@/lib/store'
 import { addTask, deleteEvent, deleteTask, newTask, saveEvent, saveTask } from '@/lib/actions'
 import { useAccounts } from '@/lib/accounts'
+import { markCreated } from '@/lib/suggestions'
+import { Mail } from 'lucide-react'
 import { fromLocalInput, PRIORITY_LABEL, RECURRENCE_LABEL, toLocalInput, fTime } from '@/lib/format'
 import { Dialog, SourceTag } from './ui'
 
 // ---------- Aufgabe ----------
 
-export function TaskDialog({ id, preset }: { id?: string; preset?: Partial<Task> }) {
+export function TaskDialog({ id, preset, suggestionId }: { id?: string; preset?: Partial<Task>; suggestionId?: string }) {
   const data = useStore((s) => s.data)
   const close = () => useStore.getState().openDialog(null)
   const existing = id ? data.tasks.find((t) => t.id === id) : undefined
@@ -26,7 +28,10 @@ export function TaskDialog({ id, preset }: { id?: string; preset?: Partial<Task>
     if (existing) {
       saveTask(clean)
       useStore.getState().toast('Aufgabe gespeichert')
-    } else addTask(clean)
+    } else {
+      addTask(clean)
+      if (suggestionId) markCreated(suggestionId, 'task', clean.id)
+    }
     close()
   }
 
@@ -118,7 +123,7 @@ export function TaskDialog({ id, preset }: { id?: string; preset?: Partial<Task>
           <span>Notizen</span>
           <textarea className="textarea" value={t.notes ?? ''} onChange={(e) => set('notes', e.target.value)} rows={3} />
         </label>
-        {t.origin && <div className="hint">Herkunft: {t.origin.label}</div>}
+        {t.origin?.kind === 'email' ? <MailLink threadId={t.origin.refId} /> : t.origin && <div className="hint">Herkunft: {t.origin.label}</div>}
         <button type="submit" hidden />
       </form>
     </Dialog>
@@ -127,7 +132,7 @@ export function TaskDialog({ id, preset }: { id?: string; preset?: Partial<Task>
 
 // ---------- Termin ----------
 
-export function EventDialog({ id, preset }: { id?: string; preset?: Partial<CalEvent> }) {
+export function EventDialog({ id, preset, suggestionId }: { id?: string; preset?: Partial<CalEvent>; suggestionId?: string }) {
   const data = useStore((s) => s.data)
   const settings = useStore((s) => s.settings)
   const close = () => useStore.getState().openDialog(null)
@@ -141,7 +146,7 @@ export function EventDialog({ id, preset }: { id?: string; preset?: Partial<CalE
   const [date, setDate] = useState(toLocalInput(init.start).date)
   const [startT, setStartT] = useState(toLocalInput(init.start).time)
   const [endT, setEndT] = useState(toLocalInput(init.end).time)
-  const [allDay, setAllDay] = useState(existing?.allDay ?? false)
+  const [allDay, setAllDay] = useState(existing?.allDay ?? preset?.allDay ?? false)
   const [location, setLocation] = useState(existing?.location ?? preset?.location ?? '')
   const [attendees, setAttendees] = useState((existing?.attendees ?? preset?.attendees ?? []).map((a) => (a.email ? `${a.name} <${a.email}>` : a.name)).join(', '))
   const [notes, setNotes] = useState(existing?.notes ?? preset?.notes ?? '')
@@ -191,6 +196,7 @@ export function EventDialog({ id, preset }: { id?: string; preset?: Partial<CalE
     notes: notes.trim() || undefined,
     projectId: projectId || undefined,
     reminderMinutes: reminder === 'std' ? undefined : reminder === 'none' ? null : Number(reminder),
+    mailRef: existing?.mailRef ?? preset?.mailRef,
     source: existing?.source ?? 'local'
   }
   const clashes = useMemo(() => {
@@ -204,7 +210,7 @@ export function EventDialog({ id, preset }: { id?: string; preset?: Partial<CalE
     setTouched(true)
     if (invalidTitle) return
     if (!existing && target !== settings.lastEventTarget) void useStore.getState().updateSettings({ lastEventTarget: target })
-    if (await saveEvent(draft, !existing, { target: existing ? undefined : target, notify })) close()
+    if (await saveEvent(draft, !existing, { target: existing ? undefined : target, notify, onCreated: (newId) => suggestionId && markCreated(suggestionId, 'event', newId) })) close()
   }
 
   if (existing?.readOnly) {
@@ -374,6 +380,7 @@ export function EventDialog({ id, preset }: { id?: string; preset?: Partial<CalE
           <span>Notizen</span>
           <textarea className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
         </label>
+        {draft.mailRef && <MailLink threadId={draft.mailRef} />}
         <button type="submit" hidden />
       </form>
     </Dialog>
@@ -463,3 +470,98 @@ export function ProjectDialog({ id }: { id?: string }) {
 }
 
 export const todayYmd = () => ymd(new Date())
+
+/** Verweis auf die Quellmail eines Eintrags */
+export function MailLink({ threadId }: { threadId: string }) {
+  const mail = useStore((s) => s.data.emails.find((m) => m.threadId === threadId))
+  if (!mail) return <div className="hint">Aus einer E-Mail übernommen (nicht mehr im Posteingang)</div>
+  return (
+    <button
+      type="button"
+      className="mail-link"
+      onClick={() => {
+        useStore.getState().openDialog(null)
+        useStore.getState().go('inbox', threadId)
+      }}
+      title="Quellmail öffnen"
+    >
+      <Mail /> Aus E-Mail: <b>{mail.subject.replace(/^((re|aw|fwd?|wg)\s*:\s*)+/gi, '')}</b> · {mail.from.name || mail.from.email}
+    </button>
+  )
+}
+
+/** Notiz aus einer Mail: Inhalt prüfen, Projekt und Speicherort wählen */
+export function MailNoteDialog(props: { suggestionId?: string; title: string; body: string; threadId: string; projectId?: string }) {
+  const data = useStore((s) => s.data)
+  const settings = useStore((s) => s.settings)
+  const ms = useAccounts((s) => s.ms)
+  const close = () => useStore.getState().openDialog(null)
+  const [title, setTitle] = useState(props.title)
+  const [body, setBody] = useState(props.body)
+  const [projectId, setProjectId] = useState(props.projectId ?? '')
+  const oneNoteOk = ms.connected && ms.caps.notes && !!settings.oneNoteSectionId
+  const [toOneNote, setToOneNote] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const submit = async () => {
+    if (!title.trim()) return
+    setBusy(true)
+    const now = new Date().toISOString()
+    const note = { id: uid('n'), title: title.trim(), body, kind: 'note' as const, projectId: projectId || undefined, mailRef: props.threadId, createdAt: now, updatedAt: now }
+    useStore.getState().mutate((d) => ({ ...d, notes: [note, ...d.notes] }), { toast: `Notiz „${note.title.slice(0, 40)}“ angelegt`, undoable: true })
+    if (props.suggestionId) markCreated(props.suggestionId, 'note', note.id)
+    if (toOneNote && settings.oneNoteSectionId) {
+      const { saveNoteToOneNote } = await import('@/lib/onenote')
+      await saveNoteToOneNote(note, settings.oneNoteSectionId)
+    }
+    setBusy(false)
+    close()
+  }
+  return (
+    <Dialog
+      title="Als Notiz merken"
+      onClose={close}
+      footer={
+        <>
+          <button className="btn" onClick={close}>
+            Abbrechen
+          </button>
+          <button className="btn primary" onClick={submit} disabled={!title.trim() || busy}>
+            Notiz anlegen
+          </button>
+        </>
+      }
+    >
+      <label className="field">
+        <span>Titel</span>
+        <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
+      </label>
+      <label className="field">
+        <span>Inhalt</span>
+        <textarea className="textarea" value={body} onChange={(e) => setBody(e.target.value)} rows={7} />
+      </label>
+      <label className="field">
+        <span>Projekt</span>
+        <select className="select" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+          <option value="">Kein Projekt</option>
+          {data.projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="field">
+        <span>Speichern in</span>
+        <label className="row" style={{ gap: 8 }}>
+          <input type="checkbox" className="box-check" checked disabled /> Tagwerk-Notizen
+        </label>
+        {oneNoteOk && (
+          <label className="row" style={{ gap: 8 }}>
+            <input type="checkbox" className="box-check" checked={toOneNote} onChange={(e) => setToOneNote(e.target.checked)} /> Zusätzlich in OneNote (zuletzt verwendeter Abschnitt)
+          </label>
+        )}
+      </div>
+      <MailLink threadId={props.threadId} />
+    </Dialog>
+  )
+}

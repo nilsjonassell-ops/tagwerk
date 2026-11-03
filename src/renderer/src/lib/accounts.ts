@@ -35,7 +35,7 @@ export function mergeSource(source: Source, events?: CalEvent[], emails?: Email[
       const local = new Map(next.events.filter((e) => e.source === source).map((e) => [e.id, e]))
       const merged = events.map((e) => {
         const old = local.get(e.id)
-        return old ? { ...e, projectId: e.projectId ?? old.projectId, taskId: e.taskId ?? old.taskId } : e
+        return old ? { ...e, projectId: e.projectId ?? old.projectId, taskId: e.taskId ?? old.taskId, mailRef: e.mailRef ?? old.mailRef } : e
       })
       next = { ...next, events: [...next.events.filter((e) => e.source !== source), ...merged] }
     }

@@ -8,6 +8,7 @@ import { addTask, createNote, deleteNote, newTask } from '@/lib/actions'
 import { suggestTasksFromNote } from '@/lib/assistant'
 import { Dialog, Empty, Segmented, ViewHeader } from '@/components/ui'
 import { OneNoteBrowser, OneNoteSaveButton } from '@/components/OneNote'
+import { MailLink } from '@/components/Editors'
 
 export function NotesView() {
   const data = useStore((s) => s.data)
@@ -189,6 +190,11 @@ function NoteEditor({ note }: { note: Note }) {
           </button>
         </div>
         <input className="title-input" value={draft.title} onChange={(e) => set('title', e.target.value)} placeholder={draft.kind === 'meeting' ? 'Meeting' : 'Titel'} aria-label="Titel" autoFocus={!draft.title} />
+        {note.mailRef && (
+          <div style={{ marginTop: 6 }}>
+            <MailLink threadId={note.mailRef} />
+          </div>
+        )}
         <div style={{ height: 12 }} />
         <textarea
           className="body-input"

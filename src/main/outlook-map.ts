@@ -27,6 +27,7 @@ export interface OMessage {
   flag?: { flagStatus?: string }
   parentFolderId?: string
   internetMessageId?: string
+  hasAttachments?: boolean
   /** Von Tagwerk gesetzt: aus welchem Ordner geladen */
   _folder?: 'inbox' | 'sent' | 'archive'
 }
@@ -72,6 +73,7 @@ export function mapOutlookMessages(list: OMessage[], me: string): Email[] {
         replied: repliedByMe,
         folder: fromMe ? 'sent' : m._folder === 'archive' ? 'archive' : 'inbox',
         rfcMessageId: m.internetMessageId,
+        hasAttachments: m.hasAttachments || undefined,
         source: 'outlook'
       })
     })

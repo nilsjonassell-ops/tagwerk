@@ -45,13 +45,17 @@ Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, N
 - Termine anlegen/bearbeiten mit Ort, Teilnehmenden, Projekt, Notizen, **Erinnerung pro Termin**.
 - **Zielkalender wählbar** beim Anlegen: Outlook, Apple-Kalender (je Kalender, z. B. „Privat“, „Uni“), Google, oder nur in Tagwerk.
 - Wiederholungen; .ics-Import (schreibgeschützt).
-- **Termine aus Mails:** erkennt in E-Mails Angaben wie „Donnerstag um 17 Uhr“ und schlägt „Termin anlegen“ vor.
+- **Termine aus Mails:** erkannte Termine landen als Vorschlag in „Aus Mails übernehmen“ (siehe Posteingang); übernommene Termine verweisen auf ihre Mail.
 
 ### Posteingang
 - **Gmail und Outlook gemeinsam**, Filter „Alle Postfächer“ oder je Konto, Konto-Badge an jeder Mail.
 - Ordner: Alle, Wichtig, Gemerkt, Ungelesen, Antwort offen, Gesendet, Archiv; Filter nach Projekt; Suche.
 - Neues Karten-Design (nur Betreff, ruhig) mit Schnellaktionen: **Archivieren, Löschen, Merken, „Antwort offen“** (auf dem Dashboard sichtbar, von Hand entfernbar).
-- Antworten direkt aus Tagwerk (mit Bestätigung), Aufgabe aus Mail erstellen.
+- Antworten direkt aus Tagwerk (mit Bestätigung); in der geöffneten Mail „Übernehmen ▾“: Termin daraus, Aufgabe daraus, Als Notiz merken.
+- **Vorschläge – „Aus Mails übernehmen“** (lokal, ohne KI): erkennt Termine (Datum + Uhrzeit, ganztägig mit Stichwort), Fristen („bis spätestens …“, „Abgabe“, „zahlbar bis“, „Monatsende“), Aufgaben („Könntest du … freischalten?“, „Bitte … bestätigen“) und Infos für Notizen (Buchungs-/Bestell-/Sendungsnummern, Raum/Treffpunkt, Meeting-Links, Beträge).
+  - Gegliedert in Heute prüfen / Diese Woche / Später, Filter nach Art und „Unsicher“; relative Angaben zeigen das berechnete Datum („nächsten Donnerstag → Do., 5.11.“) und sind als unsicher markiert.
+  - Übernehmen öffnet den vorausgefüllten Dialog (Kalender, Erinnerung, Projekt) – angelegt wird erst nach Bestätigung. Dazu: Später (heute Abend, morgen früh, nächste Woche, eigenes Datum), Ignorieren, Mehrfachübernahme eindeutiger Aufgaben/Notizen, Bereich „Erledigt“ mit Rückgängig, Dubletten-Hinweis, Anhang-Hinweis, Erinnerungen in derselben Unterhaltung als „+1 Nachtrag“ zusammengefasst, Tastatur (J/K, Enter, L, I, Leertaste, O).
+  - Jeder übernommene Eintrag verweist auf seine Mail; der Bearbeitungsstand wandert mit dem Cloud-Speicher. Einstellungen: an/aus, geprüfte Postfächer, Arten.
 - Live: neue Mails kommen innerhalb von 1–3 Sekunden.
 
 ### Aufgaben
@@ -149,6 +153,10 @@ Offene Fragen: <falls vorhanden>
 
 ## 8. Ideen-Speicher (bereits besprochen, noch nicht gebaut)
 
+- **Mail-Vorschläge, Stufe 2 (lokal):** spätere Mail ändert Zeit/Frist eines übernommenen Eintrags → alt/neu nebeneinander; Wiedervorlage für „Antwort offen“ mit Erinnerung; Vorbereitungsaufgabe vor Fristen + direkt einplanen; Regeln „Absender/Betreff → Projekt“; Serienfrage bei Einladungen (.ics); Vorschläge aufteilen/zusammenführen.
+- **Mail-Vorschläge, Stufe 3 (optional, kostenpflichtig):** Claude für freie Formulierungen – nur mit ausdrücklicher Zustimmung.
+- Beim ersten Start: „Mit Microsoft anmelden und Daten wiederherstellen“ (für neue PCs).
+
 - Neue E-Mail schreiben (nicht nur antworten), Entwürfe.
 - Globale Suche über Mails, Termine, Notizen, OneNote gleichzeitig (teilweise in Strg+K vorhanden).
 - Microsoft To Do / Apple Erinnerungen als Aufgabenquelle.
@@ -160,7 +168,7 @@ Offene Fragen: <falls vorhanden>
 ## 9. Versionsverlauf
 
 <!--VERSIONEN-->
-- **Noch nicht veröffentlicht (kommt im nächsten großen Update):** OneNote lesen & speichern · einklappbare Seitenleiste · Outlook-Mail & -Kalender · Apple Kalender (iCloud) · Postfach-Filter je Konto · Zielkalender beim Anlegen · einfachere Gmail-Einrichtung mit Direktlinks · Microsoft-Anmeldung ohne eigene Einrichtung · Cloud-Speicher über OneDrive (Daten auf jedem PC)
+- **Noch nicht veröffentlicht (kommt im nächsten großen Update):** OneNote lesen & speichern · einklappbare Seitenleiste · Outlook-Mail & -Kalender · Apple Kalender (iCloud) · Postfach-Filter je Konto · Zielkalender beim Anlegen · einfachere Gmail-Einrichtung mit Direktlinks · Microsoft-Anmeldung ohne eigene Einrichtung · Cloud-Speicher über OneDrive (Daten auf jedem PC) · Vorschläge aus Mails („Aus Mails übernehmen“: Termine, Fristen, Aufgaben, Infos)
 - **1.7.0** – Microsoft-Store-Version (kein Blockieren mehr durch Smart App Control)
 - **1.6.0** – Kalender live, Termine aus Mails, Schnelleingabe mit Uhrzeit, Wochenrückblick
 - **1.5.0** – Eigene Pop-ups unten rechts, Erinnerung pro Termin, neues Update-Pop-up
