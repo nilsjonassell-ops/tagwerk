@@ -1,0 +1,106 @@
+/* ===== Projekte ===== */
+.project-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  background: none;
+  text-align: left;
+  padding: 12px 14px;
+}
+.project-row:hover {
+  background: var(--sunken);
+}
+.project-row.selected {
+  background: var(--accent-soft);
+}
+.project-row .grow {
+  flex: 1;
+  min-width: 0;
+}
+.project-row b {
+  display: block;
+  font-weight: 600;
+}
+.project-row small {
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+}
+.progress {
+  height: 4px;
+  border-radius: 4px;
+  background: var(--sunken);
+  overflow: hidden;
+  margin-top: 6px;
+}
+.progress i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+}
+.project-detail {
+  background: var(--raised);
+}
+.project-detail .inner {
+  max-width: 900px;
+  padding: 24px 36px 48px;
+}
+.project-detail h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 34px;
+  line-height: 1.1;
+}
+.project-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px 36px;
+  margin-top: 24px;
+}
+.project-cols h3 {
+  margin: 0 0 8px;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.project-cols h3 .n {
+  font-weight: 400;
+  color: var(--ink-3);
+  font-size: var(--fs-sm);
+}
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: s;
+}
+.steps li {
+  counter-increment: s;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.steps li::before {
+  content: counter(s);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  background: var(--accent-soft);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.steps li span {
+  flex: 1;
+}

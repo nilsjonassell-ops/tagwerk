@@ -1,0 +1,127 @@
+/* ===== Notizen ===== */
+.note-row {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  background: none;
+  text-align: left;
+  padding: 11px 14px;
+}
+.note-row:hover {
+  background: var(--sunken);
+}
+.note-row.selected {
+  background: var(--accent-soft);
+}
+.note-row .t {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 600;
+}
+.note-row .t svg {
+  width: 14px;
+  height: 14px;
+  color: var(--ink-3);
+  flex-shrink: 0;
+}
+.note-row .t span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.note-row .p {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  margin-top: 3px;
+}
+.note-row .d {
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  margin-top: 4px;
+}
+.editor {
+  background: var(--raised);
+  display: flex;
+  flex-direction: column;
+}
+.editor-inner {
+  max-width: 760px;
+  width: 100%;
+  padding: 22px 36px 40px;
+  margin: 0 auto;
+}
+.editor .title-input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: 32px;
+  line-height: 1.2;
+  padding: 4px 0;
+  color: var(--ink);
+}
+.editor .meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 8px 0 16px;
+}
+.editor .meta-row .select {
+  width: auto;
+  height: 28px;
+  font-size: var(--fs-sm);
+  padding: 0 8px;
+}
+.editor .body-input {
+  width: 100%;
+  min-height: 240px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  resize: none;
+  font-size: var(--fs-lg);
+  line-height: 1.65;
+  padding: 0;
+  color: var(--ink);
+}
+.editor .section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 24px 0 6px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.editor .section-label svg {
+  width: 14px;
+  height: 14px;
+  color: var(--accent);
+}
+.editor .section-input {
+  width: 100%;
+  min-height: 70px;
+  border: 0;
+  border-left: 2px solid var(--line);
+  outline: 0;
+  background: transparent;
+  resize: vertical;
+  padding: 2px 0 2px 12px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+.editor .section-input:focus {
+  border-left-color: var(--accent);
+}
+.saved-hint {
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
