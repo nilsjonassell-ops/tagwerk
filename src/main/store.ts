@@ -33,6 +33,8 @@ function writeJsonAtomic(file: string, value: unknown) {
 }
 
 let cachedData: AppData | null = null
+const listeners: (() => void)[] = []
+const emit = () => listeners.forEach((f) => f())
 let cachedSettings: Settings | null = null
 
 export const store = {
@@ -44,6 +46,11 @@ export const store = {
     if (!data || data.version !== 1 || !Array.isArray(data.tasks)) throw new Error('Ungültiges Datenformat')
     cachedData = data
     writeJsonAtomic(dataFile(), data)
+    emit()
+  },
+  /** Wird nach jedem Speichern von Daten oder Einstellungen aufgerufen (Cloud-Abgleich) */
+  onChange(fn: () => void) {
+    listeners.push(fn)
   },
   getSettings(): Settings {
     if (!cachedSettings) {
@@ -56,6 +63,7 @@ export const store = {
     const next = mergeSettings({ ...this.getSettings(), ...patch })
     cachedSettings = next
     writeJsonAtomic(settingsFile(), next)
+    emit()
     return next
   },
   wipe() {
@@ -63,7 +71,8 @@ export const store = {
     cachedSettings = null
     rmSync(dir(), { recursive: true, force: true })
   },
-  dataPath: () => dataFile()
+  dataPath: () => dataFile(),
+  dir: () => dir()
 }
 
 function mergeSettings(raw: Partial<Settings>): Settings {

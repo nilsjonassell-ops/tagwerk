@@ -32,6 +32,7 @@ import { startScheduler } from './scheduler'
 import * as google from './google'
 import * as microsoft from './microsoft'
 import * as icloud from './icloud'
+import { cloudAck, cloudStatus, initCloud, resetCloud, setCloudEnabled, syncNow as cloudSyncNow } from './cloud'
 import { log } from './log'
 
 const isMac = process.platform === 'darwin'
@@ -544,12 +545,23 @@ function registerIpc() {
   ipcMain.handle('microsoft:setClient', (_e, id: string) => microsoft.setClient(String(id ?? '')))
   ipcMain.handle('microsoft:clearClient', () => microsoft.clearClient())
   ipcMain.handle('microsoft:connect', async (_e, o: MicrosoftConnectOptions) => {
-    const r = await microsoft.connect({ notes: !!o?.notes, mail: !!o?.mail, calendar: !!o?.calendar })
+    const r = await microsoft.connect({ notes: !!o?.notes, mail: !!o?.mail, calendar: !!o?.calendar, sync: !!o?.sync })
     showMain()
+    if (r.ok && r.status.caps.sync) void cloudSyncNow()
+    mainWindow?.webContents.send('cloud:status', cloudStatus())
     return r
   })
   ipcMain.handle('microsoft:cancelConnect', () => microsoft.cancelConnect())
-  ipcMain.handle('microsoft:disconnect', () => microsoft.disconnect())
+  ipcMain.handle('microsoft:disconnect', async () => {
+    const r = await microsoft.disconnect()
+    resetCloud()
+    mainWindow?.webContents.send('cloud:status', cloudStatus())
+    return r
+  })
+  ipcMain.handle('cloud:status', () => cloudStatus())
+  ipcMain.handle('cloud:setEnabled', (_e, on: boolean) => setCloudEnabled(!!on))
+  ipcMain.handle('cloud:sync', () => cloudSyncNow())
+  ipcMain.handle('cloud:ack', () => cloudAck())
   ipcMain.handle('microsoft:sync', (_e, o?: { only?: string }) => microsoft.outlookSync(o?.only === 'mail' || o?.only === 'calendar' ? { only: o.only } : undefined))
   ipcMain.handle('microsoft:mailAction', (_e, ids: string[], action: OutlookMailAction) => {
     const ok: OutlookMailAction[] = ['read', 'unread', 'archive', 'unarchive', 'trash', 'untrash', 'flag', 'unflag']
@@ -696,6 +708,14 @@ function init() {
   google.startLiveWatch((what) => mainWindow?.webContents.send('google:changed', what))
   microsoft.startOutlookWatch((what) => mainWindow?.webContents.send('microsoft:changed', what))
   icloud.startICloudWatch(() => mainWindow?.webContents.send('icloud:changed'))
+  initCloud({
+    patch: (p) => mainWindow?.webContents.send('cloud:patch', p),
+    settings: (next) => {
+      nativeTheme.themeSource = next.theme
+      mainWindow?.webContents.send('cloud:settings', next)
+    },
+    status: (st) => mainWindow?.webContents.send('cloud:status', st)
+  })
 
   nativeTheme.on('updated', () => {
     if (!isMac && mainWindow) mainWindow.setTitleBarOverlay(overlayColors())

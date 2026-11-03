@@ -140,13 +140,57 @@ export interface MicrosoftStatus {
   email?: string
   expired: boolean
   /** Freigegebene Bereiche */
-  caps: { notes: boolean; mail: boolean; calendar: boolean }
+  caps: { notes: boolean; mail: boolean; calendar: boolean; sync: boolean }
+  /** Anwendungs-ID ist in Tagwerk eingebaut (keine eigene Registrierung nötig) */
+  builtInClient?: boolean
 }
 
 export interface MicrosoftConnectOptions {
   notes: boolean
   mail: boolean
   calendar: boolean
+  /** Daten über OneDrive (App-Ordner) zwischen PCs abgleichen */
+  sync?: boolean
+}
+
+// ---------- Cloud-Abgleich (OneDrive-App-Ordner) ----------
+
+export interface CloudDevice {
+  id: string
+  name: string
+  lastSeen: string
+  self: boolean
+}
+
+export interface CloudStatus {
+  /** Microsoft verbunden und OneDrive-Zugriff freigegeben */
+  available: boolean
+  enabled: boolean
+  syncing: boolean
+  lastSync?: string
+  error?: string
+  devices: CloudDevice[]
+  deviceName: string
+}
+
+export type CloudCollection = 'tasks' | 'notes' | 'projects' | 'docs' | 'events' | 'focusLog'
+
+/** Änderungen von anderen Geräten, die die Oberfläche auf ihren aktuellen Stand anwendet */
+export interface CloudPatch {
+  upsert: Partial<Record<CloudCollection, { id: string }[]>>
+  remove: Partial<Record<CloudCollection, string[]>>
+  replyMarks?: { set: Record<string, ReplyMark>; remove: string[] }
+}
+
+export interface CloudApi {
+  status(): Promise<CloudStatus>
+  setEnabled(on: boolean): Promise<CloudStatus>
+  syncNow(): Promise<CloudStatus>
+  /** Eingespielten Stand übernommen und gespeichert */
+  ack(): Promise<void>
+  onStatus(cb: (s: CloudStatus) => void): () => void
+  onPatch(cb: (p: CloudPatch) => void): () => void
+  onSettings(cb: (s: Settings) => void): () => void
 }
 
 export interface OutlookSyncResult {
@@ -651,6 +695,7 @@ export interface TagwerkApi {
   google: GoogleApi
   microsoft: MicrosoftApi
   icloud: ICloudApi
+  cloud: CloudApi
   weather: { get(city: string): Promise<WeatherResult> }
   app: {
     notify(req: NotifyRequest): Promise<{ shown: boolean; reason?: string }>

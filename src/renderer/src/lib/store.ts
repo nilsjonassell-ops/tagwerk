@@ -84,13 +84,24 @@ interface State {
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 let toastSeq = 0
 
-function scheduleSave(data: AppData) {
+// Gespeichert wird immer der aktuelle Stand – nicht der vom Zeitpunkt der Änderung
+// (sonst könnte ein inzwischen eingespielter Cloud-Stand wieder überschrieben werden).
+function scheduleSave(_data?: AppData) {
   if (saveTimer) clearTimeout(saveTimer)
-  saveTimer = setTimeout(() => {
-    window.tagwerk.data.save(data).catch(() => {
-      useStore.getState().toast('Speichern fehlgeschlagen. Deine letzten Änderungen sind noch nicht gesichert.', { tone: 'error' })
-    })
-  }, 350)
+  saveTimer = setTimeout(() => void saveNow(), 350)
+}
+
+/** Sofort speichern (z. B. nach einem Cloud-Abgleich) */
+export async function saveNow(): Promise<boolean> {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = null
+  try {
+    await window.tagwerk.data.save(useStore.getState().data)
+    return true
+  } catch {
+    useStore.getState().toast('Speichern fehlgeschlagen. Deine letzten Änderungen sind noch nicht gesichert.', { tone: 'error' })
+    return false
+  }
 }
 
 export const uid = (p: string) => `${p}-${crypto.randomUUID()}`

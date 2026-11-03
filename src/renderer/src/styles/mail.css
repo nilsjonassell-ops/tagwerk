@@ -530,3 +530,12 @@
   border-radius: 6px;
   background: rgba(120, 120, 190, 0.12);
 }
+
+/* Cloud-Speicher */
+.cloud-panel { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--accent, #6d5dfc) 6%, transparent); border: 1px solid color-mix(in srgb, var(--accent, #6d5dfc) 16%, transparent); }
+.cloud-panel .perm-row { border: 0; padding: 2px 0; }
+.cloud-panel .perm-row svg { flex-shrink: 0; color: var(--accent, #6d5dfc); }
+.cloud-devices { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.cloud-devices li { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.cloud-devices li svg { opacity: .7; }
+.cloud-devices li .hint, .cloud-devices li .tag { margin-left: auto; }

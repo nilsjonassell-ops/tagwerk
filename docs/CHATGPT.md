@@ -93,9 +93,10 @@ Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, N
 | --- | --- |
 | **Gmail** | verbunden über eigenes Google-Cloud-Projekt (einmalige Einrichtung, 6 Schritte mit Direktlinks) |
 | **Google Kalender** | möglich, wird von Nils **nicht genutzt** |
-| **Outlook-Mail & Outlook-Kalender** | über Microsoft Graph (eigene App-Registrierung nötig) |
+| **Outlook-Mail & Outlook-Kalender** | über Microsoft Graph – Anmeldung mit dem privaten Microsoft-Konto, **keine Einrichtung nötig** (App-Registrierung ist eingebaut) |
 | **Apple Kalender (iCloud)** | über CalDAV mit App-spezifischem Passwort |
 | **OneNote** | über Microsoft Graph |
+| **Cloud-Speicher (OneDrive)** | Aufgaben, Notizen, Projekte, eigene Termine, „Antwort offen“ und Einstellungen liegen zusätzlich im OneDrive-App-Ordner „Apps/Tagwerk“ – auf jedem PC mit demselben Microsoft-Konto anmelden, alles ist wieder da; Abgleich alle 30 s und kurz nach jeder Änderung |
 | .ics-Dateien | Import, schreibgeschützt |
 | Wetter | Open-Meteo, ohne Konto |
 | Demo-Daten | zum Ausprobieren, entfernbar |
@@ -106,7 +107,7 @@ Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, N
 ## 5. Leitplanken (wichtig für jede Idee)
 
 1. **Kein eigener Server.** Tagwerk spricht direkt mit Google/Microsoft/Apple. Keine Cloud von Tagwerk, kein Account bei Tagwerk.
-2. **Daten bleiben lokal** auf dem PC (JSON im App-Ordner); Passwörter/Tokens verschlüsselt im Windows-Schlüsselspeicher.
+2. **Daten bleiben beim Nutzer:** lokal auf dem PC (JSON im App-Ordner) und – wenn eingeschaltet – im eigenen OneDrive (App-Ordner, kostenlos). Passwörter/Tokens nur verschlüsselt lokal, nie in der Cloud.
 3. **Keine laufenden Kosten.** Nur kostenlose Dienste/APIs; kostenpflichtige Dinge nur optional.
 4. **Bestätigung vor Wirkung nach außen:** Senden, Löschen, Termine mit Teilnehmenden verschieben → immer Rückfrage; vieles hat „Rückgängig“.
 5. **Datenschutz:** Logs ohne Inhalte; Export & komplettes Löschen in den Einstellungen.
@@ -159,7 +160,7 @@ Offene Fragen: <falls vorhanden>
 ## 9. Versionsverlauf
 
 <!--VERSIONEN-->
-- **Noch nicht veröffentlicht (kommt im nächsten großen Update):** OneNote lesen & speichern · einklappbare Seitenleiste · Outlook-Mail & -Kalender · Apple Kalender (iCloud) · Postfach-Filter je Konto · Zielkalender beim Anlegen · einfachere Gmail-Einrichtung mit Direktlinks
+- **Noch nicht veröffentlicht (kommt im nächsten großen Update):** OneNote lesen & speichern · einklappbare Seitenleiste · Outlook-Mail & -Kalender · Apple Kalender (iCloud) · Postfach-Filter je Konto · Zielkalender beim Anlegen · einfachere Gmail-Einrichtung mit Direktlinks · Microsoft-Anmeldung ohne eigene Einrichtung · Cloud-Speicher über OneDrive (Daten auf jedem PC)
 - **1.7.0** – Microsoft-Store-Version (kein Blockieren mehr durch Smart App Control)
 - **1.6.0** – Kalender live, Termine aus Mails, Schnelleingabe mit Uhrzeit, Wochenrückblick
 - **1.5.0** – Eigene Pop-ups unten rechts, Erinnerung pro Termin, neues Update-Pop-up

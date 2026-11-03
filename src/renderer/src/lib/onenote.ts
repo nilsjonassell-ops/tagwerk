@@ -22,7 +22,7 @@ interface OneNoteState {
   reset(): void
 }
 
-const EMPTY: MicrosoftStatus = { clientConfigured: false, connected: false, expired: false, caps: { notes: false, mail: false, calendar: false } }
+const EMPTY: MicrosoftStatus = { clientConfigured: false, connected: false, expired: false, caps: { notes: false, mail: false, calendar: false, sync: false } }
 
 export const useOneNote = create<OneNoteState>((set, get) => ({
   status: EMPTY,

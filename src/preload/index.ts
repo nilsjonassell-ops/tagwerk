@@ -33,6 +33,15 @@ const api: TagwerkApi = {
     send: (req) => ipcRenderer.invoke('claude:send', req)
   },
   ics: { import: () => ipcRenderer.invoke('ics:import') },
+  cloud: {
+    status: () => ipcRenderer.invoke('cloud:status'),
+    setEnabled: (on) => ipcRenderer.invoke('cloud:setEnabled', on),
+    syncNow: () => ipcRenderer.invoke('cloud:sync'),
+    ack: () => ipcRenderer.invoke('cloud:ack'),
+    onStatus: (cb) => on('cloud:status', cb),
+    onPatch: (cb) => on('cloud:patch', cb),
+    onSettings: (cb) => on('cloud:settings', cb)
+  },
   icloud: {
     status: () => ipcRenderer.invoke('icloud:status'),
     connect: (id, pw) => ipcRenderer.invoke('icloud:connect', id, pw),

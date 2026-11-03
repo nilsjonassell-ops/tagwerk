@@ -390,14 +390,16 @@ function Sources() {
   return (
     <>
       <h3>Datenquellen</h3>
-      <p>Tagwerk nutzt externe Konten nur, wenn du sie ausdrücklich verbindest. Synchronisierte Daten liegen lokal auf diesem Gerät, Zugangsdaten verschlüsselt im Schlüsselspeicher des Betriebssystems.</p>
+      <p>Tagwerk nutzt externe Konten nur, wenn du sie ausdrücklich verbindest. Deine Daten liegen auf diesem Gerät – und, wenn du den Cloud-Speicher einschaltest, zusätzlich in deinem eigenen OneDrive (Ordner „Apps/Tagwerk“). Einen Tagwerk-Server gibt es nicht. Zugangsdaten liegen verschlüsselt im Schlüsselspeicher des Betriebssystems.</p>
 
-      <div className="settings-group">E-Mail-Konten</div>
-      <GoogleSettings />
-
-      <div className="settings-group">Outlook, Kalender und Notizen</div>
+      <div className="settings-group">Microsoft – Outlook, OneNote und Cloud-Speicher</div>
       <MicrosoftSettings />
+
+      <div className="settings-group">Apple Kalender</div>
       <ICloudSettings />
+
+      <div className="settings-group">Gmail</div>
+      <GoogleSettings />
 
       <div className="settings-group">Weitere Quellen</div>
       <div className="source-row">

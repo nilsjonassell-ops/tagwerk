@@ -25,13 +25,17 @@ const URLS = MOCK
 
 // So wenig wie möglich: eigene OneNote-Notizbücher lesen/schreiben, dazu Name und E-Mail.
 const BASE_SCOPES = ['openid', 'profile', 'email', 'offline_access', 'User.Read']
-const SCOPE = { notes: 'Notes.ReadWrite', mailRead: 'Mail.ReadWrite', mailSend: 'Mail.Send', calendar: 'Calendars.ReadWrite' }
+const SCOPE = { notes: 'Notes.ReadWrite', mailRead: 'Mail.ReadWrite', mailSend: 'Mail.Send', calendar: 'Calendars.ReadWrite', sync: 'Files.ReadWrite.AppFolder' }
+
+/** In Tagwerk eingebaute App-Registrierung (öffentlicher Client, alle Microsoft-Konten). Eine eigene ID in den Einstellungen hat Vorrang. */
+const BUILT_IN_CLIENT_ID = '293e5dfa-72e5-4a58-bd9b-32648cce5a87'
 
 function scopesFor(o: MicrosoftConnectOptions): string[] {
   const s = [...BASE_SCOPES]
   if (o.notes) s.push(SCOPE.notes)
   if (o.mail) s.push(SCOPE.mailRead, SCOPE.mailSend)
   if (o.calendar) s.push(SCOPE.calendar)
+  if (o.sync) s.push(SCOPE.sync)
   return s
 }
 /** Ältere Verbindungen (nur OneNote) kennen ihre Bereiche nicht */
@@ -60,7 +64,9 @@ class MsError extends Error {
 let accessToken: { token: string; exp: number } | null = null
 let pendingAuth: { cancel: () => void } | null = null
 
-const clientId = () => secrets.getJson<{ clientId: string }>(VAULT_CLIENT)?.clientId
+const ownClientId = () => secrets.getJson<{ clientId: string }>(VAULT_CLIENT)?.clientId
+// Im Test (Mock) nur die ausdrücklich hinterlegte ID, damit die Einrichtung testbar bleibt
+const clientId = () => ownClientId() ?? (MOCK && !process.env.TAGWERK_MS_BUILTIN ? undefined : BUILT_IN_CLIENT_ID)
 const account = () => secrets.getJson<Account>(VAULT_ACCOUNT)
 const b64url = (b: Buffer) => b.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 
@@ -69,6 +75,7 @@ export async function msStatus(): Promise<MicrosoftStatus> {
   const a = account()
   return {
     clientConfigured: !!id,
+    builtInClient: !!id && !ownClientId(),
     clientIdHint: id ? `${id.slice(0, 8)}…` : undefined,
     connected: !!a && !a.expired,
     email: a?.email,
@@ -79,7 +86,7 @@ export async function msStatus(): Promise<MicrosoftStatus> {
 
 function capsOf(a: Account | null): MicrosoftStatus['caps'] {
   const has = (x: string) => !!a && !a.expired && accountScopes(a).some((s) => s.toLowerCase().endsWith(x.toLowerCase()))
-  return { notes: has(SCOPE.notes), mail: has(SCOPE.mailRead), calendar: has(SCOPE.calendar) }
+  return { notes: has(SCOPE.notes), mail: has(SCOPE.mailRead), calendar: has(SCOPE.calendar), sync: has(SCOPE.sync) }
 }
 
 export const msCaps = () => capsOf(account())
@@ -109,7 +116,7 @@ export async function connect(opts: MicrosoftConnectOptions): Promise<{ ok: bool
   const id = clientId()
   if (!id) return { ok: false, error: 'Zuerst die Anwendungs-ID hinterlegen.', status: await msStatus() }
   if (!net.isOnline() && !MOCK) return { ok: false, error: 'Keine Internetverbindung.', status: await msStatus() }
-  if (!opts.notes && !opts.mail && !opts.calendar) return { ok: false, error: 'Wähle mindestens Mail, Kalender oder OneNote.', status: await msStatus() }
+  if (!opts.notes && !opts.mail && !opts.calendar && !opts.sync) return { ok: false, error: 'Wähle mindestens Mail, Kalender, OneNote oder Cloud-Speicher.', status: await msStatus() }
   cancelConnect()
   const scopes = scopesFor(opts)
   const verifier = b64url(randomBytes(48))
@@ -289,6 +296,25 @@ async function graph(path: string, init: RequestInit = {}, raw = false, retried 
   }
   return res
 }
+
+/** OneDrive-App-Ordner für den Cloud-Abgleich: liefert die Antwort ungeprüft (404 = Datei fehlt). */
+export async function driveFetch(path: string, init: RequestInit = {}, retried = false): Promise<Response> {
+  const token = await getAccessToken()
+  let res: Response
+  try {
+    res = await net.fetch(`${URLS.graph}${path}`, { ...init, headers: { ...(init.headers ?? {}), authorization: `Bearer ${token}` } })
+  } catch {
+    throw new MsError('offline', 'OneDrive ist nicht erreichbar.')
+  }
+  if (res.status === 401 && !retried) {
+    accessToken = null
+    return driveFetch(path, init, true)
+  }
+  return res
+}
+
+/** Fehlertext für die Oberfläche */
+export const msErrorText = (e: unknown) => (e instanceof MsError ? e.message : 'OneDrive ist gerade nicht erreichbar.')
 
 const json = async <T>(path: string, init?: RequestInit) => (await (await graph(path, init)).json()) as T
 

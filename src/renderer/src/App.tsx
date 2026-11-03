@@ -7,7 +7,8 @@ import { useAccounts } from '@/lib/accounts'
 import { useEffect } from 'react'
 import { AlertCircle } from 'lucide-react'
 import type { ViewId } from '@shared/types'
-import { useStore } from '@/lib/store'
+import { saveNow, useStore } from '@/lib/store'
+import { applyCloudPatch } from '@shared/cloud'
 import { archiveThread, createNote, markThread, toggleTask } from '@/lib/actions'
 import { Sidebar } from '@/components/Sidebar'
 import { AssistantPanel } from '@/components/Assistant'
@@ -99,6 +100,24 @@ export function App() {
       offIc()
     }
   }, [ready, online, msOn, icOn])
+
+  // Cloud-Abgleich: Stände anderer PCs auf die aktuellen Daten anwenden
+  useEffect(() => {
+    if (!ready) return
+    const offStatus = window.tagwerk.cloud.onStatus((cloud) => useAccounts.setState({ cloud }))
+    const offPatch = window.tagwerk.cloud.onPatch(async (p) => {
+      const st = useStore.getState()
+      st.set({ data: applyCloudPatch(st.data, p) })
+      await saveNow()
+      await window.tagwerk.cloud.ack()
+    })
+    const offSettings = window.tagwerk.cloud.onSettings((settings) => useStore.getState().set({ settings }))
+    return () => {
+      offStatus()
+      offPatch()
+      offSettings()
+    }
+  }, [ready])
 
   // Online/Offline
   useEffect(() => {

@@ -2,7 +2,7 @@
 // und Apple Kalender (iCloud). Google bleibt im Hauptspeicher (store.ts).
 
 import { create } from 'zustand'
-import type { CalEvent, Email, ICloudStatus, MicrosoftStatus, Source } from '@shared/types'
+import type { CalEvent, CloudStatus, Email, ICloudStatus, MicrosoftStatus, Source } from '@shared/types'
 import { useStore, notifyNewMail } from './store'
 import { useOneNote } from './onenote'
 
@@ -17,13 +17,15 @@ interface AccountsState {
   icloud: ICloudStatus
   outlookSync: SyncState
   icloudSync: SyncState
+  cloud: CloudStatus
   refresh(): Promise<void>
   syncOutlook(opts?: { quiet?: boolean; only?: 'mail' | 'calendar' }): Promise<void>
   syncICloud(opts?: { quiet?: boolean }): Promise<void>
 }
 
-export const EMPTY_MS: MicrosoftStatus = { clientConfigured: false, connected: false, expired: false, caps: { notes: false, mail: false, calendar: false } }
+export const EMPTY_MS: MicrosoftStatus = { clientConfigured: false, connected: false, expired: false, caps: { notes: false, mail: false, calendar: false, sync: false } }
 const EMPTY_IC: ICloudStatus = { connected: false, calendars: [] }
+export const EMPTY_CLOUD: CloudStatus = { available: false, enabled: true, syncing: false, devices: [], deviceName: '' }
 
 /** Ersetzt die Datensätze einer Quelle, behält aber lokale Zusatzinfos (Projekt, Aufgabe). */
 export function mergeSource(source: Source, events?: CalEvent[], emails?: Email[]) {
@@ -53,10 +55,11 @@ export const useAccounts = create<AccountsState>((set, get) => ({
   icloud: EMPTY_IC,
   outlookSync: { syncing: false },
   icloudSync: { syncing: false },
+  cloud: EMPTY_CLOUD,
 
   async refresh() {
-    const [ms, icloud] = await Promise.all([window.tagwerk.microsoft.status(), window.tagwerk.icloud.status()])
-    set({ ms, icloud })
+    const [ms, icloud, cloud] = await Promise.all([window.tagwerk.microsoft.status(), window.tagwerk.icloud.status(), window.tagwerk.cloud.status()])
+    set({ ms, icloud, cloud })
     useOneNote.setState({ status: ms })
   },
 
