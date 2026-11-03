@@ -96,7 +96,7 @@ function scheduleSave(data: AppData) {
 export const uid = (p: string) => `${p}-${crypto.randomUUID()}`
 
 /** Neue E-Mails seit dem letzten Abgleich melden – gebündelt, je nach Einstellung nur wichtige. */
-function notifyNewMail(before: Email[], after: Email[], me: string | undefined, settings: Settings) {
+export function notifyNewMail(before: Email[], after: Email[], me: string | undefined, settings: Settings) {
   const mode = settings.notifications.mail
   const list = mailsToNotify(before, after, me, mode, settings.notifications.vipSenders)
   if (!list.length) return

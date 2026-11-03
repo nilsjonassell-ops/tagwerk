@@ -75,8 +75,8 @@ export function archiveCompleted() {
 // ---------- Termine ----------
 
 export interface SaveEventOptions {
-  /** Ziel für neue Termine */
-  target?: 'google' | 'local'
+  /** Ziel für neue Termine: Google, Outlook, ein Apple-Kalender („icloud:<id>“) oder nur Tagwerk */
+  target?: string
   /** Teilnehmende über Google benachrichtigen (nur neue Google-Termine) */
   notify?: boolean
   /** Keine Einzelmeldung (z. B. beim Einplanen mehrerer Blöcke) */
@@ -88,7 +88,14 @@ const googleFail = (what: string, err: string) => S().toast(`${what}: ${err}`, {
 export async function saveEvent(ev: CalEvent, isNew: boolean, opts: SaveEventOptions = {}): Promise<boolean> {
   const prev = S().data.events.find((e) => e.id === ev.id)
   if (prev?.readOnly) {
-    S().toast(prev.source === 'google' ? 'Diesen Termin kannst du in Tagwerk nicht ändern (nur Lesezugriff oder fremder Termin).' : 'Importierte Termine sind schreibgeschützt.', { tone: 'error' })
+    S().toast(
+      prev.source === 'google' || prev.source === 'outlook'
+        ? 'Diesen Termin kannst du in Tagwerk nicht ändern (Einladung, Serientermin oder nur Lesezugriff).'
+        : prev.source === 'icloud'
+          ? 'Wiederkehrende Termine und geteilte Kalender bearbeitest du in Apple Kalender.'
+          : 'Importierte Termine sind schreibgeschützt.',
+      { tone: 'error' }
+    )
     return false
   }
 
@@ -97,6 +104,20 @@ export async function saveEvent(ev: CalEvent, isNew: boolean, opts: SaveEventOpt
     const r = await window.tagwerk.google.createEvent({ ...ev, source: 'google' }, !!opts.notify)
     if (!r.ok) return googleFail('Termin nicht angelegt', r.error), false
     S().mutate((d) => ({ ...d, events: [...d.events, { ...r.value, projectId: ev.projectId, taskId: ev.taskId }] }), opts.quiet ? undefined : { toast: `„${short(ev.title)}“ in Google Kalender angelegt` })
+    return true
+  }
+
+  // Neuer Termin in Outlook oder Apple Kalender
+  if (isNew && opts.target === 'outlook') {
+    const r = await window.tagwerk.microsoft.createEvent({ ...ev, source: 'outlook' }, !!opts.notify)
+    if (!r.ok) return googleFail('Termin nicht angelegt', r.error), false
+    S().mutate((d) => ({ ...d, events: [...d.events, { ...r.value, projectId: ev.projectId, taskId: ev.taskId }] }), opts.quiet ? undefined : { toast: `„${short(ev.title)}“ im Outlook-Kalender angelegt` })
+    return true
+  }
+  if (isNew && opts.target?.startsWith('icloud:')) {
+    const r = await window.tagwerk.icloud.createEvent({ ...ev, source: 'icloud' }, opts.target.slice(7))
+    if (!r.ok) return googleFail('Termin nicht angelegt', r.error), false
+    S().mutate((d) => ({ ...d, events: [...d.events, { ...r.value, projectId: ev.projectId, taskId: ev.taskId }] }), opts.quiet ? undefined : { toast: `„${short(ev.title)}“ in Apple Kalender (${r.value.calendarName}) angelegt` })
     return true
   }
 
@@ -117,12 +138,20 @@ export async function saveEvent(ev: CalEvent, isNew: boolean, opts: SaveEventOpt
       } else {
         const ok = await confirm({
           title: 'Termin verschieben?',
-          body: `„${prev.title}“ hat ${prev.attendees.length} Teilnehmende. Neue Zeit: ${when}.${ev.source === 'demo' ? ' (Demo-Kalender – es werden keine Einladungen verschickt.)' : ''}`,
+          body: `„${prev.title}“ hat ${prev.attendees.length} Teilnehmende. Neue Zeit: ${when}.${ev.source === 'demo' ? ' (Demo-Kalender – es werden keine Einladungen verschickt.)' : prev.source === 'outlook' ? ' Outlook informiert die Teilnehmenden über die neue Zeit.' : ''}`,
           confirmLabel: 'Verschieben'
         })
         if (!ok) return false
       }
     }
+  }
+
+  if (!isNew && (prev?.source === 'outlook' || prev?.source === 'icloud')) {
+    const r = prev.source === 'outlook' ? await window.tagwerk.microsoft.updateEvent(ev) : await window.tagwerk.icloud.updateEvent(ev)
+    if (!r.ok) return googleFail('Termin nicht gespeichert', r.error), false
+    const saved = { ...r.value, id: r.value.id, projectId: ev.projectId, taskId: ev.taskId }
+    S().mutate((d) => ({ ...d, events: d.events.map((e) => (e.id === ev.id ? saved : e)) }), opts.quiet ? undefined : { toast: prev.source === 'outlook' ? 'Im Outlook-Kalender gespeichert' : 'In Apple Kalender gespeichert' })
+    return true
   }
 
   if (!isNew && prev?.source === 'google') {
@@ -158,10 +187,33 @@ export async function deleteEvent(id: string): Promise<boolean> {
     return true
   }
   if (ev.readOnly) {
-    S().toast(ev.source === 'google' ? 'Tagwerk hat nur Lesezugriff auf deinen Google Kalender. Verbinde Google mit Schreibzugriff neu, um Termine zu ändern.' : 'Importierte Termine sind schreibgeschützt. Entferne den Import in den Einstellungen.', { tone: 'error' })
+    S().toast(
+      ev.source === 'google'
+        ? 'Tagwerk hat nur Lesezugriff auf deinen Google Kalender. Verbinde Google mit Schreibzugriff neu, um Termine zu ändern.'
+        : ev.source === 'outlook'
+          ? 'Einladungen und Serientermine löschst du in Outlook.'
+          : ev.source === 'icloud'
+            ? 'Wiederkehrende Termine und geteilte Kalender bearbeitest du in Apple Kalender.'
+            : 'Importierte Termine sind schreibgeschützt. Entferne den Import in den Einstellungen.',
+      { tone: 'error' }
+    )
     return false
   }
   const base = `„${ev.title}“ am ${fDayMed.format(new Date(ev.start))}`
+  if (ev.source === 'outlook' || ev.source === 'icloud') {
+    const where = ev.source === 'outlook' ? 'Outlook-Kalender' : `Apple Kalender${ev.calendarName ? ` („${ev.calendarName}“)` : ''}`
+    const ok = await confirm({
+      title: `Termin im ${ev.source === 'outlook' ? 'Outlook-Kalender' : 'Apple Kalender'} löschen?`,
+      body: `${base} wird aus deinem ${where} gelöscht.${ev.source === 'outlook' && ev.attendees.length ? ' Outlook schickt den Teilnehmenden eine Absage.' : ''} Das lässt sich in Tagwerk nicht rückgängig machen.`,
+      confirmLabel: 'Löschen',
+      danger: true
+    })
+    if (!ok) return false
+    const r = ev.source === 'outlook' ? await window.tagwerk.microsoft.deleteEvent(ev.remoteId!) : await window.tagwerk.icloud.deleteEvent(ev)
+    if (!r.ok && r.code !== 'not-found') return googleFail('Termin nicht gelöscht', r.error), false
+    S().mutate((d) => ({ ...d, events: d.events.filter((e) => e.id !== id) }), { toast: `Termin im ${where} gelöscht` })
+    return true
+  }
   if (ev.source === 'google') {
     const opts = {
       title: 'Termin in Google Kalender löschen?',
@@ -191,6 +243,13 @@ export async function deleteEvent(id: string): Promise<boolean> {
 const threadOf = (threadId: string) => S().data.emails.filter((m) => m.threadId === threadId)
 const isGoogleThread = (threadId: string) => threadOf(threadId).some((m) => m.source === 'google')
 const remoteThread = (threadId: string) => threadOf(threadId).find((m) => m.remoteThreadId)?.remoteThreadId
+const isOutlookThread = (threadId: string) => threadOf(threadId).some((m) => m.source === 'outlook')
+/** Outlook arbeitet mit einzelnen Nachrichten statt Unterhaltungen */
+const outlookIds = (threadId: string, folder?: Email['folder']) =>
+  threadOf(threadId)
+    .filter((m) => m.source === 'outlook' && m.remoteId && (folder ? m.folder === folder : m.folder !== 'sent'))
+    .map((m) => m.remoteId!)
+const outlookResync = () => import('./accounts').then((m) => m.useAccounts.getState().syncOutlook({ quiet: true, only: 'mail' }))
 
 const withoutMark = (marks: AppData['replyMarks'], threadId: string) => {
   if (!marks?.[threadId]) return marks
@@ -207,6 +266,13 @@ export async function toggleStar(threadId: string) {
   const google = isGoogleThread(threadId)
   if (google && !S().google.caps.gmailWrite) return S().toast('Tagwerk hat nur Lesezugriff auf Gmail.', { tone: 'error' })
   S().mutate((d) => ({ ...d, emails: d.emails.map((m) => (m.threadId === threadId ? { ...m, starred: on } : m)) }))
+  if (isOutlookThread(threadId)) {
+    const r = await window.tagwerk.microsoft.mailAction(outlookIds(threadId), on ? 'flag' : 'unflag')
+    if (!r.ok) {
+      S().replaceData(prev)
+      return googleFail('Nicht gemerkt', r.error)
+    }
+  }
   if (google) {
     const r = await window.tagwerk.google.modifyThread(remoteThread(threadId)!, on ? ['STARRED'] : [], on ? [] : ['STARRED'])
     if (!r.ok) {
@@ -231,6 +297,14 @@ export function setReplyMark(threadId: string, on: boolean) {
 export async function markThread(threadId: string, patch: Partial<Email>) {
   const prev = S().data
   S().mutate((d) => ({ ...d, emails: d.emails.map((m) => (m.threadId === threadId && m.folder !== 'sent' ? { ...m, ...patch } : m)) }))
+  if (isOutlookThread(threadId) && patch.read !== undefined) {
+    const r = await window.tagwerk.microsoft.mailAction(outlookIds(threadId), patch.read ? 'read' : 'unread')
+    if (!r.ok) {
+      S().replaceData(prev)
+      googleFail('Outlook nicht aktualisiert', r.error)
+    }
+    return
+  }
   if (isGoogleThread(threadId) && patch.read !== undefined && S().google.caps.gmailWrite) {
     const id = remoteThread(threadId)!
     const r = await window.tagwerk.google.modifyThread(id, patch.read ? [] : ['UNREAD'], patch.read ? ['UNREAD'] : [])
@@ -244,6 +318,14 @@ export async function markThread(threadId: string, patch: Partial<Email>) {
 export async function archiveThread(threadId: string) {
   const apply = () =>
     S().mutate((d) => ({ ...d, emails: d.emails.map((m) => (m.threadId === threadId && m.folder === 'inbox' ? { ...m, folder: 'archive' } : m)) }))
+  if (isOutlookThread(threadId)) {
+    const r = await window.tagwerk.microsoft.mailAction(outlookIds(threadId, 'inbox'), 'archive')
+    if (!r.ok) return googleFail('Nicht archiviert', r.error)
+    apply()
+    S().toast('In Outlook archiviert')
+    void outlookResync()
+    return
+  }
   if (isGoogleThread(threadId)) {
     if (!S().google.caps.gmailWrite) return S().toast('Tagwerk hat nur Lesezugriff auf Gmail.', { tone: 'error' })
     const id = remoteThread(threadId)!
@@ -270,6 +352,7 @@ export async function deleteThread(threadId: string): Promise<boolean> {
   if (!msgs.length) return false
   const subject = msgs[0].subject || '(ohne Betreff)'
   const google = isGoogleThread(threadId)
+  const outlook = isOutlookThread(threadId)
   if (google && !S().google.caps.gmailWrite) {
     S().toast('Tagwerk hat nur Lesezugriff auf Gmail.', { tone: 'error' })
     return false
@@ -278,11 +361,20 @@ export async function deleteThread(threadId: string): Promise<boolean> {
     title: 'E-Mail löschen?',
     body: google
       ? `„${subject}“ wird in Gmail in den Papierkorb verschoben. Dort kannst du sie 30 Tage lang wiederherstellen, danach löscht Google sie endgültig.`
-      : `„${subject}“ wird aus Tagwerk entfernt.`,
+      : outlook
+        ? `„${subject}“ wird in Outlook in den Ordner „Gelöschte Elemente“ verschoben. Dort kannst du sie wiederherstellen.`
+        : `„${subject}“ wird aus Tagwerk entfernt.`,
     confirmLabel: 'Löschen',
     danger: true
   })
   if (!ok) return false
+  if (outlook) {
+    const r = await window.tagwerk.microsoft.mailAction(outlookIds(threadId, 'inbox').concat(outlookIds(threadId, 'archive')), 'trash')
+    if (!r.ok && r.code !== 'not-found') return googleFail('Nicht gelöscht', r.error), false
+    S().mutate((d) => ({ ...d, emails: d.emails.filter((m) => m.threadId !== threadId) }), { toast: 'In Outlook gelöscht' })
+    void outlookResync()
+    return true
+  }
   const prev = S().data
   const remove = () => S().mutate((d) => ({ ...d, emails: d.emails.filter((m) => m.threadId !== threadId) }))
   if (google) {
@@ -315,6 +407,28 @@ export async function sendReply(threadId: string, body: string): Promise<boolean
   const msgs = threadOf(threadId).sort((a, b) => a.date.localeCompare(b.date))
   const last = [...msgs].reverse().find((m) => m.folder !== 'sent')
   if (!last || !body.trim()) return false
+
+  if (last.source === 'outlook') {
+    const ms = await window.tagwerk.microsoft.status()
+    const ok = await confirm({
+      title: 'E-Mail senden?',
+      body: `Die Antwort an ${last.from.name} <${last.from.email}> wird jetzt über Outlook (${ms.email ?? 'Microsoft-Konto'}) versendet. Versendete E-Mails lassen sich nicht zurückholen.`,
+      confirmLabel: 'Senden'
+    })
+    if (!ok) return false
+    const r = await window.tagwerk.microsoft.reply(last.remoteId!, body.trim())
+    if (!r.ok) return googleFail('Nicht gesendet', r.error), false
+    S().mutate(
+      (d) => ({
+        ...d,
+        emails: d.emails.map((m) => (m.threadId === threadId && m.folder !== 'sent' ? { ...m, replied: true, read: true, needsReply: false } : m)),
+        replyMarks: withoutMark(d.replyMarks, threadId)
+      }),
+      { toast: `Antwort an ${last.from.name} gesendet` }
+    )
+    void outlookResync()
+    return true
+  }
 
   if (last.source === 'google') {
     const g = S().google

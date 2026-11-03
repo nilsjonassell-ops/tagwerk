@@ -1,7 +1,7 @@
 // Gemeinsame Datentypen für Haupt- und Renderer-Prozess.
 
 /** Herkunft eines Datensatzes – wird in der Oberfläche sichtbar gemacht. */
-export type Source = 'demo' | 'local' | 'ics' | 'google'
+export type Source = 'demo' | 'local' | 'ics' | 'google' | 'outlook' | 'icloud'
 
 export type Priority = 'high' | 'medium' | 'low'
 export type TaskStatus = 'open' | 'doing' | 'done'
@@ -62,6 +62,10 @@ export interface CalEvent {
   taskId?: string
   /** Erinnerung: Minuten vorher (0 = zum Beginn), null = keine, fehlt = Standard aus den Einstellungen */
   reminderMinutes?: number | null
+  /** Apple Kalender: Kalender-URL, Ressourcen-ETag und Name des Kalenders */
+  calendarId?: string
+  etag?: string
+  calendarName?: string
 }
 
 export type MailFolder = 'inbox' | 'sent' | 'archive'
@@ -135,6 +139,54 @@ export interface MicrosoftStatus {
   connected: boolean
   email?: string
   expired: boolean
+  /** Freigegebene Bereiche */
+  caps: { notes: boolean; mail: boolean; calendar: boolean }
+}
+
+export interface MicrosoftConnectOptions {
+  notes: boolean
+  mail: boolean
+  calendar: boolean
+}
+
+export interface OutlookSyncResult {
+  ok: boolean
+  syncedAt: string
+  events?: CalEvent[]
+  emails?: Email[]
+  errors: { calendar?: string; mail?: string; general?: string }
+}
+
+export type OutlookMailAction = 'read' | 'unread' | 'archive' | 'unarchive' | 'trash' | 'untrash' | 'flag' | 'unflag'
+
+// ---------- Apple Kalender (iCloud, CalDAV) ----------
+
+export interface ICloudCalendar {
+  id: string
+  name: string
+  color?: string
+  enabled: boolean
+  readOnly?: boolean
+}
+
+export interface ICloudStatus {
+  connected: boolean
+  appleId?: string
+  calendars: ICloudCalendar[]
+  defaultCalendarId?: string
+  error?: string
+}
+
+export interface ICloudApi {
+  status(): Promise<ICloudStatus>
+  connect(appleId: string, appPassword: string): Promise<{ ok: boolean; error?: string; status: ICloudStatus }>
+  disconnect(): Promise<ICloudStatus>
+  setCalendars(enabledIds: string[], defaultId?: string): Promise<ICloudStatus>
+  sync(): Promise<{ ok: boolean; syncedAt: string; events?: CalEvent[]; error?: string }>
+  createEvent(ev: CalEvent, calendarId?: string): Promise<MsResult<CalEvent>>
+  updateEvent(ev: CalEvent): Promise<MsResult<CalEvent>>
+  deleteEvent(ev: CalEvent): Promise<MsResult<null>>
+  onChanged(cb: () => void): () => void
 }
 
 export type MsResult<T> = { ok: true; value: T } | { ok: false; error: string; code?: 'offline' | 'expired' | 'not-connected' | 'not-found' | 'unknown' }
@@ -151,9 +203,17 @@ export interface MicrosoftApi {
   status(): Promise<MicrosoftStatus>
   setClient(clientId: string): Promise<{ ok: boolean; error?: string }>
   clearClient(): Promise<void>
-  connect(): Promise<{ ok: boolean; error?: string; status: MicrosoftStatus }>
+  connect(opts: MicrosoftConnectOptions): Promise<{ ok: boolean; error?: string; status: MicrosoftStatus }>
   cancelConnect(): Promise<void>
   disconnect(): Promise<MicrosoftStatus>
+  /** Outlook Mail + Kalender */
+  sync(opts?: { only?: 'mail' | 'calendar' }): Promise<OutlookSyncResult>
+  mailAction(messageIds: string[], action: OutlookMailAction): Promise<MsResult<null>>
+  reply(messageId: string, body: string): Promise<MsResult<null>>
+  createEvent(ev: CalEvent, notify: boolean): Promise<MsResult<CalEvent>>
+  updateEvent(ev: CalEvent): Promise<MsResult<CalEvent>>
+  deleteEvent(remoteId: string): Promise<MsResult<null>>
+  onChanged(cb: (what: 'mail' | 'calendar') => void): () => void
   sections(): Promise<MsResult<OneNoteSection[]>>
   pages(sectionId?: string): Promise<MsResult<OneNotePage[]>>
   pageText(pageId: string): Promise<MsResult<string>>
@@ -324,6 +384,8 @@ export interface Settings {
   retention: {
     archivedTasksDays: number
   }
+  /** Zuletzt gewählter Kalender für neue Termine */
+  lastEventTarget?: string
   /** OneNote: zuletzt gewählter Abschnitt zum Speichern */
   oneNoteSectionId?: string
   weather: {
@@ -588,6 +650,7 @@ export interface TagwerkApi {
   ics: { import(): Promise<IcsResult> }
   google: GoogleApi
   microsoft: MicrosoftApi
+  icloud: ICloudApi
   weather: { get(city: string): Promise<WeatherResult> }
   app: {
     notify(req: NotifyRequest): Promise<{ shown: boolean; reason?: string }>

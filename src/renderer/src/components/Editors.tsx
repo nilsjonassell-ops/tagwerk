@@ -4,6 +4,7 @@ import { eventsOnDay, findConflicts, ymd } from '@shared/analysis'
 import type { CalEvent, Person, Priority, Project, ProjectStatus, Recurrence, Task, TaskStatus } from '@shared/types'
 import { uid, useStore } from '@/lib/store'
 import { addTask, deleteEvent, deleteTask, newTask, saveEvent, saveTask } from '@/lib/actions'
+import { useAccounts } from '@/lib/accounts'
 import { fromLocalInput, PRIORITY_LABEL, RECURRENCE_LABEL, toLocalInput, fTime } from '@/lib/format'
 import { Dialog, SourceTag } from './ui'
 
@@ -152,9 +153,25 @@ export function EventDialog({ id, preset }: { id?: string; preset?: Partial<CalE
   )
   const google = useStore((s) => s.google)
   const isGoogle = existing?.source === 'google'
-  const [target, setTarget] = useState<'google' | 'local'>(google.caps.calendarWrite ? 'google' : 'local')
+  // Teilnehmende bestehender Termine verwaltet der jeweilige Kalender
+  const isRemote = existing?.source === 'google' || existing?.source === 'outlook' || existing?.source === 'icloud'
+  const remoteName = existing?.source === 'outlook' ? 'Outlook' : existing?.source === 'icloud' ? 'Apple Kalender' : 'Google Kalender'
+  // Zielkalender für neue Termine: zuletzt gewählter, sonst der erste verbundene
+  const ms = useAccounts((s) => s.ms)
+  const ic = useAccounts((s) => s.icloud)
+  const targets = [
+    ...(ms.connected && ms.caps.calendar ? [{ id: 'outlook', label: `Outlook-Kalender (${ms.email ?? 'Microsoft'})` }] : []),
+    ...(ic.connected ? ic.calendars.filter((c) => c.enabled && !c.readOnly).map((c) => ({ id: `icloud:${c.id}`, label: `Apple Kalender · ${c.name}` })) : []),
+    ...(google.connected && google.caps.calendarRead ? [{ id: 'google', label: `Google Kalender (${google.email})${google.caps.calendarWrite ? '' : ' – nur Lesezugriff'}`, disabled: !google.caps.calendarWrite }] : []),
+    { id: 'local', label: 'Nur in Tagwerk' }
+  ] as { id: string; label: string; disabled?: boolean }[]
+  const remembered = settings.lastEventTarget
+  const icDefault = ic.defaultCalendarId ? `icloud:${ic.defaultCalendarId}` : undefined
+  const [target, setTarget] = useState<string>(
+    () => [remembered, icDefault].find((t) => t && targets.some((x) => x.id === t && !x.disabled)) ?? targets.find((x) => !x.disabled)?.id ?? 'local'
+  )
   const [notify, setNotify] = useState(false)
-  const toGoogle = !existing && target === 'google'
+  const toGoogle = !existing && (target === 'google' || target === 'outlook')
 
   const start = allDay ? fromLocalInput(date, '00:00') : fromLocalInput(date, startT)
   let end = allDay ? fromLocalInput(date, '23:59') : fromLocalInput(date, endT)
@@ -170,7 +187,7 @@ export function EventDialog({ id, preset }: { id?: string; preset?: Partial<CalE
     allDay: allDay || undefined,
     location: location.trim() || undefined,
     // Teilnehmende bestehender Google-Termine werden in Google Kalender verwaltet.
-    attendees: isGoogle ? existing!.attendees : parseAttendees(attendees),
+    attendees: isRemote ? existing!.attendees : parseAttendees(attendees),
     notes: notes.trim() || undefined,
     projectId: projectId || undefined,
     reminderMinutes: reminder === 'std' ? undefined : reminder === 'none' ? null : Number(reminder),
@@ -186,15 +203,20 @@ export function EventDialog({ id, preset }: { id?: string; preset?: Partial<CalE
   const submit = async () => {
     setTouched(true)
     if (invalidTitle) return
+    if (!existing && target !== settings.lastEventTarget) void useStore.getState().updateSettings({ lastEventTarget: target })
     if (await saveEvent(draft, !existing, { target: existing ? undefined : target, notify })) close()
   }
 
   if (existing?.readOnly) {
-    const why = isGoogle
-      ? existing.organizer
-        ? `Organisiert von ${existing.organizer.name}. Nur die organisierende Person kann Zeit und Details ändern.`
-        : 'Tagwerk hat nur Lesezugriff auf deinen Google Kalender. Schreibzugriff kannst du in den Einstellungen unter Datenquellen freigeben.'
-      : 'Dieser Termin stammt aus einer importierten Kalenderdatei. Änderungen nimmst du in deinem Ursprungskalender vor und importierst die Datei erneut.'
+    const why = existing.organizer
+      ? `Organisiert von ${existing.organizer.name}. Nur die organisierende Person kann Zeit und Details ändern.`
+      : isGoogle
+        ? 'Tagwerk hat nur Lesezugriff auf deinen Google Kalender. Schreibzugriff kannst du in den Einstellungen unter Datenquellen freigeben.'
+        : existing.source === 'outlook'
+          ? 'Das ist ein einzelner Termin aus einer Serie. Serien bearbeitest du direkt in Outlook.'
+          : existing.source === 'icloud'
+            ? 'Wiederkehrende Termine und geteilte Kalender bearbeitest du direkt in Apple Kalender.'
+            : 'Dieser Termin stammt aus einer importierten Kalenderdatei. Änderungen nimmst du in deinem Ursprungskalender vor und importierst die Datei erneut.'
     return (
       <Dialog
         title="Termin ist schreibgeschützt"
@@ -203,7 +225,7 @@ export function EventDialog({ id, preset }: { id?: string; preset?: Partial<CalE
           <>
             {existing.webLink && (
               <a className="btn left" href={existing.webLink} target="_blank" rel="noreferrer">
-                In Google Kalender öffnen
+                In {remoteName} öffnen
               </a>
             )}
             <button className="btn" onClick={close}>Schließen</button>
@@ -243,14 +265,15 @@ export function EventDialog({ id, preset }: { id?: string; preset?: Partial<CalE
         style={{ display: 'contents' }}
       >
         {existing && <div className="row"><SourceTag source={existing.source} /></div>}
-        {!existing && google.connected && (
+        {!existing && targets.length > 1 && (
           <label className="field">
             <span>Kalender</span>
-            <select className="select" value={target} onChange={(e) => setTarget(e.target.value as 'google' | 'local')}>
-              <option value="google" disabled={!google.caps.calendarWrite}>
-                Google Kalender ({google.email}){google.caps.calendarWrite ? '' : ' – nur Lesezugriff'}
-              </option>
-              <option value="local">Nur in Tagwerk</option>
+            <select className="select" value={target} onChange={(e) => setTarget(e.target.value)}>
+              {targets.map((t) => (
+                <option key={t.id} value={t.id} disabled={t.disabled}>
+                  {t.label}
+                </option>
+              ))}
             </select>
           </label>
         )}
@@ -302,17 +325,19 @@ export function EventDialog({ id, preset }: { id?: string; preset?: Partial<CalE
             value={attendees}
             onChange={(e) => setAttendees(e.target.value)}
             placeholder="Name <mail@beispiel.de>, …"
-            disabled={isGoogle}
+            disabled={isRemote}
           />
-          {isGoogle ? (
-            <span className="hint">Teilnehmende änderst du direkt in Google Kalender.</span>
+          {isRemote ? (
+            <span className="hint">Teilnehmende änderst du direkt in {remoteName}.</span>
           ) : toGoogle ? (
             <label className="row" style={{ gap: 8 }}>
               <input type="checkbox" className="box-check" checked={notify} onChange={(e) => setNotify(e.target.checked)} disabled={!parseAttendees(attendees).some((a) => a.email)} />
               <span className="hint">Einladungen per E-Mail an die Teilnehmenden senden</span>
             </label>
           ) : (
-            <span className="hint">Es werden keine Einladungen verschickt{google.connected ? ' – der Termin bleibt nur in Tagwerk.' : ' – kein Kalenderkonto verbunden.'}</span>
+            <span className="hint">
+              {target.startsWith('icloud:') ? 'Einladungen verschickst du in der Kalender-App von Apple – Tagwerk trägt den Termin nur in deinen Kalender ein.' : 'Es werden keine Einladungen verschickt – der Termin bleibt nur in Tagwerk.'}
+            </span>
           )}
         </label>
         <div className="grid-2">

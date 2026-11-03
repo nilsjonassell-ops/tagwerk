@@ -1,11 +1,19 @@
 import { useState } from 'react'
-import { CalendarDays, Check, ChevronDown, ChevronRight, FileJson, Loader2, RefreshCw, AlertTriangle } from 'lucide-react'
+import { Check, ChevronDown, ChevronRight, ExternalLink, FileJson, Loader2, RefreshCw, AlertTriangle } from 'lucide-react'
 import { removeDemo } from '@shared/demo'
 import { GMAIL_CATEGORIES, type GmailCategory } from '@shared/types'
 import { confirm, useStore } from '@/lib/store'
 import { Switch } from './ui'
 
-const CONSOLE = 'https://console.cloud.google.com/'
+// Direkte Links in die Google Cloud Console – jeweils genau der richtige Schritt
+const G = {
+  project: 'https://console.cloud.google.com/projectcreate',
+  gmailApi: 'https://console.cloud.google.com/apis/library/gmail.googleapis.com',
+  calendarApi: 'https://console.cloud.google.com/apis/library/calendar-json.googleapis.com',
+  branding: 'https://console.cloud.google.com/auth/branding',
+  audience: 'https://console.cloud.google.com/auth/audience',
+  client: 'https://console.cloud.google.com/auth/clients/create'
+}
 
 /** Einrichtung und Status der Google-Verbindung (Kalender + Gmail). */
 export function GoogleSettings() {
@@ -20,7 +28,8 @@ export function GoogleSettings() {
   const [clientId, setClientId] = useState('')
   const [clientSecret, setClientSecret] = useState('')
   const [clientErr, setClientErr] = useState('')
-  const [opts, setOpts] = useState({ calendar: true, gmail: true, write: true })
+  // Standard: nur Gmail – den Google Kalender schaltest du bei Bedarf dazu
+  const [opts, setOpts] = useState({ calendar: false, gmail: true, write: true })
   const [connecting, setConnecting] = useState(false)
   const [connectErr, setConnectErr] = useState('')
 
@@ -104,12 +113,17 @@ export function GoogleSettings() {
   return (
     <div className="google-box">
       <div className="source-row" style={{ borderBottom: 0 }}>
-        <div className="icon">
-          <CalendarDays />
+        <div className="icon acc-icon google">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="#4285F4" d="M22 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.6a4.8 4.8 0 0 1-2.1 3.2v2.6h3.4c2-1.8 3.1-4.5 3.1-7.6z" />
+            <path fill="#34A853" d="M12 22c2.8 0 5.2-.9 6.9-2.5l-3.4-2.6c-.9.6-2.1 1-3.5 1-2.7 0-5-1.8-5.8-4.3H2.7v2.7A10 10 0 0 0 12 22z" />
+            <path fill="#FBBC05" d="M6.2 13.6a6 6 0 0 1 0-3.9V7H2.7a10 10 0 0 0 0 9l3.5-2.4z" />
+            <path fill="#EA4335" d="M12 5.9c1.5 0 2.9.5 4 1.5l3-3A10 10 0 0 0 2.7 7l3.5 2.7C7 7.7 9.3 5.9 12 5.9z" />
+          </svg>
         </div>
         <div className="label">
           <b>
-            Google Kalender & Gmail{' '}
+            Gmail{google.caps.calendarRead ? ' & Google Kalender' : ''}{' '}
             {google.connected ? <span className="tag ok">verbunden</span> : google.expired ? <span className="tag alert">abgelaufen</span> : <span className="tag">nicht verbunden</span>}
           </b>
           <span>
@@ -117,7 +131,7 @@ export function GoogleSettings() {
               ? google.email
               : google.expired
                 ? 'Die Anmeldung ist abgelaufen oder wurde widerrufen. Verbinde neu – deine Einstellungen bleiben erhalten.'
-                : 'Termine aus deinem Hauptkalender und die letzten 40 Unterhaltungen im Posteingang.'}
+                : 'Die letzten 40 Unterhaltungen aus deinem Gmail-Posteingang – optional auch der Google Kalender.'}
           </span>
         </div>
         {google.connected && (
@@ -207,23 +221,57 @@ export function GoogleSettings() {
       {!google.connected && (
         <div className="google-setup">
           <button className="guide-toggle" onClick={() => setGuideOpen(!guideOpen)} aria-expanded={guideOpen}>
-            {guideOpen ? <ChevronDown /> : <ChevronRight />} Einmalige Einrichtung in der Google Cloud Console (ca. 10 Minuten)
+            {guideOpen ? <ChevronDown /> : <ChevronRight />} Einmalige Einrichtung bei Google · 6 Schritte · ca. 5 Minuten
           </button>
           {guideOpen && (
-            <ol className="guide">
+            <ol className="guide steps-linked">
               <li>
-                Öffne die <a href={CONSOLE} target="_blank" rel="noreferrer">Google Cloud Console</a> und lege ein neues Projekt an, z. B. „Tagwerk“.
+                <a className="btn small" href={G.project} target="_blank" rel="noreferrer">
+                  <ExternalLink /> Neues Projekt anlegen
+                </a>
+                <span>
+                  Mit deinem Google-Konto anmelden, Projektname <code>Tagwerk</code> → <b>Erstellen</b>. Oben links muss danach „Tagwerk“ ausgewählt sein.
+                </span>
               </li>
               <li>
-                Unter <b>APIs & Dienste → Bibliothek</b> die <b>Google Calendar API</b> und die <b>Gmail API</b> aktivieren.
+                <a className="btn small" href={G.gmailApi} target="_blank" rel="noreferrer">
+                  <ExternalLink /> Gmail API aktivieren
+                </a>
+                <span>
+                  Auf <b>Aktivieren</b> klicken. Brauchst du auch den Google Kalender:{' '}
+                  <a href={G.calendarApi} target="_blank" rel="noreferrer">
+                    Calendar API aktivieren
+                  </a>
+                  .
+                </span>
               </li>
               <li>
-                Unter <b>Google Auth Platform</b> (früher „OAuth-Zustimmungsbildschirm“) die App einrichten: Typ <b>Extern</b>, App-Name „Tagwerk“, deine E-Mail als Kontakt. Unter <b>Zielgruppe → Testnutzer</b> deine eigene Gmail-Adresse hinzufügen.
+                <a className="btn small" href={G.branding} target="_blank" rel="noreferrer">
+                  <ExternalLink /> App einrichten
+                </a>
+                <span>
+                  <b>Jetzt starten</b> → App-Name <code>Tagwerk</code>, deine Gmail-Adresse als Support-E-Mail → <b>Weiter</b> → Zielgruppe <b>Extern</b> → <b>Weiter</b> → deine Gmail-Adresse als Kontakt → Zustimmen → <b>Erstellen</b>.
+                </span>
               </li>
               <li>
-                Unter <b>Clients</b> einen neuen OAuth-Client vom Typ <b>Desktop-App</b> erstellen und die JSON-Datei herunterladen.
+                <a className="btn small" href={G.audience} target="_blank" rel="noreferrer">
+                  <ExternalLink /> Dich als Testnutzer eintragen
+                </a>
+                <span>
+                  Unter „Testnutzer“ auf <b>+ Nutzer hinzufügen</b> → deine Gmail-Adresse → <b>Speichern</b>.
+                </span>
               </li>
-              <li>Hier die heruntergeladene Datei auswählen und auf „Mit Google verbinden“ klicken. Im Browser bestätigst du den Zugriff.</li>
+              <li>
+                <a className="btn small" href={G.client} target="_blank" rel="noreferrer">
+                  <ExternalLink /> Zugangsdaten erstellen
+                </a>
+                <span>
+                  Anwendungstyp <b>Desktopanwendung</b>, Name <code>Tagwerk</code> → <b>Erstellen</b>. Im Fenster danach auf <b>JSON herunterladen</b> klicken.
+                </span>
+              </li>
+              <li>
+                <span>Unten auf „client_secret-Datei auswählen“ klicken, die heruntergeladene Datei wählen und mit Google verbinden.</span>
+              </li>
             </ol>
           )}
 

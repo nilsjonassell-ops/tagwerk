@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Archive, CheckSquare, FlaskConical, Inbox as InboxIcon, Mail, MailOpen, Reply, Search, Send, Sparkles, Star, Trash2, X, AlertCircle, Clock, Loader2, Flag, CalendarPlus, CalendarCheck } from 'lucide-react'
+import { Archive, CheckSquare, FlaskConical, Inbox as InboxIcon, Mail, MailOpen, Reply, Search, Send, Sparkles, Star, Trash2, X, AlertCircle, Clock, Loader2, Flag, CalendarPlus, CalendarCheck, Layers } from 'lucide-react'
 import { groupThreads, type Thread } from '@shared/analysis'
 import { findAppointments, type Appointment } from '@shared/parse-de'
+import type { Source } from '@shared/types'
+import { SOURCE_LABEL } from '@/lib/accounts'
+
+const ACCOUNT_ORDER: Source[] = ['google', 'outlook', 'demo', 'local']
 import { useStore } from '@/lib/store'
 import { hueFor, initials, mailDate, projectName } from '@/lib/format'
 import { archiveThread, deleteThread, markThread, sendReply, setReplyMark, taskFromEmail, toggleStar } from '@/lib/actions'
@@ -29,6 +33,10 @@ export function InboxView() {
   const [filter, setFilter] = useState<Filter>('all')
   const [query, setQuery] = useState('')
   const [projectFilter, setProjectFilter] = useState<string>('')
+  // Konto-Filter (nur sichtbar, wenn mehr als ein Postfach Mails liefert)
+  const [account, setAccount] = useState<Source | ''>('')
+  const accounts = useMemo(() => [...new Set(data.emails.map((m) => m.source))].sort((a, b) => ACCOUNT_ORDER.indexOf(a) - ACCOUNT_ORDER.indexOf(b)), [data.emails])
+  const multi = accounts.length > 1
 
   const allThreads = useMemo(() => groupThreads(data.emails, data.replyMarks), [data.emails, data.replyMarks])
   const counts = useMemo(() => {
@@ -52,11 +60,12 @@ export function InboxView() {
         : filter === 'starred' ? t.starred && t.folder !== 'sent'
         : t.folder === 'inbox' && (filter === 'all' || (filter === 'important' && t.important) || (filter === 'unread' && t.unread) || (filter === 'reply' && t.needsReply))
       if (!ok) return false
+      if (account && t.messages[0]?.source !== account) return false
       if (projectFilter && t.projectId !== projectFilter) return false
       if (!q) return true
       return t.messages.some((m) => [m.subject, m.body, m.from.name, m.from.email, projectName(data, m.projectId)].some((x) => x?.toLowerCase().includes(q)))
     })
-  }, [allThreads, filter, query, projectFilter, data])
+  }, [allThreads, filter, query, projectFilter, account, data])
 
   const selected = allThreads.find((t) => t.id === selectedId)
 
@@ -128,6 +137,25 @@ export function InboxView() {
                 {counts[f.id] ? <span className="count">{counts[f.id]}</span> : null}
               </button>
             ))}
+            {multi && (
+              <>
+                <div className="group-label">Konten</div>
+                <button className="nav-item" aria-current={account === '' ? 'page' : undefined} onClick={() => setAccount('')}>
+                  <Layers aria-hidden="true" />
+                  <span className="label">Alle Postfächer</span>
+                </button>
+                {accounts.map((a) => (
+                  <button key={a} className="nav-item" aria-current={account === a ? 'page' : undefined} onClick={() => setAccount(account === a ? '' : a)}>
+                    <span className={`acc-dot acc-${a}`} aria-hidden="true" />
+                    <span className="label">{SOURCE_LABEL[a] ?? a}</span>
+                    {(() => {
+                      const n = allThreads.filter((t) => t.folder === 'inbox' && t.unread && t.messages[0]?.source === a).length
+                      return n ? <span className="count">{n}</span> : null
+                    })()}
+                  </button>
+                ))}
+              </>
+            )}
             {data.projects.length > 0 && <div className="group-label">Nach Projekt</div>}
             {data.projects.map((p) => (
               <button key={p.id} className="nav-item" aria-current={projectFilter === p.id ? 'page' : undefined} onClick={() => setProjectFilter(projectFilter === p.id ? '' : p.id)}>
@@ -153,7 +181,7 @@ export function InboxView() {
             ) : (
               <div role="listbox" aria-label="Unterhaltungen">
                 {threads.map((t) => (
-                  <ThreadRow key={t.id} t={t} selected={t.id === selectedId} onClick={() => select('inbox', t.id)} />
+                  <ThreadRow key={t.id} t={t} selected={t.id === selectedId} onClick={() => select('inbox', t.id)} showAccount={multi} />
                 ))}
               </div>
             )}
@@ -174,7 +202,7 @@ export function InboxView() {
   )
 }
 
-function ThreadRow({ t, selected, onClick }: { t: Thread; selected: boolean; onClick: () => void }) {
+function ThreadRow({ t, selected, onClick, showAccount }: { t: Thread; selected: boolean; onClick: () => void; showAccount?: boolean }) {
   const google = useStore((s) => s.google)
   const isGmail = t.messages.some((m) => m.source === 'google')
   const canModify = !isGmail || google.caps.gmailWrite
@@ -197,6 +225,7 @@ function ThreadRow({ t, selected, onClick }: { t: Thread; selected: boolean; onC
           {sender}
           {t.messages.length > 1 && <span className="mc-count">{t.messages.length}</span>}
         </span>
+        {showAccount && <span className={`mc-acc acc-${t.messages[0]?.source}`}>{SOURCE_LABEL[t.messages[0]?.source] ?? ''}</span>}
         <span className="mc-marks">
           {t.needsReply && <Flag className="mc-flag" aria-label="Antwort offen" />}
           {t.starred && <Star className="mc-star" aria-label="Gemerkt" />}

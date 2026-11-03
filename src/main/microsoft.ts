@@ -6,10 +6,11 @@ import { app, net, shell } from 'electron'
 import { createServer, type Server, type IncomingMessage, type ServerResponse } from 'node:http'
 import { createHash, randomBytes } from 'node:crypto'
 import type { AddressInfo } from 'node:net'
-import type { MicrosoftStatus, MsResult, OneNotePage, OneNoteSaveRequest, OneNoteSection } from '@shared/types'
+import type { CalEvent, Email, OutlookMailAction, OutlookSyncResult, MicrosoftConnectOptions, MicrosoftStatus, MsResult, OneNotePage, OneNoteSaveRequest, OneNoteSection } from '@shared/types'
 import { secrets } from './secrets'
 import { log } from './log'
 import { mapPage, mapSection, noteToOneNoteHtml, oneNoteHtmlToText, type GPage, type GSection } from './onenote-map'
+import { mapOutlookEvent, mapOutlookMessages, toOutlookEvent, type OEvent, type OMessage } from './outlook-map'
 
 // Nur in Entwicklungs-Builds auf einen lokalen Test-Server umlenkbar.
 const MOCK = !app.isPackaged ? process.env.TAGWERK_MS_BASE : undefined
@@ -23,7 +24,18 @@ const URLS = MOCK
     }
 
 // So wenig wie möglich: eigene OneNote-Notizbücher lesen/schreiben, dazu Name und E-Mail.
-const SCOPES = ['openid', 'profile', 'email', 'offline_access', 'User.Read', 'Notes.ReadWrite']
+const BASE_SCOPES = ['openid', 'profile', 'email', 'offline_access', 'User.Read']
+const SCOPE = { notes: 'Notes.ReadWrite', mailRead: 'Mail.ReadWrite', mailSend: 'Mail.Send', calendar: 'Calendars.ReadWrite' }
+
+function scopesFor(o: MicrosoftConnectOptions): string[] {
+  const s = [...BASE_SCOPES]
+  if (o.notes) s.push(SCOPE.notes)
+  if (o.mail) s.push(SCOPE.mailRead, SCOPE.mailSend)
+  if (o.calendar) s.push(SCOPE.calendar)
+  return s
+}
+/** Ältere Verbindungen (nur OneNote) kennen ihre Bereiche nicht */
+const accountScopes = (a: Account | null) => a?.scopes ?? [...BASE_SCOPES, SCOPE.notes]
 
 const VAULT_CLIENT = 'microsoft-client'
 const VAULT_ACCOUNT = 'microsoft-account'
@@ -32,6 +44,7 @@ interface Account {
   refreshToken: string
   email: string
   expired?: boolean
+  scopes?: string[]
 }
 
 type Code = 'offline' | 'expired' | 'not-connected' | 'not-found' | 'unknown'
@@ -59,9 +72,18 @@ export async function msStatus(): Promise<MicrosoftStatus> {
     clientIdHint: id ? `${id.slice(0, 8)}…` : undefined,
     connected: !!a && !a.expired,
     email: a?.email,
-    expired: !!a?.expired
+    expired: !!a?.expired,
+    caps: capsOf(a)
   }
 }
+
+function capsOf(a: Account | null): MicrosoftStatus['caps'] {
+  const has = (x: string) => !!a && !a.expired && accountScopes(a).some((s) => s.toLowerCase().endsWith(x.toLowerCase()))
+  return { notes: has(SCOPE.notes), mail: has(SCOPE.mailRead), calendar: has(SCOPE.calendar) }
+}
+
+export const msCaps = () => capsOf(account())
+export const msEmail = () => account()?.email ?? ''
 
 export async function setClient(id: string): Promise<{ ok: boolean; error?: string }> {
   const v = String(id ?? '').trim()
@@ -83,21 +105,24 @@ export function clearClient() {
 
 // ---------- Anmeldung ----------
 
-export async function connect(): Promise<{ ok: boolean; error?: string; status: MicrosoftStatus }> {
+export async function connect(opts: MicrosoftConnectOptions): Promise<{ ok: boolean; error?: string; status: MicrosoftStatus }> {
   const id = clientId()
   if (!id) return { ok: false, error: 'Zuerst die Anwendungs-ID hinterlegen.', status: await msStatus() }
   if (!net.isOnline() && !MOCK) return { ok: false, error: 'Keine Internetverbindung.', status: await msStatus() }
+  if (!opts.notes && !opts.mail && !opts.calendar) return { ok: false, error: 'Wähle mindestens Mail, Kalender oder OneNote.', status: await msStatus() }
   cancelConnect()
+  const scopes = scopesFor(opts)
   const verifier = b64url(randomBytes(48))
   const challenge = b64url(createHash('sha256').update(verifier).digest())
   const state = b64url(randomBytes(16))
   try {
-    const { code, redirectUri } = await waitForCode(id, challenge, state)
-    const tok = await tokenRequest({ client_id: id, code, code_verifier: verifier, grant_type: 'authorization_code', redirect_uri: redirectUri, scope: SCOPES.join(' ') })
+    const { code, redirectUri } = await waitForCode(id, challenge, state, scopes)
+    const tok = await tokenRequest({ client_id: id, code, code_verifier: verifier, grant_type: 'authorization_code', redirect_uri: redirectUri, scope: scopes.join(' ') })
     if (!tok.refresh_token) throw new MsError('unknown', 'Microsoft hat kein Langzeit-Token geliefert. Bitte erneut verbinden.')
     accessToken = { token: tok.access_token, exp: Date.now() + (Number(tok.expires_in) || 3600) * 1000 }
     const email = emailFromIdToken(tok.id_token) ?? (await me().catch(() => '')) ?? ''
-    await secrets.setJson(VAULT_ACCOUNT, { refreshToken: tok.refresh_token, email } satisfies Account)
+    const granted = tok.scope ? tok.scope.split(/\s+/).filter(Boolean) : scopes
+    await secrets.setJson(VAULT_ACCOUNT, { refreshToken: tok.refresh_token, email, scopes: granted } satisfies Account)
     log.info('microsoft connected')
     return { ok: true, status: await msStatus() }
   } catch (e) {
@@ -113,7 +138,7 @@ export async function connect(): Promise<{ ok: boolean; error?: string; status: 
  * „http://localhost“ mit beliebigem Port – je nach System löst der Browser
  * localhost als IPv4 oder IPv6 auf, deshalb wird auf beiden gelauscht.
  */
-function waitForCode(id: string, challenge: string, state: string): Promise<{ code: string; redirectUri: string }> {
+function waitForCode(id: string, challenge: string, state: string, scopes: string[]): Promise<{ code: string; redirectUri: string }> {
   return new Promise((resolve, reject) => {
     const servers: Server[] = []
     let redirectUri = ''
@@ -161,7 +186,7 @@ function waitForCode(id: string, challenge: string, state: string): Promise<{ co
           response_type: 'code',
           redirect_uri: redirectUri,
           response_mode: 'query',
-          scope: SCOPES.join(' '),
+          scope: scopes.join(' '),
           code_challenge: challenge,
           code_challenge_method: 'S256',
           state,
@@ -191,6 +216,7 @@ function emailFromIdToken(idToken?: string): string | undefined {
 
 interface TokenResponse {
   access_token: string
+  scope?: string
   expires_in?: number
   refresh_token?: string
   id_token?: string
@@ -218,7 +244,7 @@ async function getAccessToken(): Promise<string> {
   if (!id || !a) throw new MsError('not-connected', 'OneNote ist nicht verbunden.')
   if (a.expired) throw new MsError('expired', 'Die Microsoft-Anmeldung ist abgelaufen. Bitte neu verbinden.')
   try {
-    const tok = await tokenRequest({ client_id: id, refresh_token: a.refreshToken, grant_type: 'refresh_token', scope: SCOPES.join(' ') })
+    const tok = await tokenRequest({ client_id: id, refresh_token: a.refreshToken, grant_type: 'refresh_token', scope: accountScopes(a).join(' ') })
     accessToken = { token: tok.access_token, exp: Date.now() + (Number(tok.expires_in) || 3600) * 1000 }
     // Microsoft tauscht das Langzeit-Token bei jeder Erneuerung aus
     if (tok.refresh_token && tok.refresh_token !== a.refreshToken) await secrets.setJson(VAULT_ACCOUNT, { ...a, refreshToken: tok.refresh_token })
@@ -327,4 +353,185 @@ export function savePage(req: OneNoteSaveRequest): Promise<MsResult<OneNotePage>
     }
     return page
   })
+}
+
+
+// ---------- Outlook Mail ----------
+
+const MAIL_SELECT = '$select=id,conversationId,subject,body,from,sender,toRecipients,receivedDateTime,sentDateTime,isRead,importance,inferenceClassification,flag,internetMessageId'
+// Nur Text statt HTML, Zeiten in UTC
+const PREFER = { prefer: 'outlook.body-content-type="text", outlook.timezone="UTC"' }
+
+let mailSeen = ''
+let calSeen = ''
+
+async function fetchMail(me: string): Promise<Email[]> {
+  const inbox = await json<{ value?: OMessage[] }>(`/me/mailFolders/inbox/messages?${MAIL_SELECT}&$orderby=receivedDateTime desc&$top=40`, { headers: PREFER })
+  // Eigene Antworten, damit „beantwortet“ stimmt und Unterhaltungen vollständig sind
+  const sent = await json<{ value?: OMessage[] }>(`/me/mailFolders/sentitems/messages?${MAIL_SELECT}&$orderby=sentDateTime desc&$top=25`, { headers: PREFER }).catch(() => ({ value: [] as OMessage[] }))
+  const convs = new Set((inbox.value ?? []).map((m) => m.conversationId))
+  const list = [
+    ...(inbox.value ?? []).map((m) => ({ ...m, _folder: 'inbox' as const })),
+    ...(sent.value ?? []).filter((m) => convs.has(m.conversationId)).map((m) => ({ ...m, _folder: 'sent' as const }))
+  ]
+  mailSeen = await newestMail().catch(() => mailSeen)
+  return mapOutlookMessages(list, me)
+}
+
+async function fetchCalendar(me: string): Promise<CalEvent[]> {
+  const now = Date.now()
+  const q = new URLSearchParams({
+    startDateTime: new Date(now - 30 * 86400_000).toISOString(),
+    endDateTime: new Date(now + 120 * 86400_000).toISOString(),
+    $top: '250',
+    $select: 'id,subject,body,start,end,isAllDay,isCancelled,isOrganizer,location,attendees,organizer,webLink,isReminderOn,reminderMinutesBeforeStart,type'
+  })
+  const out: CalEvent[] = []
+  let next: string | undefined = `/me/calendarView?${q}`
+  for (let i = 0; next && i < 8; i++) {
+    const r: { value?: OEvent[]; '@odata.nextLink'?: string } = await json(next, { headers: PREFER })
+    for (const e of r.value ?? []) {
+      const m = mapOutlookEvent(e, me)
+      if (m) out.push(m)
+    }
+    next = r['@odata.nextLink']?.replace(URLS.graph, '')
+  }
+  calSeen = await newestEvent().catch(() => calSeen)
+  return out
+}
+
+export async function outlookSync(opts?: { only?: 'mail' | 'calendar' }): Promise<OutlookSyncResult> {
+  const syncedAt = new Date().toISOString()
+  const a = account()
+  if (!a || a.expired) return { ok: false, syncedAt, errors: { general: a?.expired ? 'Microsoft-Anmeldung abgelaufen – bitte neu verbinden.' : 'Microsoft ist nicht verbunden.' } }
+  const c = capsOf(a)
+  const errors: OutlookSyncResult['errors'] = {}
+  let emails: Email[] | undefined
+  let events: CalEvent[] | undefined
+  if (c.mail && opts?.only !== 'calendar') {
+    const r = await wrap(() => fetchMail(a.email))
+    if (r.ok) emails = r.value
+    else errors.mail = r.error
+  }
+  if (c.calendar && opts?.only !== 'mail') {
+    const r = await wrap(() => fetchCalendar(a.email))
+    if (r.ok) events = r.value
+    else errors.calendar = r.error
+  }
+  log.info('outlook sync', { emails: emails?.length ?? -1, events: events?.length ?? -1 })
+  return { ok: !errors.mail && !errors.calendar, syncedAt, emails, events, errors }
+}
+
+export function mailAction(ids: string[], action: OutlookMailAction): Promise<MsResult<null>> {
+  return wrap(async () => {
+    for (const id of ids.slice(0, 50)) {
+      const path = `/me/messages/${encodeURIComponent(id)}`
+      const patch = (body: unknown) => graph(path, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+      const move = (dest: string) => graph(`${path}/move`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ destinationId: dest }) })
+      if (action === 'read' || action === 'unread') await patch({ isRead: action === 'read' })
+      else if (action === 'flag' || action === 'unflag') await patch({ flag: { flagStatus: action === 'flag' ? 'flagged' : 'notFlagged' } })
+      else if (action === 'archive') await move('archive')
+      else if (action === 'unarchive' || action === 'untrash') await move('inbox')
+      else if (action === 'trash') await move('deleteditems')
+    }
+    return null
+  })
+}
+
+/** Antwort auf eine Nachricht (Outlook verkettet die Unterhaltung selbst). */
+export function reply(messageId: string, body: string): Promise<MsResult<null>> {
+  return wrap(async () => {
+    await graph(`/me/messages/${encodeURIComponent(messageId)}/reply`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ comment: String(body).slice(0, 100_000) })
+    })
+    return null
+  })
+}
+
+// ---------- Outlook Kalender ----------
+
+const tz = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+
+export function createEvent(ev: CalEvent, notify: boolean): Promise<MsResult<CalEvent>> {
+  return wrap(async () => {
+    const body = toOutlookEvent(ev, { includeAttendees: notify, timeZone: tz() })
+    const r = await json<OEvent>('/me/events', { method: 'POST', headers: { 'content-type': 'application/json', ...PREFER }, body: JSON.stringify(body) })
+    const m = mapOutlookEvent(r, msEmail())
+    if (!m) throw new MsError('unknown', 'Outlook hat den Termin nicht bestätigt.')
+    return m
+  })
+}
+
+export function updateEvent(ev: CalEvent): Promise<MsResult<CalEvent>> {
+  return wrap(async () => {
+    if (!ev.remoteId) throw new MsError('not-found', 'Termin ohne Outlook-Kennung.')
+    const body = toOutlookEvent(ev, { includeAttendees: false, timeZone: tz() })
+    const r = await json<OEvent>(`/me/events/${encodeURIComponent(ev.remoteId)}`, { method: 'PATCH', headers: { 'content-type': 'application/json', ...PREFER }, body: JSON.stringify(body) })
+    const m = mapOutlookEvent(r, msEmail())
+    if (!m) throw new MsError('unknown', 'Outlook hat den Termin nicht bestätigt.')
+    return m
+  })
+}
+
+export function deleteEvent(remoteId: string): Promise<MsResult<null>> {
+  return wrap(async () => {
+    await graph(`/me/events/${encodeURIComponent(remoteId)}`, { method: 'DELETE' }, true)
+    return null
+  })
+}
+
+// ---------- Live-Abgleich ----------
+
+async function newestMail(): Promise<string> {
+  const r = await json<{ value?: { id: string; lastModifiedDateTime?: string }[] }>('/me/mailFolders/inbox/messages?$select=id,lastModifiedDateTime&$orderby=lastModifiedDateTime desc&$top=1')
+  const m = r.value?.[0]
+  // Gesamtzahl gehört dazu, damit auch gelöschte/verschobene Mails auffallen
+  const f = await json<{ totalItemCount?: number; unreadItemCount?: number }>('/me/mailFolders/inbox?$select=totalItemCount,unreadItemCount')
+  return `${m?.id ?? ''}@${m?.lastModifiedDateTime ?? ''}#${f.totalItemCount ?? 0}/${f.unreadItemCount ?? 0}`
+}
+
+async function newestEvent(): Promise<string> {
+  const r = await json<{ value?: { id: string; lastModifiedDateTime?: string }[] }>('/me/events?$select=id,lastModifiedDateTime&$orderby=lastModifiedDateTime desc&$top=1')
+  const e = r.value?.[0]
+  return `${e?.id ?? ''}@${e?.lastModifiedDateTime ?? ''}`
+}
+
+let watchTimer: NodeJS.Timeout | null = null
+
+/** Alle paar Sekunden prüfen, ob sich in Outlook etwas geändert hat – geladen wird erst dann. */
+export function startOutlookWatch(onChange: (what: 'mail' | 'calendar') => void) {
+  if (watchTimer) clearTimeout(watchTimer)
+  let delay = 3000
+  const tick = async () => {
+    try {
+      const a = account()
+      if (!a || a.expired || !net.isOnline()) {
+        delay = 5000
+        return
+      }
+      const c = capsOf(a)
+      if (c.mail && mailSeen) {
+        const h = await newestMail()
+        if (h !== mailSeen) {
+          mailSeen = h
+          onChange('mail')
+        }
+      }
+      if (c.calendar && calSeen) {
+        const h = await newestEvent()
+        if (h !== calSeen) {
+          calSeen = h
+          onChange('calendar')
+        }
+      }
+      delay = 3000
+    } catch {
+      delay = Math.min(60_000, delay * 2)
+    } finally {
+      watchTimer = setTimeout(tick, delay)
+    }
+  }
+  watchTimer = setTimeout(tick, delay)
 }

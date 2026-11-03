@@ -3,6 +3,7 @@ import { FocusHost } from '@/components/Focus'
 import { useFocus } from '@/lib/focus'
 import { PlanDialog } from '@/components/PlanDialog'
 import { WeeklyReview } from '@/components/WeeklyReview'
+import { useAccounts } from '@/lib/accounts'
 import { useEffect } from 'react'
 import { AlertCircle } from 'lucide-react'
 import type { ViewId } from '@shared/types'
@@ -74,6 +75,30 @@ export function App() {
       window.removeEventListener('focus', onFocus)
     }
   }, [ready, googleConnected, online])
+
+  // Outlook und Apple Kalender: beim Start, alle 5 Minuten als Rückfallebene und live bei Änderungen
+  const msOn = useAccounts((s) => s.ms.connected && (s.ms.caps.mail || s.ms.caps.calendar))
+  const icOn = useAccounts((s) => s.icloud.connected)
+  useEffect(() => {
+    if (ready) void useAccounts.getState().refresh()
+  }, [ready])
+  useEffect(() => {
+    if (!ready || !online || (!msOn && !icOn)) return
+    const acc = useAccounts.getState
+    if (msOn) void acc().syncOutlook({ quiet: true })
+    if (icOn) void acc().syncICloud({ quiet: true })
+    const t = setInterval(() => {
+      if (msOn) void acc().syncOutlook({ quiet: true })
+      if (icOn) void acc().syncICloud({ quiet: true })
+    }, 5 * 60_000)
+    const offMs = window.tagwerk.microsoft.onChanged((what) => acc().syncOutlook({ quiet: true, only: what }))
+    const offIc = window.tagwerk.icloud.onChanged(() => acc().syncICloud({ quiet: true }))
+    return () => {
+      clearInterval(t)
+      offMs()
+      offIc()
+    }
+  }, [ready, online, msOn, icOn])
 
   // Online/Offline
   useEffect(() => {

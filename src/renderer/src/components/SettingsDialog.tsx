@@ -1,14 +1,15 @@
 import { useUpdateStatus, VersionRow } from '@/components/Updates'
 import { useState, type ReactNode } from 'react'
 import {
-  ArrowDown, ArrowUp, Bell, CalendarDays, CalendarPlus, CloudSun, Database, Eye, EyeOff, FlaskConical, KeyRound, LayoutDashboard, Mail, Monitor, Shield, Sparkles, Trash2, Loader2, Check, Download
+  ArrowDown, ArrowUp, Bell, CalendarDays, CalendarPlus, CloudSun, Database, Eye, EyeOff, FlaskConical, KeyRound, LayoutDashboard, Monitor, Shield, Sparkles, Trash2, Loader2, Check, Download
 } from 'lucide-react'
 import { createDemoData, removeDemo } from '@shared/demo'
 import { CLAUDE_MODELS, type DashboardCardId, type Settings } from '@shared/types'
 import { confirm, useStore } from '@/lib/store'
 import { VIEW_META } from './Sidebar'
 import { GoogleSettings } from './GoogleSettings'
-import { OneNoteSettings } from './OneNoteSettings'
+import { MicrosoftSettings } from './OneNoteSettings'
+import { ICloudSettings } from './ICloudSettings'
 import { Dialog, Segmented, Switch } from './ui'
 import { isMac, modKey } from '@/lib/format'
 
@@ -391,19 +392,14 @@ function Sources() {
       <h3>Datenquellen</h3>
       <p>Tagwerk nutzt externe Konten nur, wenn du sie ausdrücklich verbindest. Synchronisierte Daten liegen lokal auf diesem Gerät, Zugangsdaten verschlüsselt im Schlüsselspeicher des Betriebssystems.</p>
 
-      <div className="source-row">
-        <div className="icon"><FlaskConical /></div>
-        <div className="label">
-          <b>Demo-Datenquelle {data.sources.demo ? <span className="tag demo">aktiv</span> : <span className="tag">aus</span>}</b>
-          <span>Beispieltermine, -mails und -aufgaben zum Ausprobieren. Werden überall als „Demo“ gekennzeichnet.</span>
-        </div>
-        <button className="btn small" onClick={toggleDemo}>{data.sources.demo ? 'Entfernen' : 'Laden'}</button>
-      </div>
-
+      <div className="settings-group">E-Mail-Konten</div>
       <GoogleSettings />
 
-      <OneNoteSettings />
+      <div className="settings-group">Outlook, Kalender und Notizen</div>
+      <MicrosoftSettings />
+      <ICloudSettings />
 
+      <div className="settings-group">Weitere Quellen</div>
       <div className="source-row">
         <div className="icon"><CalendarPlus /></div>
         <div className="label">
@@ -422,19 +418,14 @@ function Sources() {
         </div>
       ))}
 
-      {[
-        { icon: Mail, name: 'Microsoft 365 / Outlook', text: 'Direkte Kontoverbindung (Microsoft Graph) ist noch nicht eingerichtet.' },
-        { icon: Mail, name: 'E-Mail per IMAP/SMTP', text: 'Noch nicht verfügbar.' }
-      ].map((x) => (
-        <div key={x.name} className="source-row">
-          <div className="icon"><x.icon /></div>
-          <div className="label">
-            <b>{x.name} <span className="tag">nicht verbunden</span></b>
-            <span>{x.text}</span>
-          </div>
-          <button className="btn small" disabled title="Noch nicht verfügbar">Verbinden</button>
+      <div className="source-row">
+        <div className="icon"><FlaskConical /></div>
+        <div className="label">
+          <b>Demo-Datenquelle {data.sources.demo ? <span className="tag demo">aktiv</span> : <span className="tag">aus</span>}</b>
+          <span>Beispieltermine, -mails und -aufgaben zum Ausprobieren. Werden überall als „Demo“ gekennzeichnet.</span>
         </div>
-      ))}
+        <button className="btn small" onClick={toggleDemo}>{data.sources.demo ? 'Entfernen' : 'Laden'}</button>
+      </div>
 
       <h3>Wetter</h3>
       <div className="source-row">

@@ -18,7 +18,7 @@ import { join } from 'node:path'
 import { uptime } from 'node:os'
 import { randomUUID } from 'node:crypto'
 import { eventsOnDay, hm } from '@shared/analysis'
-import type { OneNoteSaveRequest, AppData, CalEvent, ClaudeRequest, GoogleConnectOptions, GoogleSendParams, Note, Settings, FocusSignal, NotifyRequest } from '@shared/types'
+import type { MicrosoftConnectOptions, OutlookMailAction, OneNoteSaveRequest, AppData, CalEvent, ClaudeRequest, GoogleConnectOptions, GoogleSendParams, Note, Settings, FocusSignal, NotifyRequest } from '@shared/types'
 import { store } from './store'
 import { secrets } from './secrets'
 import { sendToClaude, verifyKey } from './claude'
@@ -31,6 +31,7 @@ import { focusState, focusSummary, initFocus, setFocus } from './focus'
 import { startScheduler } from './scheduler'
 import * as google from './google'
 import * as microsoft from './microsoft'
+import * as icloud from './icloud'
 import { log } from './log'
 
 const isMac = process.platform === 'darwin'
@@ -542,13 +543,31 @@ function registerIpc() {
   ipcMain.handle('microsoft:status', () => microsoft.msStatus())
   ipcMain.handle('microsoft:setClient', (_e, id: string) => microsoft.setClient(String(id ?? '')))
   ipcMain.handle('microsoft:clearClient', () => microsoft.clearClient())
-  ipcMain.handle('microsoft:connect', async () => {
-    const r = await microsoft.connect()
+  ipcMain.handle('microsoft:connect', async (_e, o: MicrosoftConnectOptions) => {
+    const r = await microsoft.connect({ notes: !!o?.notes, mail: !!o?.mail, calendar: !!o?.calendar })
     showMain()
     return r
   })
   ipcMain.handle('microsoft:cancelConnect', () => microsoft.cancelConnect())
   ipcMain.handle('microsoft:disconnect', () => microsoft.disconnect())
+  ipcMain.handle('microsoft:sync', (_e, o?: { only?: string }) => microsoft.outlookSync(o?.only === 'mail' || o?.only === 'calendar' ? { only: o.only } : undefined))
+  ipcMain.handle('microsoft:mailAction', (_e, ids: string[], action: OutlookMailAction) => {
+    const ok: OutlookMailAction[] = ['read', 'unread', 'archive', 'unarchive', 'trash', 'untrash', 'flag', 'unflag']
+    if (!ok.includes(action)) return { ok: false, error: 'Unbekannte Aktion' }
+    return microsoft.mailAction(Array.isArray(ids) ? ids.map(String) : [], action)
+  })
+  ipcMain.handle('microsoft:reply', (_e, id: string, body: string) => microsoft.reply(String(id), String(body ?? '')))
+  ipcMain.handle('microsoft:createEvent', (_e, ev: CalEvent, notify: boolean) => microsoft.createEvent(ev, !!notify))
+  ipcMain.handle('microsoft:updateEvent', (_e, ev: CalEvent) => microsoft.updateEvent(ev))
+  ipcMain.handle('microsoft:deleteEvent', (_e, id: string) => microsoft.deleteEvent(String(id)))
+  ipcMain.handle('icloud:status', () => icloud.icloudStatus())
+  ipcMain.handle('icloud:connect', (_e, id: string, pw: string) => icloud.connect(String(id ?? ''), String(pw ?? '')))
+  ipcMain.handle('icloud:disconnect', () => icloud.disconnect())
+  ipcMain.handle('icloud:setCalendars', (_e, ids: string[], def?: string) => icloud.setCalendars(Array.isArray(ids) ? ids.map(String) : [], def ? String(def) : undefined))
+  ipcMain.handle('icloud:sync', () => icloud.sync())
+  ipcMain.handle('icloud:createEvent', (_e, ev: CalEvent, cal?: string) => icloud.createEvent(ev, cal ? String(cal) : undefined))
+  ipcMain.handle('icloud:updateEvent', (_e, ev: CalEvent) => icloud.updateEvent(ev))
+  ipcMain.handle('icloud:deleteEvent', (_e, ev: CalEvent) => icloud.deleteEvent(ev))
   ipcMain.handle('microsoft:sections', () => microsoft.sections())
   ipcMain.handle('microsoft:pages', (_e, sectionId?: string) => microsoft.pages(sectionId ? String(sectionId) : undefined))
   ipcMain.handle('microsoft:pageText', (_e, id: string) => microsoft.pageText(String(id)))
@@ -675,6 +694,8 @@ function init() {
   })
   startScheduler()
   google.startLiveWatch((what) => mainWindow?.webContents.send('google:changed', what))
+  microsoft.startOutlookWatch((what) => mainWindow?.webContents.send('microsoft:changed', what))
+  icloud.startICloudWatch(() => mainWindow?.webContents.send('icloud:changed'))
 
   nativeTheme.on('updated', () => {
     if (!isMac && mainWindow) mainWindow.setTitleBarOverlay(overlayColors())

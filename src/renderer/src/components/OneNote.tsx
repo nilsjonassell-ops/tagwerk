@@ -28,7 +28,7 @@ export function OneNoteBrowser() {
     void useOneNote.getState().refreshStatus()
   }, [])
   useEffect(() => {
-    if (!status.connected) return
+    if (!status.connected || !status.caps.notes) return
     void useOneNote.getState().loadSections()
     void useOneNote.getState().loadPages(section)
   }, [status.connected, section])
@@ -44,10 +44,10 @@ export function OneNoteBrowser() {
     return [...m.entries()]
   }, [sections])
 
-  if (!status.connected) {
+  if (!status.connected || !status.caps.notes) {
     return (
       <div className="onenote-empty">
-        <Empty icon={<NotebookTabs />} title={status.expired ? 'OneNote-Anmeldung abgelaufen' : 'OneNote ist noch nicht verbunden'}>
+        <Empty icon={<NotebookTabs />} title={status.expired ? 'Microsoft-Anmeldung abgelaufen' : status.connected ? 'OneNote ist nicht freigegeben' : 'OneNote ist noch nicht verbunden'}>
           {status.expired ? 'Verbinde dein Microsoft-Konto neu – das dauert nur ein paar Sekunden.' : 'Verbinde dein Microsoft-Konto, um deine Notizbücher hier zu lesen und Tagwerk-Notizen nach OneNote zu speichern.'}
           <div style={{ marginTop: 12 }}>
             <button className="btn primary small" onClick={() => openDialog({ kind: 'settings', section: 'sources' })}>
@@ -199,7 +199,7 @@ export function OneNoteSaveButton({ note }: { note: Note }) {
   useEffect(() => {
     void useOneNote.getState().refreshStatus()
   }, [])
-  if (!status.connected) return null
+  if (!status.connected || !status.caps.notes) return null
   return (
     <>
       {note.oneNote && (

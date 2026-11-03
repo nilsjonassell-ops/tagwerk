@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { FlaskConical, Loader2, RefreshCw, X, AlertTriangle } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { useAccounts } from '@/lib/accounts'
 import type { Priority, Source } from '@shared/types'
 import { PRIORITY_LABEL } from '@/lib/format'
 
@@ -101,6 +102,8 @@ export function SourceTag({ source }: { source: Source }) {
     )
   if (source === 'ics') return <span className="tag" title="Aus einer Kalenderdatei importiert, schreibgeschützt">Importiert</span>
   if (source === 'google') return <span className="tag accent" title="Mit deinem Google-Konto synchronisiert">Google</span>
+  if (source === 'outlook') return <span className="tag accent" title="Mit deinem Outlook-Kalender synchronisiert">Outlook</span>
+  if (source === 'icloud') return <span className="tag accent" title="Mit Apple Kalender (iCloud) synchronisiert">Apple Kalender</span>
   return null
 }
 
@@ -136,26 +139,46 @@ export function Segmented<T extends string>({ value, options, onChange, label }:
   )
 }
 
-/** Kontostatus in der Kopfzeile: verbundenes Konto, letzte Synchronisation, Sync-Knopf. */
+/** Kontostatus in der Kopfzeile: verbundene Konten, letzte Synchronisation, Sync-Knopf. */
 export function AccountStatus({ kind }: { kind: 'gmail' | 'calendar' }) {
   const google = useStore((s) => s.google)
   const sync = useStore((s) => s.googleSync)
   const syncGoogle = useStore((s) => s.syncGoogle)
   const online = useStore((s) => s.online)
-  const has = kind === 'gmail' ? google.caps.gmailRead : google.caps.calendarRead
-  if (google.expired) return <span className="tag alert"><AlertTriangle /> Google-Anmeldung abgelaufen</span>
-  if (!google.connected || !has) return <span className="hint">{kind === 'gmail' ? 'Kein E-Mail-Konto verbunden' : 'Kein Kalenderkonto verbunden'}</span>
-  const err = kind === 'gmail' ? sync.errors.gmail : sync.errors.calendar
-  const time = sync.lastSync ? new Date(sync.lastSync).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : null
+  const ms = useAccounts((s) => s.ms)
+  const icloud = useAccounts((s) => s.icloud)
+  const oSync = useAccounts((s) => s.outlookSync)
+  const iSync = useAccounts((s) => s.icloudSync)
+  const syncOutlook = useAccounts((s) => s.syncOutlook)
+  const syncICloud = useAccounts((s) => s.syncICloud)
+  const hasGoogle = google.connected && (kind === 'gmail' ? google.caps.gmailRead : google.caps.calendarRead)
+  const hasOutlook = ms.connected && (kind === 'gmail' ? ms.caps.mail : ms.caps.calendar)
+  const hasICloud = kind === 'calendar' && icloud.connected
+  const names: string[] = []
+  if (hasGoogle) names.push(kind === 'gmail' ? 'Gmail' : 'Google')
+  if (hasOutlook) names.push('Outlook')
+  if (hasICloud) names.push('Apple')
+  if (google.expired && hasGoogle) return <span className="tag alert"><AlertTriangle /> Google-Anmeldung abgelaufen</span>
+  if (!names.length) return <span className="hint">{kind === 'gmail' ? 'Kein E-Mail-Konto verbunden' : 'Kein Kalenderkonto verbunden'}</span>
+  const err = (hasGoogle && (kind === 'gmail' ? sync.errors.gmail : sync.errors.calendar)) || (hasOutlook && oSync.error) || (hasICloud && iSync.error) || ''
+  const syncing = (hasGoogle && sync.syncing) || (hasOutlook && oSync.syncing) || (hasICloud && iSync.syncing)
+  const last = Math.max(hasGoogle && sync.lastSync ? new Date(sync.lastSync).getTime() : 0, hasOutlook && oSync.lastSync ? new Date(oSync.lastSync).getTime() : 0, hasICloud && iSync.lastSync ? new Date(iSync.lastSync).getTime() : 0)
+  const time = last ? new Date(last).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : null
+  const label = names.length === 1 && hasGoogle && google.email ? google.email : names.join(' · ')
+  const runSync = () => {
+    if (hasGoogle) void syncGoogle()
+    if (hasOutlook) void syncOutlook({ only: kind === 'gmail' ? 'mail' : 'calendar' })
+    if (hasICloud) void syncICloud()
+  }
   return (
     <span className="row" style={{ gap: 6 }}>
       {err ? (
         <span className="tag alert" title={err}><AlertTriangle /> Synchronisation fehlgeschlagen</span>
       ) : (
-        <span className="hint" title={google.email}>{google.email}{time ? ` · ${time}` : ''}</span>
+        <span className="hint" title={label}>{label}{time ? ` · ${time}` : ''}</span>
       )}
-      <button className="btn ghost small icon-btn" onClick={() => syncGoogle()} disabled={sync.syncing || !online} aria-label="Jetzt synchronisieren" title={online ? 'Jetzt synchronisieren' : 'Offline'}>
-        {sync.syncing ? <Loader2 className="spin" /> : <RefreshCw />}
+      <button className="btn ghost small icon-btn" onClick={runSync} disabled={syncing || !online} aria-label="Jetzt synchronisieren" title={online ? 'Jetzt synchronisieren' : 'Offline'}>
+        {syncing ? <Loader2 className="spin" /> : <RefreshCw />}
       </button>
     </span>
   )
