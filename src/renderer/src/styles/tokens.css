@@ -1,0 +1,300 @@
+/* ==========================================================================
+   Tagwerk – Gestaltungswerte (Design-Tokens)
+   ERZEUGT aus src/shared/palette.ts mit `npm run tokens` – nicht von Hand ändern.
+   Umschalten über <html data-theme="light|dark" data-accent="…" data-motion="full|reduced">.
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+  --font-ui: 'Inter Variable', 'Segoe UI Variable Text', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+
+  --fs-xs: 11.5px;
+  --fs-sm: 12.5px;
+  --fs-md: 13.5px;
+  --fs-lg: 15px;
+  --fs-xl: 19px;
+  --fs-2xl: 26px;
+  --fs-3xl: 38px;
+  --lh-tight: 1.2;
+  --lh: 1.45;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 48px;
+
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+  --r-pill: 999px;
+
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-slow: 320ms;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --titlebar: 44px;
+  --sidebar-w: 224px;
+  --panel-w: 380px;
+
+  --shadow-1: 0 1px 2px rgba(20, 24, 45, 0.05), 0 1px 1px rgba(20, 24, 45, 0.03);
+  --shadow-2: 0 2px 6px rgba(20, 24, 45, 0.06), 0 12px 32px -6px rgba(20, 24, 45, 0.16);
+  --shadow-3: 0 4px 12px rgba(20, 24, 45, 0.08), 0 32px 72px -16px rgba(20, 24, 45, 0.3);
+  --blur: saturate(160%) blur(20px);
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.35), 0 14px 36px -6px rgba(0, 0, 0, 0.55);
+  --shadow-3: 0 4px 12px rgba(0, 0, 0, 0.4), 0 36px 80px -16px rgba(0, 0, 0, 0.7);
+}
+:root[data-motion='reduced'] {
+  --dur-fast: 0ms;
+  --dur: 0ms;
+  --dur-slow: 0ms;
+}
+
+:root,
+:root[data-theme='light'] {
+  --bg: #eceef5;
+  --canvas: #f7f8fb;
+  --raised: #ffffff;
+  --sunken: #eef0f5;
+  --ink: #141726;
+  --ink-2: #454a5d;
+  --ink-3: #60667a;
+  --line: #dcdfe8;
+  --line-soft: #e8eaf0;
+  --surface-0: #eceef5;
+  --surface-1: #f7f8fb;
+  --surface-2: rgba(255, 255, 255, 0.86);
+  --surface-2-solid: #ffffff;
+  --surface-3: rgba(20, 24, 45, 0.28);
+  --hover: rgba(20, 24, 45, 0.045);
+  --pressed: rgba(20, 24, 45, 0.08);
+  --disabled-ink: #9ca1b2;
+  --alert: #c0243f;
+  --alert-soft: #fbe7ea;
+  --attention: #93520a;
+  --attention-soft: #f8ecd9;
+  --ok: #16704f;
+  --ok-soft: #e1f2ea;
+}
+:root[data-theme='dark'] {
+  --bg: #0b0d14;
+  --canvas: #12141d;
+  --raised: #191c27;
+  --sunken: #0f1119;
+  --ink: #eceef5;
+  --ink-2: #b6bbcb;
+  --ink-3: #9097aa;
+  --line: #2a2e3c;
+  --line-soft: #212432;
+  --surface-0: #0b0d14;
+  --surface-1: #12141d;
+  --surface-2: rgba(30, 33, 46, 0.82);
+  --surface-2-solid: #191c27;
+  --surface-3: rgba(5, 6, 12, 0.55);
+  --hover: rgba(255, 255, 255, 0.06);
+  --pressed: rgba(255, 255, 255, 0.1);
+  --disabled-ink: #5d6376;
+  --alert: #ff8a9a;
+  --alert-soft: #3a1c24;
+  --attention: #f0b25a;
+  --attention-soft: #352914;
+  --ok: #6fd3a5;
+  --ok-soft: #16302a;
+}
+:root,
+:root[data-accent='indigo'] {
+  --accent: #3a5af0;
+  --accent-ink: #ffffff;
+  --accent-text: #3150e0;
+  --accent-soft: #e8ecfe;
+  --accent-line: #b7c3fb;
+  --selected: #e8ecfe;
+  --focus-ring: #3a5af0;
+  --ring: 0 0 0 2px var(--canvas), 0 0 0 4px #3a5af0;
+  --hatch: color-mix(in srgb, #3a5af0 8%, transparent);
+  --wash-1: #9fb2ff;
+  --wash-2: #f2b8dc;
+}
+:root[data-theme='dark'][data-accent='indigo'],
+:root[data-theme='dark']:not([data-accent]) {
+  --accent: #8fa3ff;
+  --accent-ink: #0c1233;
+  --accent-text: #a5b5ff;
+  --accent-soft: #1e2550;
+  --accent-line: #3a4794;
+  --selected: #1e2550;
+  --focus-ring: #8fa3ff;
+  --ring: 0 0 0 2px var(--canvas), 0 0 0 4px #8fa3ff;
+  --hatch: color-mix(in srgb, #8fa3ff 8%, transparent);
+  --wash-1: #2a3a9a;
+  --wash-2: #6a2a6e;
+}
+:root[data-accent='petrol'] {
+  --accent: #1c6570;
+  --accent-ink: #ffffff;
+  --accent-text: #1a5f69;
+  --accent-soft: #e0eff0;
+  --accent-line: #a6ced2;
+  --selected: #e0eff0;
+  --focus-ring: #1c6570;
+  --ring: 0 0 0 2px var(--canvas), 0 0 0 4px #1c6570;
+  --hatch: color-mix(in srgb, #1c6570 8%, transparent);
+  --wash-1: #9fd3d6;
+  --wash-2: #b9d7f2;
+}
+:root[data-theme='dark'][data-accent='petrol'] {
+  --accent: #74bcc3;
+  --accent-ink: #0d1e20;
+  --accent-text: #8acbd1;
+  --accent-soft: #173235;
+  --accent-line: #2f5f64;
+  --selected: #173235;
+  --focus-ring: #74bcc3;
+  --ring: 0 0 0 2px var(--canvas), 0 0 0 4px #74bcc3;
+  --hatch: color-mix(in srgb, #74bcc3 8%, transparent);
+  --wash-1: #174f55;
+  --wash-2: #1e3760;
+}
+:root[data-accent='blue'] {
+  --accent: #0b6bcb;
+  --accent-ink: #ffffff;
+  --accent-text: #0a63bd;
+  --accent-soft: #e3effc;
+  --accent-line: #a9cbf3;
+  --selected: #e3effc;
+  --focus-ring: #0b6bcb;
+  --ring: 0 0 0 2px var(--canvas), 0 0 0 4px #0b6bcb;
+  --hatch: color-mix(in srgb, #0b6bcb 8%, transparent);
+  --wash-1: #a3cdfa;
+  --wash-2: #bfe4f5;
+}
+:root[data-theme='dark'][data-accent='blue'] {
+  --accent: #6cb2ff;
+  --accent-ink: #06182e;
+  --accent-text: #86c0ff;
+  --accent-soft: #132b47;
+  --accent-line: #2d5687;
+  --selected: #132b47;
+  --focus-ring: #6cb2ff;
+  --ring: 0 0 0 2px var(--canvas), 0 0 0 4px #6cb2ff;
+  --hatch: color-mix(in srgb, #6cb2ff 8%, transparent);
+  --wash-1: #16457e;
+  --wash-2: #174f66;
+}
+:root[data-accent='green'] {
+  --accent: #1d7346;
+  --accent-ink: #ffffff;
+  --accent-text: #1b6b41;
+  --accent-soft: #e2f2e8;
+  --accent-line: #a7d4b8;
+  --selected: #e2f2e8;
+  --focus-ring: #1d7346;
+  --ring: 0 0 0 2px var(--canvas), 0 0 0 4px #1d7346;
+  --hatch: color-mix(in srgb, #1d7346 8%, transparent);
+  --wash-1: #a9dcbc;
+  --wash-2: #d4e9b4;
+}
+:root[data-theme='dark'][data-accent='green'] {
+  --accent: #6fd09c;
+  --accent-ink: #0a2416;
+  --accent-text: #85dbac;
+  --accent-soft: #15301f;
+  --accent-line: #2d6243;
+  --selected: #15301f;
+  --focus-ring: #6fd09c;
+  --ring: 0 0 0 2px var(--canvas), 0 0 0 4px #6fd09c;
+  --hatch: color-mix(in srgb, #6fd09c 8%, transparent);
+  --wash-1: #195536;
+  --wash-2: #3c5218;
+}
+:root[data-accent='amber'] {
+  --accent: #9a5300;
+  --accent-ink: #ffffff;
+  --accent-text: #8f4d00;
+  --accent-soft: #fbeedb;
+  --accent-line: #ecc58e;
+  --selected: #fbeedb;
+  --focus-ring: #9a5300;
+  --ring: 0 0 0 2px var(--canvas), 0 0 0 4px #9a5300;
+  --hatch: color-mix(in srgb, #9a5300 8%, transparent);
+  --wash-1: #f5cf96;
+  --wash-2: #f6b9a4;
+}
+:root[data-theme='dark'][data-accent='amber'] {
+  --accent: #f2b35a;
+  --accent-ink: #2b1800;
+  --accent-text: #f5c27a;
+  --accent-soft: #36260f;
+  --accent-line: #6e4d1c;
+  --selected: #36260f;
+  --focus-ring: #f2b35a;
+  --ring: 0 0 0 2px var(--canvas), 0 0 0 4px #f2b35a;
+  --hatch: color-mix(in srgb, #f2b35a 8%, transparent);
+  --wash-1: #6a4310;
+  --wash-2: #6a2a1c;
+}
+:root[data-accent='rose'] {
+  --accent: #c22d5c;
+  --accent-ink: #ffffff;
+  --accent-text: #b52855;
+  --accent-soft: #fce6ed;
+  --accent-line: #f1b0c4;
+  --selected: #fce6ed;
+  --focus-ring: #c22d5c;
+  --ring: 0 0 0 2px var(--canvas), 0 0 0 4px #c22d5c;
+  --hatch: color-mix(in srgb, #c22d5c 8%, transparent);
+  --wash-1: #f6b0c8;
+  --wash-2: #d8b8f5;
+}
+:root[data-theme='dark'][data-accent='rose'] {
+  --accent: #ff8fb1;
+  --accent-ink: #330a19;
+  --accent-text: #ffa3bf;
+  --accent-soft: #3d1a27;
+  --accent-line: #7a3550;
+  --selected: #3d1a27;
+  --focus-ring: #ff8fb1;
+  --ring: 0 0 0 2px var(--canvas), 0 0 0 4px #ff8fb1;
+  --hatch: color-mix(in srgb, #ff8fb1 8%, transparent);
+  --wash-1: #6e1f40;
+  --wash-2: #4b2373;
+}
+:root[data-accent='graphite'] {
+  --accent: #3d4354;
+  --accent-ink: #ffffff;
+  --accent-text: #3a4050;
+  --accent-soft: #e9ebf0;
+  --accent-line: #c2c6d1;
+  --selected: #e9ebf0;
+  --focus-ring: #3d4354;
+  --ring: 0 0 0 2px var(--canvas), 0 0 0 4px #3d4354;
+  --hatch: color-mix(in srgb, #3d4354 8%, transparent);
+  --wash-1: #c9cfdc;
+  --wash-2: #dcd7e6;
+}
+:root[data-theme='dark'][data-accent='graphite'] {
+  --accent: #c4c9d6;
+  --accent-ink: #14161d;
+  --accent-text: #d0d4df;
+  --accent-soft: #252834;
+  --accent-line: #4a4f60;
+  --selected: #252834;
+  --focus-ring: #c4c9d6;
+  --ring: 0 0 0 2px var(--canvas), 0 0 0 4px #c4c9d6;
+  --hatch: color-mix(in srgb, #c4c9d6 8%, transparent);
+  --wash-1: #2c3142;
+  --wash-2: #352d42;
+}
