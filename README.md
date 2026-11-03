@@ -30,16 +30,16 @@ Electron + React + TypeScript (Vite über electron-vite).
 
 | Quelle | Status |
 | --- | --- |
-| Demo-Datenquelle | aktiv beim ersten Start, überall als „Demo“ gekennzeichnet, in den Einstellungen entfernbar |
-| Kalenderdatei (.ics) | verfügbar – Import aus Outlook, Google oder Apple Kalender, schreibgeschützt |
-| Claude (Anthropic API) | verfügbar – eigener API-Schlüssel in Einstellungen → Claude |
+| Demo-Datenquelle | beim ersten Start wählbar, überall als „Demo“ gekennzeichnet, entfernbar |
+| Microsoft (Outlook-Mail, Outlook-Kalender, OneNote) | verfügbar – „Mit Microsoft anmelden“, keine eigene Einrichtung nötig |
+| Cloud-Speicher (OneDrive-App-Ordner) | verfügbar – Daten zwischen PCs abgleichen, „Meine Daten wiederherstellen“ beim ersten Start |
+| Apple Kalender (iCloud) | verfügbar – mit App-spezifischem Passwort |
+| Gmail (& Google Kalender) | verfügbar – einmalige Einrichtung, siehe unten |
+| Kalenderdatei (.ics) | verfügbar – Import, schreibgeschützt |
 | Wetter (Open-Meteo) | verfügbar, optional, ohne Konto |
-| Google Kalender & Gmail | verfügbar – einmalige Einrichtung, siehe unten |
-| Microsoft 365 / Outlook | nicht verbunden – App-Registrierung (Microsoft Graph) nötig |
-| IMAP/SMTP | nicht verbunden |
-| Pendelzeit | nicht verbunden – Routendienst nötig |
+| Claude (Anthropic API) | optional, standardmäßig aus – eigener API-Schlüssel |
 
-Im Demo-Postfach werden Antworten nur lokal abgelegt und nie versendet.
+Vorschläge aus E-Mails (Termine, Fristen, Aufgaben, Infos) werden lokal auf dem PC erkannt – ohne KI und ohne Server; angelegt wird nur, was bestätigt wird. Im Demo-Postfach werden Antworten nur lokal abgelegt und nie versendet.
 
 ## Google verbinden (einmalig, ca. 10 Minuten)
 
