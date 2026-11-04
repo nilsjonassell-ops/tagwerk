@@ -189,3 +189,39 @@ test('Ausgeschlossene Absender werden nicht geprüft', async () => {
   assert.equal(detectAll([m], { now: NOW }).length, 1)
   assert.equal(detectAll([m], { now: NOW, exclude: ['@liste.example.de'] }).length, 0)
 })
+
+test('Ausgeschriebener Monat: „am 5. November um 9 Uhr“ ist ein sicherer Termin', () => {
+  const a = run('Projekttreffen', 'Hallo,\n\nTreffen am 5. November um 9 Uhr im Büro.\n\nViele Grüße').filter((s) => s.kind === 'event')
+  assert.equal(a.length, 1)
+  const d = new Date(a[0].start!)
+  assert.equal(d.getMonth(), 10)
+  assert.equal(d.getDate(), 5)
+  assert.equal(d.getHours(), 9)
+  assert.equal(a[0].uncertain, false)
+})
+
+test('Wochentag + ausgeschriebenes Datum + Uhrzeit: genaues Datum zählt, nicht „unsicher“', () => {
+  const a = run('Projekttreffen', 'Wir treffen uns am Donnerstag, 5. November um 14:30 Uhr im Raum Taunus.').filter((s) => s.kind === 'event')
+  assert.equal(a.length, 1)
+  assert.equal(new Date(a[0].start!).getHours(), 14)
+  assert.equal(a[0].uncertain, false, a[0].reason)
+})
+
+test('Abkürzung „am 12. Nov. um 10 Uhr“ wird erkannt', () => {
+  const a = run('Rückruf', 'Können wir am 12. Nov. um 10 Uhr telefonieren? Ich rufe dich an.').filter((s) => s.kind === 'event')
+  assert.equal(a.length, 1)
+  assert.equal(new Date(a[0].start!).getDate(), 12)
+})
+
+test('Frist mit Wochentag und Datum („bis Freitag, 6. November“): Datum ist eindeutig', () => {
+  const a = run('Folien', 'Bitte schick mir die Folien bis Freitag, 6. November.').filter((s) => s.kind === 'deadline')
+  assert.equal(a.length, 1)
+  assert.equal(a[0].due, '2026-11-06')
+  assert.equal(a[0].uncertain, false, a[0].reason)
+})
+
+test('Satzende nach Ordnungszahl wird nicht mit einem Monatsnamen verwechselt, echte Satzenden schon', () => {
+  const a = run('Info', 'Die Abgabe ist bis zum 20.11. Danach gibt es keine Verlängerung.').filter((s) => s.kind === 'deadline')
+  assert.equal(a.length, 1)
+  assert.equal(a[0].due, '2026-11-20')
+})

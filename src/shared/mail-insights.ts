@@ -29,6 +29,9 @@ const short = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1).tri
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 /** Sätze ohne Grußformel und Signatur */
+const MONTH_NAMES = 'Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember|Jan|Feb|Mär|Apr|Jun|Jul|Aug|Sep|Sept|Okt|Nov|Dez'
+const MONTH_SAFE_SPLIT = new RegExp(`(?<=(?<!(?<![\\d.])\\d{1,2})\\.|[!?])\\s+(?=[A-ZÄÖÜ„"])|(?<=(?<![\\d.])\\d{1,2}\\.)\\s+(?=[A-ZÄÖÜ„"])(?!(?:${MONTH_NAMES})(?![\\p{L}]))`, 'u')
+
 function sentences(body: string): string[] {
   const lines = stripQuoted(body).split(/\r?\n/)
   const out: string[] = []
@@ -37,7 +40,8 @@ function sentences(body: string): string[] {
     if (!line) continue
     // „Viele Grüße“ beendet die Mail – „Vielen Dank für den Empfang! …“ nicht
     if (SIGNOFF.test(line) && line.length < 45) break
-    for (const s of line.split(/(?<=[.!?])\s+(?=[A-ZÄÖÜ„"])/u)) {
+    // Satzende – aber nicht nach einer Ordnungszahl vor einem Monatsnamen („am 5. November“, „12. Nov.“)
+    for (const s of line.split(MONTH_SAFE_SPLIT)) {
       // „zwischen 10 und 14 Uhr“ → „10–14 Uhr“ (versteht die Zeiterkennung)
       const t = s
         .replace(GREETING, '')
@@ -264,8 +268,9 @@ export function detectMailSuggestions(m: Email, opts: DetectOptions = {}): MailS
         }
         return
       }
-      const d = dates[0]
-      const phrase = s.slice(d.index, d.index + d.length)
+      // Ausdrückliches Datum („6. November“, „6.11.“) vor Wochentag oder „morgen“ – sonst wäre es unnötig „unsicher“
+      const d = dates.find((x) => /\d/.test(sd.slice(x.index, x.index + x.length)) && !RELATIVE.test(sd.slice(x.index, x.index + x.length))) ?? dates[0]
+      const phrase = sd.slice(d.index, d.index + d.length)
       const day = d.value
       // Frist: Datum + „bis …“, „spätestens“, „Abgabe“ …
       if (deadline && kinds.has('deadline')) {
