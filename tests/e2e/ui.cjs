@@ -481,6 +481,52 @@ const tests = {
     await p.context().close()
   },
 
+  async accounts(b, url) {
+    for (const scheme of ['light', 'dark']) {
+      const p = await start(b, url, { scheme })
+      await p.keyboard.press('Control+,')
+      await p.waitForSelector('.settings-nav')
+      await p.locator('.settings-nav button:has-text("Konten")').click()
+      await p.waitForSelector('.provider-list')
+      await sleep(500) // Dialog fertig eingeblendet
+      const groups = await p.locator('.providers section').evaluateAll((s) => s.map((x) => x.getAttribute('aria-label')))
+      if (scheme === 'light') ok(JSON.stringify(groups) === JSON.stringify(['E-Mail', 'Kalender', 'Notizen & Sicherung']), `Gruppen (${groups.join(', ')})`)
+      const state = (id) => p.locator(`[data-provider="${id}"] .pr-state`).innerText()
+      if (scheme === 'light') {
+        ok((await state('gmail')).includes('Nicht verbunden'), 'Gmail: „Nicht verbunden“ als Text')
+        ok((await state('icloud-mail')).includes('Nicht unterstützt'), 'iCloud Mail: ehrlich „Nicht unterstützt“, ohne Knopf')
+        ok(await p.locator('[data-provider="icloud-mail"] button').count() === 0, 'nicht unterstützt → keine Aktion')
+      }
+      // Logos: gleiche Kachel, Inhalt mittig, Name auf gleicher Höhe wie Logo-Mitte
+      const geo = await p.evaluate(() =>
+        [...document.querySelectorAll('.provider-row')].map((r) => {
+          const l = r.querySelector('.provider-logo').getBoundingClientRect()
+          const t = r.querySelector('.pr-text').getBoundingClientRect()
+          const g = r.querySelector('.provider-logo svg').getBoundingClientRect()
+          return { w: Math.round(l.width), h: Math.round(l.height), dy: Math.abs(l.top + l.height / 2 - (t.top + t.height / 2)), gx: Math.abs(g.left + g.width / 2 - (l.left + l.width / 2)), gy: Math.abs(g.top + g.height / 2 - (l.top + l.height / 2)) }
+        })
+      )
+      ok(geo.every((x) => x.w === 36 && x.h === 36), `[${scheme}] alle Logos gleich groß (36 px) ${geo.filter((x) => x.w !== 36 || x.h !== 36).map((x) => x.w + '×' + x.h).join(' ')}`)
+      ok(geo.every((x) => x.gx < 1.5 && x.gy < 1.5), `[${scheme}] Logos mittig in der Kachel`)
+      ok(geo.every((x) => x.dy < 3), `[${scheme}] Name und Logo auf einer Höhe`)
+      if (scheme === 'light') {
+        // Aktion springt zum Abschnitt
+        await p.locator('[data-provider="apple-calendar"] button').click()
+        await sleep(700)
+        const vis = await p.evaluate(() => { const r = document.getElementById('acc-apple').getBoundingClientRect(); const c = document.querySelector('.settings-content').getBoundingClientRect(); return r.top >= c.top - 2 && r.top < c.bottom - 40 })
+        ok(vis, '„Verbinden“ bei Apple führt zum Abschnitt Apple Kalender')
+        // Simuliertes Microsoft verbinden → Zustände wechseln
+        await p.locator('button:has-text("Mit Microsoft anmelden")').click()
+        await sleep(1600)
+        ok((await state('outlook-mail')).includes('Verbunden'), 'nach der Anmeldung: Outlook „Verbunden“')
+        ok((await state('outlook-calendar')).includes('Verbunden') || (await state('outlook-calendar')).includes('abgeglichen'), 'Outlook-Kalender verbunden')
+        ok((await p.locator('[data-provider="outlook-mail"] button').innerText()).includes('Verwalten'), 'Aktion wird zu „Verwalten“')
+      }
+      ok(p.errors.length === 0, `[${scheme}] keine Konsolenfehler (${p.errors.join(' | ')})`)
+      await p.context().close()
+    }
+  },
+
   async noNative(b, url) {
     const p = await start(b, url)
     const count = () => p.evaluate(() => document.querySelectorAll('select').length)

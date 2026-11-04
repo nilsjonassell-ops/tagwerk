@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, ExternalLink, Loader2, RefreshCw } from 'luc
 import { confirm, useStore } from '@/lib/store'
 import { removeSource, useAccounts } from '@/lib/accounts'
 import { Switch } from './ui'
+import { ProviderLogo } from './ProviderLogo'
 
 const APPLE_SECURITY = 'https://account.apple.com/account/manage/section/security'
 
@@ -65,11 +66,7 @@ export function ICloudSettings() {
   return (
     <div className="google-box">
       <div className="source-row" style={{ borderBottom: 0 }}>
-        <div className="icon acc-icon apple">
-          <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-            <path d="M16.4 12.6c0-2.4 2-3.6 2.1-3.7-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.8-1.7 0-3.3 1-4.2 2.5-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.9-1.1-2.9-4.3zM13.9 5.2c.7-.9 1.2-2 1-3.2-1 0-2.3.7-3 1.6-.7.8-1.3 2-1.1 3.1 1.2.1 2.3-.6 3.1-1.5z" />
-          </svg>
-        </div>
+        <ProviderLogo kind="apple" />
         <div className="label">
           <b>
             Apple Kalender (iCloud) {status.connected ? <span className="tag ok">verbunden</span> : <span className="tag">nicht verbunden</span>}

@@ -2,7 +2,7 @@ import { useUpdateStatus, VersionRow } from '@/components/Updates'
 import { useState, type ReactNode } from 'react'
 import { useAccounts } from '@/lib/accounts'
 import {
-  ArrowDown, ArrowUp, Bell, CalendarDays, CalendarPlus, CloudSun, Database, Eye, EyeOff, FlaskConical, KeyRound, LayoutDashboard, Monitor, Shield, Sparkles, Trash2, Loader2, Check, Download,
+  ArrowDown, ArrowUp, Bell, CalendarDays, CloudSun, Database, Eye, EyeOff, FlaskConical, KeyRound, LayoutDashboard, Monitor, Shield, Sparkles, Trash2, Loader2, Check, Download,
   X, Palette, ListChecks, ArrowRight
 } from 'lucide-react'
 import { createDemoData, removeDemo } from '@shared/demo'
@@ -14,6 +14,7 @@ import { MicrosoftSettings } from './OneNoteSettings'
 import { ICloudSettings } from './ICloudSettings'
 import { Dialog, Segmented, Select, Switch } from './ui'
 import { AccentPicker, ModeCards } from './AppearancePicker'
+import { ProvidersOverview } from './ProvidersOverview'
 import { isMac, modKey } from '@/lib/format'
 
 type Section = 'appearance' | 'general' | 'dashboard' | 'calendar' | 'notifications' | 'sources' | 'suggestions' | 'claude' | 'privacy'
@@ -381,28 +382,29 @@ function Sources() {
   return (
     <>
       <h3>Konten</h3>
-      <p>Tagwerk nutzt externe Konten nur, wenn du sie ausdrücklich verbindest. Deine Daten liegen auf diesem Gerät – und, wenn du den Cloud-Speicher einschaltest, zusätzlich in deinem eigenen OneDrive (Ordner „Apps/Tagwerk“). Einen Tagwerk-Server gibt es nicht. Zugangsdaten liegen verschlüsselt im Schlüsselspeicher des Betriebssystems.</p>
+      <p>Tagwerk nutzt externe Konten nur, wenn du sie ausdrücklich verbindest. Deine Daten liegen auf diesem Gerät – und, wenn du den Cloud-Speicher einschaltest, zusätzlich in deinem eigenen OneDrive (Ordner „Apps/Tagwerk“). Einen Tagwerk-Server gibt es nicht.</p>
 
+      <ProvidersOverview onImport={importIcs} importing={importing} />
+
+      <h3 className="accounts-detail-title">Kontoeinstellungen</h3>
       <div className="settings-group">Microsoft – Outlook, OneNote und Cloud-Speicher</div>
-      <MicrosoftSettings />
+      <div id="acc-microsoft" className="acc-section">
+        <MicrosoftSettings />
+      </div>
 
       <div className="settings-group">Apple Kalender</div>
-      <ICloudSettings />
-
-      <div className="settings-group">Gmail</div>
-      <GoogleSettings />
-
-      <div className="settings-group">Weitere Quellen</div>
-      <div className="source-row">
-        <div className="icon"><CalendarPlus /></div>
-        <div className="label">
-          <b>Kalenderdatei (.ics) <span className="tag ok">verfügbar</span></b>
-          <span>Export aus Outlook, Google Kalender oder Apple Kalender importieren. Importierte Termine sind schreibgeschützt und werden nicht automatisch aktualisiert.</span>
-        </div>
-        <button className="btn small" onClick={importIcs} disabled={importing}>{importing ? <Loader2 className="spin" /> : null} Datei importieren</button>
+      <div id="acc-apple" className="acc-section">
+        <ICloudSettings />
       </div>
+
+      <div className="settings-group">Google – Gmail und Kalender</div>
+      <div id="acc-google" className="acc-section">
+        <GoogleSettings />
+      </div>
+
+      {data.sources.icsImports.length > 0 && <div className="settings-group">Importierte Kalenderdateien</div>}
       {data.sources.icsImports.map((i) => (
-        <div key={i.id} className="source-row" style={{ paddingLeft: 46 }}>
+        <div key={i.id} className="source-row">
           <div className="label">
             <b>{i.name}</b>
             <span>{i.count} Termine · importiert am {new Date(i.importedAt).toLocaleString('de-DE')}</span>
@@ -411,6 +413,7 @@ function Sources() {
         </div>
       ))}
 
+      <div className="settings-group">Ausprobieren</div>
       <div className="source-row">
         <div className="icon"><FlaskConical /></div>
         <div className="label">

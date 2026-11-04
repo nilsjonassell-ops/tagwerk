@@ -4,6 +4,7 @@ import { confirm, useStore } from '@/lib/store'
 import { useOneNote } from '@/lib/onenote'
 import { removeSource, useAccounts } from '@/lib/accounts'
 import { Switch } from './ui'
+import { ProviderLogo } from './ProviderLogo'
 
 const L = {
   newApp: 'https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade/quickStartType~/null/isMSAApp~/false',
@@ -86,14 +87,7 @@ export function MicrosoftSettings() {
   return (
     <div className="google-box">
       <div className="source-row" style={{ borderBottom: 0 }}>
-        <div className="icon acc-icon ms">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="2" y="2" width="9.5" height="9.5" fill="#f25022" />
-            <rect x="12.5" y="2" width="9.5" height="9.5" fill="#7fba00" />
-            <rect x="2" y="12.5" width="9.5" height="9.5" fill="#00a4ef" />
-            <rect x="12.5" y="12.5" width="9.5" height="9.5" fill="#ffb900" />
-          </svg>
-        </div>
+        <ProviderLogo kind="microsoft" />
         <div className="label">
           <b>
             Microsoft-Konto{' '}
