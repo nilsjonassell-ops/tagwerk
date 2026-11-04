@@ -60,6 +60,8 @@ interface State {
   sidebarHidden: boolean
   /** Seitenleiste im Modus „automatisch“ gerade ausgefahren */
   sidebarOpen: boolean
+  /** Andocken am Bildschirmrand (vom Hauptprogramm gemeldet) */
+  dock: import('@shared/types').DockState
   assistantOpen: boolean
   paletteOpen: boolean
   dialog: DialogState
@@ -148,6 +150,7 @@ export const useStore = create<State>((set, get) => ({
   selection: {},
   sidebarHidden: false,
   sidebarOpen: false,
+  dock: { edge: null, collapsed: false },
   assistantOpen: false,
   paletteOpen: false,
   dialog: null,

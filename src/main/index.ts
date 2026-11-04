@@ -34,6 +34,7 @@ import * as microsoft from './microsoft'
 import * as icloud from './icloud'
 import { cloudAck, cloudStatus, initCloud, resetCloud, setCloudEnabled, syncNow as cloudSyncNow } from './cloud'
 import { log } from './log'
+import { dockRestBounds, dockSettingChanged, initDock, setDockHold } from './dock'
 
 const isMac = process.platform === 'darwin'
 const isWin = process.platform === 'win32'
@@ -114,7 +115,7 @@ function loadBounds() {
 function saveBounds() {
   if (!mainWindow) return
   try {
-    writeFileSync(windowStateFile(), JSON.stringify({ ...mainWindow.getNormalBounds(), maximized: mainWindow.isMaximized() }))
+    writeFileSync(windowStateFile(), JSON.stringify({ ...dockRestBounds(mainWindow.getNormalBounds()), maximized: mainWindow.isMaximized() }))
   } catch {
     /* ignorieren */
   }
@@ -151,6 +152,7 @@ function createMainWindow(startHidden: boolean) {
     }
   })
   if (b?.maximized) mainWindow.maximize()
+  initDock({ win: () => mainWindow, enabled: () => store.getSettings().windowDock })
 
   mainWindow.once('ready-to-show', () => {
     if (!startHidden) mainWindow?.show()
@@ -197,8 +199,10 @@ function showMain(view?: string) {
   const win = mainWindow
   // War das Fenster im Infobereich versteckt, spielt die Startanimation erneut –
   // kurz vorher anstoßen, damit kein alter Zustand aufblitzt.
-  if (!win.isVisible() && !win.webContents.isLoading()) win.webContents.send('app:command', 'replay-intro')
-  reveal(win, view)
+  const wasHidden = !win.isVisible()
+  if (wasHidden && !win.webContents.isLoading()) win.webContents.send('app:command', 'replay-intro')
+  // Erneutes Öffnen (Infobereich, Taskleiste) beginnt immer auf „Heute“ – außer ein Ziel ist angegeben
+  reveal(win, view ?? (wasHidden ? 'today' : undefined))
 }
 
 /** In den Infobereich: erst das Anfangsbild der Startanimation zeichnen, dann verstecken.
@@ -227,7 +231,8 @@ function reveal(win: BrowserWindow, view?: string) {
 
 /** Klick auf eine Benachrichtigung: Fenster zeigen und das Ziel öffnen */
 function openTarget(t: { view: string; id?: string }) {
-  showMain()
+  // gleich zum Ziel, nicht erst kurz „Heute“
+  showMain(t.view)
   setTimeout(() => mainWindow?.webContents.send('app:open', t), 150)
 }
 
@@ -512,6 +517,7 @@ function registerIpc() {
     const next = store.setSettings(patch)
     if (patch.theme) nativeTheme.themeSource = next.theme
     if (patch.launchAtLogin !== undefined) applyLoginItem(next)
+    if (patch.windowDock !== undefined) dockSettingChanged()
     if (patch.quickNoteShortcut !== undefined && patch.quickNoteShortcut !== prev.quickNoteShortcut) {
       if (!registerQuickNoteShortcut(next.quickNoteShortcut)) {
         registerQuickNoteShortcut(prev.quickNoteShortcut)
@@ -665,6 +671,7 @@ function registerIpc() {
     quitting = true
     installNow()
   })
+  on('dock:hold', (_e, v: unknown) => setDockHold(v === true))
   on('focus:signal', (_e, sig: FocusSignal) => {
     if (!sig || typeof sig !== 'object') return
     setFocus({

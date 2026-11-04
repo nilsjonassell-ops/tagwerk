@@ -21,7 +21,8 @@
     "build:web": "vite build --config vite.web.config.ts",
     "tokens": "node --experimental-strip-types scripts/gen-tokens.mjs",
     "test:e2e": "node tests/e2e/ui.cjs",
-    "test:visual": "node tests/e2e/visual.cjs"
+    "test:visual": "node tests/e2e/visual.cjs",
+    "test:desktop": "TAGWERK_DOCK_TEST=1 xvfb-run -a -s \"-screen 0 1920x1080x24\" electron --no-sandbox tests/desktop/dock.cjs"
   },
   "dependencies": {
     "@floating-ui/react": "^0.27.20",

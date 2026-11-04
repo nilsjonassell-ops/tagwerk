@@ -33,6 +33,10 @@ const api: TagwerkApi = {
     send: (req) => ipcRenderer.invoke('claude:send', req)
   },
   ics: { import: () => ipcRenderer.invoke('ics:import') },
+  dock: {
+    onState: (cb) => on('dock:state', cb),
+    setHold: (hold) => ipcRenderer.send('dock:hold', hold)
+  },
   cloud: {
     status: () => ipcRenderer.invoke('cloud:status'),
     setEnabled: (on) => ipcRenderer.invoke('cloud:setEnabled', on),

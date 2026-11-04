@@ -50,6 +50,7 @@ Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, N
 ### Posteingang
 - **Gmail und Outlook gemeinsam**, Filter „Alle Postfächer“ oder je Konto, Konto-Badge an jeder Mail.
 - Ordner: Alle, Wichtig, Gemerkt, Ungelesen, Antwort offen, Gesendet, Archiv; Filter nach Projekt; Suche.
+- Mail-Erkennung versteht ausgeschriebene Monate („am 5. November um 9 Uhr“, „12. Nov.“); steht Wochentag und Datum zusammen („Freitag, 6. November“), zählt das genaue Datum (nicht „unsicher“).
 - **Aus E-Mail übernehmen:** In der geöffneten Mail drei klare Wege „Aufgabe · Notiz · Termin“. Der Dialog führt in Schritten (Art wählen → Prüfen & ergänzen → Speichern), zeigt die Quell-Mail, kennzeichnet jede Angabe („aus Mail“, „prüfen“ mit Begründung, „nicht gefunden“), klappt Zusatzangaben ein, behält Eingaben beim Wechsel der Art, warnt bei bereits Angelegtem aus derselben Mail und bestätigt mit „Öffnen“ direkt zum neuen Element. Seltene Aktionen (ungelesen, löschen, zur Bearbeitung) im Menü „…“.
 - Neues Karten-Design (nur Betreff, ruhig) mit Schnellaktionen: **Archivieren, Löschen, Merken, „Antwort offen“** (auf dem Dashboard sichtbar, von Hand entfernbar).
 - Antworten direkt aus Tagwerk (mit Bestätigung); in der geöffneten Mail „Übernehmen ▾“: Termin daraus, Aufgabe daraus, Als Notiz merken.
@@ -101,7 +102,8 @@ Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, N
 - **Einstellungen** im Stil der macOS-Systemeinstellungen: gruppierte Glas-Karten, festes Raster (Beschriftung | Bedienelement, bei wenig Platz untereinander), Bereiche: Darstellung (Modus-Vorschaukarten, Akzentfarbe, Animationen, Seitenleiste) · Allgemein · Übersicht · Kalender · Benachrichtigungen · Konten · Mail-Vorschläge · Claude · Datenschutz.
 - Seitenleiste „automatisch“: bleibt als schmaler Streifen am Rand, fährt beim Überfahren aus (Inhalt rückt synchron mit) und wieder ein; kein Knopf. Strg+B oder Einstellung „Immer ausgeklappt“.
 - Tastenkürzel: Strg+1–6 Bereiche, Strg+N Aufgabe, Strg+Umschalt+N Termin, Strg+/ alle Kürzel.
-- Start mit Windows, Infobereich-Symbol, Startanimation.
+- Start mit Windows, Infobereich-Symbol, Startanimation. Wieder geöffnet (Infobereich, Taskleiste) beginnt Tagwerk immer auf „Heute“; Klicks auf Benachrichtigungen öffnen direkt ihr Ziel.
+- **Fenster andocken** (Einstellung, standardmäßig aus, nur dieser PC): an den linken oder rechten Bildschirmrand geschoben, fährt das Fenster ein, wenn die Maus es verlässt (~0,65 s), nur der Symbolstreifen bleibt sichtbar; Maus auf den Streifen fährt es nach ~0,1 s wieder aus. Gleitet ohne Größenänderung, nur an Außenkanten (nicht zwischen zwei Bildschirmen), berücksichtigt die Taskleiste, fährt nicht ein, solange ein Dialog/Menü offen ist. Rechts angedockt liegt die Seitenleiste rechts.
 
 ### Claude-Assistent (vorhanden, aber bei Nils ausgeschaltet)
 - Eingebautes Claude-Panel (eigener API-Schlüssel nötig = kostenpflichtig). Nils nutzt es bewusst **nicht**. Ideen sollten **ohne KI-Kosten** funktionieren; KI-Ideen nur als optionale Zusatzstufe vorschlagen.
@@ -109,6 +111,9 @@ Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, N
 ---
 
 ## 4. Konten & Datenquellen
+
+Einstellungen → Konten zeigt oben eine Übersicht nach **E-Mail · Kalender · Notizen & Sicherung**: Gmail, Outlook, iCloud Mail (ehrlich „nicht unterstützt“) · Google Kalender, Outlook-Kalender, Apple Kalender, Kalenderdatei (.ics) · OneNote, Cloud-Speicher. Jede Zeile: einheitliches Logo, Zustand als Symbol + Text (verbunden, nicht verbunden, Anmeldung abgelaufen, Fehler beim Abgleich, wird abgeglichen, nicht unterstützt) und genau eine Aktion (Verbinden, Verwalten, Neu anmelden, Datei importieren), die zum jeweiligen Kontoabschnitt springt.
+
 
 | Quelle | Stand |
 | --- | --- |
@@ -145,7 +150,7 @@ Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, N
 - Hauptprozess: Fenster, Infobereich, Pop-up-Fenster, Planer für Erinnerungen, Konten-Synchronisierung (Google API, Microsoft Graph, CalDAV), Live-Abfragen (Google jede Sekunde, Outlook alle 3 s, iCloud alle 10 s).
 - Oberfläche läuft abgeschottet (kein Node-Zugriff), schmale Brücke `window.tagwerk`.
 - Gestaltung: Design-Tokens in `styles/tokens.css`, erzeugt aus `src/shared/palette.ts` (`npm run tokens`); Kontrasttest prüft jede Akzentfarbe in Hell/Dunkel. Bausteine `Popover`/`Menu`/`Select`/`Segmented`/`Tooltip` (Positionierung mit @floating-ui).
-- Tests: Logik-Tests (Node) + automatische Oberflächentests mit Testservern; `npm run test:e2e` (Menüs, Auswahl, Dialoge, Darstellung im Browser) und `npm run test:visual` (Bildvergleich, lokal).
+- Tests: Logik-Tests (Node) + automatische Oberflächentests mit Testservern; `npm run test:e2e` (Menüs, Auswahl, Dialoge, Darstellung im Browser) und `npm run test:visual` (Bildvergleich, lokal), `npm run test:desktop` (Andocken in der echten App, virtueller Bildschirm).
 - Auslieferung: GitHub-Actions baut Installer + Store-Paket (MSIX); Store-Einreichung über Microsoft Partner Center.
 
 ---
@@ -190,7 +195,7 @@ Offene Fragen: <falls vorhanden>
 ## 9. Versionsverlauf
 
 <!--VERSIONEN-->
-- **Noch nicht veröffentlicht (gesammelt fürs große Update)** – Neues Design-System mit dezenter Glasoptik · 7 Akzentfarben + Hell/Dunkel/Wie Windows · eigene, tastaturbedienbare Menüs und Auswahlfelder · Dialoge mit Unschärfe und Rückfrage bei ungespeicherten Eingaben · Fokus-Start neu (Suche, Dauer-Umschalter, Enter startet) · Einstellungen neu gegliedert als gruppierte Karten (Darstellung, Konten, Mail-Vorschläge) · Seitenleiste fährt automatisch aus und ein · „Aus E-Mail übernehmen“ als geführter Ablauf (Aufgabe · Notiz · Termin) · „Bewegung reduzieren“
+- **Noch nicht veröffentlicht (gesammelt fürs große Update)** – Neues Design-System mit dezenter Glasoptik · 7 Akzentfarben + Hell/Dunkel/Wie Windows · eigene, tastaturbedienbare Menüs und Auswahlfelder · Dialoge mit Unschärfe und Rückfrage bei ungespeicherten Eingaben · Fokus-Start neu (Suche, Dauer-Umschalter, Enter startet) · Einstellungen neu gegliedert als gruppierte Karten (Darstellung, Konten, Mail-Vorschläge) · Seitenleiste fährt automatisch aus und ein · „Aus E-Mail übernehmen“ als geführter Ablauf (Aufgabe · Notiz · Termin) · Konten-Übersicht mit klaren Zuständen · Fenster am Bildschirmrand andocken · Wiederöffnen auf „Heute“ · Erkennung ausgeschriebener Monate · „Bewegung reduzieren“
 - **1.8.0** (03.11.2026) – OneNote lesen & speichern · einklappbare Seitenleiste · Outlook-Mail & -Kalender · Apple Kalender (iCloud) · Postfach-Filter je Konto · Zielkalender beim Anlegen · einfachere Gmail-Einrichtung mit Direktlinks · Microsoft-Anmeldung ohne eigene Einrichtung · Cloud-Speicher über OneDrive (Daten auf jedem PC) · Vorschläge aus Mails („Aus Mails übernehmen“: Termine, Fristen, Aufgaben, Infos – mit Änderungen, Serien, Aufteilen/Zusammenführen, Vorlauf, Regeln) · Wiedervorlage für Mails · „Meine Daten wiederherstellen“ beim ersten Start
 - **1.7.0** – Microsoft-Store-Version (kein Blockieren mehr durch Smart App Control)
 - **1.6.0** – Kalender live, Termine aus Mails, Schnelleingabe mit Uhrzeit, Wochenrückblick

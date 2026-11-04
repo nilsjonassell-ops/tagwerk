@@ -498,6 +498,8 @@ export interface Settings {
   sidebarCollapsed?: boolean
   /** Seitenleiste: 'auto' = schmaler Streifen am Rand, fährt beim Überfahren aus; 'pinned' = immer ausgeklappt */
   sidebarMode: SidebarMode
+  /** Fenster am linken/rechten Bildschirmrand andocken: fährt ein, wenn die Maus es verlässt (nur dieser PC) */
+  windowDock: boolean
   closeToTray: boolean
   quickNoteShortcut: string
   notifications: {
@@ -591,6 +593,7 @@ export const DEFAULT_SETTINGS: Settings = {
   accent: 'indigo',
   motion: 'system',
   sidebarMode: 'auto',
+  windowDock: false,
   launchAtLogin: false,
   closeToTray: true,
   quickNoteShortcut: 'CommandOrControl+Shift+Space',
@@ -849,4 +852,15 @@ export interface TagwerkApi {
     save(text: string): Promise<void>
     close(): void
   }
+  /** Fenster am Bildschirmrand andocken (Hauptprozess) */
+  dock: {
+    onState(cb: (s: DockState) => void): () => void
+    /** Dialog/Menü offen oder Maustaste gedrückt – nicht einfahren */
+    setHold(hold: boolean): void
+  }
+}
+
+export interface DockState {
+  edge: 'left' | 'right' | null
+  collapsed: boolean
 }

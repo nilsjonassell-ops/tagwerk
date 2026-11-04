@@ -164,6 +164,7 @@ function OrderList<T extends { id: string; visible: boolean }>({ items, label, o
 
 function Appearance() {
   const [s, set] = useSettings()
+  const inWebPreview = window.tagwerk.platform.version === 'web'
   return (
     <>
       <h3>Darstellung</h3>
@@ -183,6 +184,12 @@ function Appearance() {
       <h3 style={{ marginTop: 28 }}>Seitenleiste</h3>
       <Row label="Verhalten" hint={`„Automatisch“: schmaler Streifen am Rand, fährt beim Überfahren aus und wieder ein. Umschalten auch mit ${modKey()}+B.`}>
         <Segmented label="Seitenleiste" value={s.sidebarMode} onChange={(sidebarMode) => set({ sidebarMode })} options={[{ id: 'auto', label: 'Automatisch' }, { id: 'pinned', label: 'Immer ausgeklappt' }]} />
+      </Row>
+      <Row
+        label="Fenster am Bildschirmrand andocken"
+        hint={`Schiebe Tagwerk an den linken oder rechten Rand: Verlässt die Maus das Fenster, fährt es ein und nur der Symbolstreifen bleibt sichtbar. Mit der Maus auf den Streifen fährt es wieder aus. Nur an Außenkanten (nicht zwischen zwei Bildschirmen), gilt nur für diesen PC.${inWebPreview ? ' In der Web-Vorschau nicht verfügbar – nur in der installierten App.' : ''}`}
+      >
+        <Switch label="Fenster am Bildschirmrand andocken" checked={s.windowDock && !inWebPreview} disabled={inWebPreview} onChange={(windowDock) => set({ windowDock })} />
       </Row>
       <p>Welche Bereiche in der Navigation erscheinen. Ausgeblendete bleiben über die Suche ({modKey()}+K) erreichbar.</p>
       <OrderList

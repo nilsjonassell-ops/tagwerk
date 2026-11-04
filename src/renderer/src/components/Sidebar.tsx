@@ -29,8 +29,9 @@ export function Sidebar() {
   const openDialog = useStore((s) => s.openDialog)
   const selection = useStore((s) => s.selection)
   // Automatisch: schmaler Streifen, fährt beim Überfahren aus (siehe lib/sidebarHover)
-  const auto = settings.sidebarMode !== 'pinned'
-  const open = useStore((s) => s.sidebarOpen)
+  const dockCollapsed = useStore((s) => s.dock.collapsed)
+  const auto = settings.sidebarMode !== 'pinned' || dockCollapsed
+  const open = useStore((s) => s.sidebarOpen) && !dockCollapsed
   const rail = auto && !open
 
   // Gleitende Markierung hinter dem aktiven Menüpunkt

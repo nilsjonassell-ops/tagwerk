@@ -9,7 +9,8 @@ let timer: ReturnType<typeof setTimeout> | undefined
 let inside = 0
 
 const setOpen = (v: boolean) => useStore.getState().sidebarOpen !== v && useStore.setState({ sidebarOpen: v })
-const auto = () => useStore.getState().settings.sidebarMode !== 'pinned'
+// Eingefahren am Bildschirmrand fährt das Fenster selbst aus – die Leiste bleibt dann ruhig
+const auto = () => useStore.getState().settings.sidebarMode !== 'pinned' && !useStore.getState().dock.collapsed
 
 /** Maus/Fokus kommt in den Bereich (Leiste oder Randstreifen) */
 export function sidebarEnter() {

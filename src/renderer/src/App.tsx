@@ -15,6 +15,7 @@ import { AssistantPanel } from '@/components/Assistant'
 import { CommandPalette } from '@/components/CommandPalette'
 import { applyAppearance } from '@/lib/appearance'
 import { sidebarEnter, sidebarLeave, sidebarReset } from '@/lib/sidebarHover'
+import { dockHold } from '@/lib/dockHold'
 import { ConfirmHost, Toasts } from '@/components/Overlays'
 import { EventDialog, MailNoteDialog, ProjectDialog, TaskDialog } from '@/components/Editors'
 import { SplitDialog } from '@/components/Suggestions'
@@ -33,8 +34,29 @@ export function App() {
   const loadError = useStore((s) => s.loadError)
   const view = useStore((s) => s.view)
   const sidebarHidden = useStore((s) => s.sidebarHidden)
-  const sidebarAuto = useStore((s) => s.settings.sidebarMode !== 'pinned')
-  const sidebarOpen = useStore((s) => s.sidebarOpen)
+  const dock = useStore((s) => s.dock)
+  // Eingefahren am Bildschirmrand ist immer nur der Symbolstreifen sichtbar
+  const sidebarAuto = useStore((s) => s.settings.sidebarMode !== 'pinned') || dock.collapsed
+  const sidebarOpen = useStore((s) => s.sidebarOpen) && !dock.collapsed
+  const dialogOpen = useStore((s) => !!s.dialog || s.paletteOpen)
+  useEffect(() => dockHold('dialog', dialogOpen), [dialogOpen])
+  useEffect(() => {
+    const off = window.tagwerk.dock?.onState((d) => {
+      useStore.setState({ dock: d })
+      if (d.collapsed) sidebarReset()
+    })
+    const down = () => dockHold('pointer', true)
+    const up = () => dockHold('pointer', false)
+    window.addEventListener('pointerdown', down)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('blur', up)
+    return () => {
+      off?.()
+      window.removeEventListener('pointerdown', down)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('blur', up)
+    }
+  }, [])
   const assistantOpen = useStore((s) => s.assistantOpen)
   const paletteOpen = useStore((s) => s.paletteOpen)
   const dialog = useStore((s) => s.dialog)
@@ -220,8 +242,8 @@ export function App() {
 
   const platform = window.tagwerk.platform.platform
   return (
-    <div className={`app platform-${platform} ${sidebarHidden ? 'sidebar-hidden' : ''} ${sidebarAuto ? 'sb-auto' : ''} ${sidebarAuto && !sidebarOpen ? 'sb-collapsed' : ''} ${assistantOpen ? 'panel-open' : ''}`}>
-      {sidebarAuto && <div className="sb-edge" aria-hidden="true" onMouseEnter={sidebarEnter} onMouseLeave={sidebarLeave} />}
+    <div className={`app platform-${platform} ${sidebarHidden ? 'sidebar-hidden' : ''} ${sidebarAuto ? 'sb-auto' : ''} ${sidebarAuto && !sidebarOpen ? 'sb-collapsed' : ''} ${assistantOpen ? 'panel-open' : ''} ${dock.edge ? `dock-${dock.edge}` : ''} ${dock.collapsed ? 'dock-collapsed' : ''}`}>
+      {sidebarAuto && !dock.collapsed && <div className="sb-edge" aria-hidden="true" onMouseEnter={sidebarEnter} onMouseLeave={sidebarLeave} />}
       <Sidebar />
       <main className="main" aria-label="Inhalt">
         {view === 'today' && <TodayView />}

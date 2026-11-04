@@ -1,7 +1,8 @@
 // Grundlage für alles Schwebende (Menüs, Auswahllisten, kleine Panels).
 // Liegt in einer eigenen obersten Ebene (#layer-root) außerhalb jeder Animation,
 // klappt an Fensterkanten um und folgt dem Auslöser beim Scrollen und Animieren.
-import { useRef, type ReactNode, type CSSProperties } from 'react'
+import { useEffect, useRef, type ReactNode, type CSSProperties } from 'react'
+import { popoverOpen } from '@/lib/dockHold'
 import { FloatingFocusManager, FloatingPortal, autoUpdate, flip, offset, shift, size, useDismiss, useFloating, useInteractions, useRole, type Placement } from '@floating-ui/react'
 
 let layer: HTMLElement | null = null
@@ -56,6 +57,12 @@ export function Popover(p: PopoverProps) {
     ]
   })
   const self = useRef<HTMLElement | null>(null)
+  // Angedocktes Fenster nicht einfahren, solange ein Menü offen ist
+  useEffect(() => {
+    if (!p.open) return
+    popoverOpen(1)
+    return () => popoverOpen(-1)
+  }, [p.open])
   const dismiss = useDismiss(context, { outsidePressEvent: 'mousedown', escapeKey: false })
   const role = useRole(context, { role: p.role === 'listbox' ? 'listbox' : p.role === 'menu' ? 'menu' : 'dialog' })
   const { getFloatingProps } = useInteractions([dismiss, role])

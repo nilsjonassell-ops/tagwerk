@@ -243,6 +243,8 @@ export const webApi: TagwerkApi = {
     deleteEvent: async () => ok(null),
     onChanged: noop
   },
+  // Andocken gibt es nur in der installierten App
+  dock: { onState: noop, setHold: () => {} },
   cloud: {
     status: async () => cloud,
     setEnabled: async () => cloud,

@@ -142,3 +142,27 @@
     transition: none !important;
   }
 }
+
+/* ===== Fenster am rechten Bildschirmrand angedockt: Seitenleiste rechts ===== */
+/* (eingefahren bleibt genau der Symbolstreifen sichtbar – deshalb muss er an der Kante liegen) */
+.app.dock-right {
+  direction: rtl;
+}
+.app.dock-right > * {
+  direction: ltr;
+}
+.app.dock-right .sidebar {
+  margin: 10px 10px 10px 0;
+}
+.app.dock-right .main,
+.app.dock-right .assistant {
+  margin: 10px 0 10px 10px;
+}
+.app.dock-right .sb-edge {
+  left: auto;
+  right: 0;
+}
+/* Windows/Linux: Fensterknöpfe sitzen oben rechts über dem Inhalt – die Leiste rückt darunter */
+.app.dock-right:not(.platform-darwin) .sidebar {
+  margin-top: calc(env(titlebar-area-height, 34px) + 10px);
+}
