@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { Trash2, AlertTriangle, ChevronRight } from 'lucide-react'
+import { Trash2, AlertTriangle, ChevronRight, Loader2 } from 'lucide-react'
 import { eventsOnDay, findConflicts, planTasks, ymd } from '@shared/analysis'
 import type { CalEvent, Person, Priority, Project, ProjectStatus, Recurrence, Task, TaskStatus } from '@shared/types'
 import { uid, useStore } from '@/lib/store'
@@ -219,6 +219,7 @@ export function EventDialog({ id, preset, suggestionId, series, capture }: { id?
   // Nach einem Wechsel Aufgabe ↔ Termin: zuletzt bearbeiteter Stand
   const [d0] = useState(() => takeDraft<EventDraft>(capture))
   const saving = useRef(false)
+  const [busy, setBusy] = useState(false)
   const init = useMemo(() => {
     const start = existing?.start ?? preset?.start ?? new Date(Math.ceil(Date.now() / 3600_000) * 3600_000).toISOString()
     const end = existing?.end ?? preset?.end ?? new Date(new Date(start).getTime() + 3600_000).toISOString()
@@ -298,6 +299,7 @@ export function EventDialog({ id, preset, suggestionId, series, capture }: { id?
     setTouched(true)
     if (invalidTitle || saving.current) return
     saving.current = true
+    setBusy(true)
     if (!existing && target !== settings.lastEventTarget) void useStore.getState().updateSettings({ lastEventTarget: target })
     const many = wholeSeries && seriesList.length > 1
     let createdId = ''
@@ -312,6 +314,7 @@ export function EventDialog({ id, preset, suggestionId, series, capture }: { id?
     })
     if (!ok) {
       saving.current = false
+      setBusy(false)
       return
     }
     if (capture && createdId && !many) {
@@ -380,8 +383,12 @@ export function EventDialog({ id, preset, suggestionId, series, capture }: { id?
           <button className="btn" onClick={close}>
             Abbrechen
           </button>
-          <button className="btn primary" onClick={submit}>
-            {existing ? 'Speichern' : capture ? 'Termin anlegen' : 'Anlegen'}
+          <button className="btn primary" onClick={submit} disabled={busy} aria-busy={busy}>
+            {busy ? (
+              <>
+                <Loader2 className="spin" aria-hidden="true" /> Speichert …
+              </>
+            ) : existing ? 'Speichern' : capture ? 'Termin anlegen' : 'Anlegen'}
           </button>
         </>
       }

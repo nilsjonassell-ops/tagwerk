@@ -122,6 +122,8 @@ let ic: ICloudStatus = read<ICloudStatus>(K.ic) ?? { connected: false, calendars
 const google: GoogleStatus = { clientConfigured: false, connected: false, expired: false, encrypted: true, caps: { calendarRead: false, calendarWrite: false, gmailRead: false, gmailWrite: false } }
 const cloud: CloudStatus = { available: false, enabled: false, syncing: false, devices: [], deviceName: 'Web-Vorschau' }
 const ok = <T>(value: T) => ({ ok: true as const, value })
+/** Simulierte Konten antworten wie im echten Netz mit kurzer Verzögerung */
+const net = () => new Promise((r) => setTimeout(r, 600))
 
 export const webApi: TagwerkApi = {
   platform: { platform: 'win32', version: 'web' },
@@ -203,7 +205,7 @@ export const webApi: TagwerkApi = {
       toastPopup('Antwort (simuliert)', 'In der Web-Vorschau wird nichts verschickt.')
       return ok(null)
     },
-    createEvent: async (ev) => ok({ ...ev, id: `o-${crypto.randomUUID()}`, source: 'outlook' as const }),
+    createEvent: async (ev) => (await net(), ok({ ...ev, id: `o-${crypto.randomUUID()}`, source: 'outlook' as const })),
     updateEvent: async (ev) => ok(ev),
     deleteEvent: async () => ok(null),
     onChanged: noop,
@@ -233,6 +235,7 @@ export const webApi: TagwerkApi = {
     },
     sync: async () => ({ ok: true, syncedAt: nowIso(), events: ic.connected ? icloudEvents(ic.calendars.filter((c) => c.enabled).map((c) => c.id)) : [] }),
     createEvent: async (ev, cal) => {
+      await net()
       const c = ic.calendars.find((x) => x.id === (cal ?? ic.defaultCalendarId))
       return ok({ ...ev, id: `ic-${crypto.randomUUID()}`, source: 'icloud' as const, calendarId: c?.id, calendarName: c?.name, remoteId: `${c?.id}/x.ics` })
     },

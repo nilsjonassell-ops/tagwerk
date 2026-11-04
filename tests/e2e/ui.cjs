@@ -452,6 +452,35 @@ const tests = {
     await p.context().close()
   },
 
+  async doubleSubmit(b, url) {
+    const p = await start(b, url)
+    // Simuliertes Outlook verbinden: Anlegen dauert dort wie im echten Netz einen Moment
+    await p.keyboard.press('Control+,')
+    await p.waitForSelector('.settings-nav')
+    await p.locator('.settings-nav button:has-text("Konten")').click()
+    await p.locator('button:has-text("Mit Microsoft anmelden")').click()
+    await sleep(1500)
+    await p.keyboard.press('Escape')
+    await sleep(300)
+    await openFirstMail(p)
+    await p.locator('.capture-btn.k-event').click()
+    await p.waitForSelector('.capture-head')
+    ok((await p.locator('[role="combobox"][aria-label="Kalender"]').innerText()).includes('Outlook'), 'Ziel: Outlook-Kalender (simuliert)')
+    await p.locator('.dialog input.input').first().fill('Doppelklick-Test')
+    const save = p.locator('.dialog .dialog-foot .btn.primary')
+    await save.dblclick()
+    await sleep(120)
+    const during = (await save.count()) ? await save.evaluate((el) => `${el.disabled}|${el.textContent}`) : 'zu'
+    ok(during.startsWith('true') && during.includes('Speichert'), `während des Speicherns gesperrt mit „Speichert …“ (${during})`)
+    await sleep(1500)
+    ok(await p.locator('.dialog').count() === 0, 'Dialog nach dem Speichern geschlossen')
+    await p.keyboard.press('Control+2')
+    await sleep(800)
+    const n = await p.locator('.cal-event:has-text("Doppelklick-Test")').count()
+    ok(n === 1, `Doppelklick legt genau einen Termin an (gefunden: ${n})`)
+    await p.context().close()
+  },
+
   async noNative(b, url) {
     const p = await start(b, url)
     const count = () => p.evaluate(() => document.querySelectorAll('select').length)
