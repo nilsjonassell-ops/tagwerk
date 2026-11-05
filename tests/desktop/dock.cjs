@@ -19,7 +19,12 @@ app.on('browser-window-created', async (_e, win) => {
   await new Promise((r) => win.webContents.once('did-finish-load', r))
   await sleep(3500)
   const js = (c) => win.webContents.executeJavaScript(c)
-  await js(`document.querySelector('button.btn.primary')?.textContent.includes('Loslegen') && document.querySelector('button.btn.primary').click()`).catch(() => {})
+  // Erster Start: Begrüßung im Vollbild → „Demo ansehen“ → „Demo öffnen“
+  await js(`[...document.querySelectorAll('.welcome-option')].find((b) => b.textContent.includes('Demo ansehen'))?.click()`).catch(() => {})
+  await sleep(500)
+  await js(`[...document.querySelectorAll('.welcome button')].find((b) => b.textContent.includes('Demo öffnen'))?.click()`).catch(() => {})
+  await sleep(1500)
+  ok(await js(`!!document.querySelector('.app') && !document.querySelector('.welcome')`), 'Begrüßung verlassen, App sichtbar')
   const D = globalThis.__tagwerkDock
   ok(!!D, 'Testzugang zum Andocken vorhanden')
   const work = screen.getPrimaryDisplay().workArea

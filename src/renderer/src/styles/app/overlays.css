@@ -18,7 +18,7 @@
 @keyframes pop {
   from {
     opacity: 0;
-    transform: translateY(-6px) scale(0.985);
+    transform: translateY(calc(-6px * var(--move, 1))) scale(calc(1 + (0.985 - 1) * var(--move, 1)));
   }
 }
 .dialog {

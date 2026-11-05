@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, CheckSquare, Gavel, ListChecks, NotebookPen, Plus, Search, Sparkles, Trash2, Users, Loader2 } from 'lucide-react'
-import { extractTaskCandidates } from '@shared/analysis'
+import { extractTaskCandidates, isBlankNote } from '@shared/analysis'
 import type { Note } from '@shared/types'
 import { useStore } from '@/lib/store'
 import { fDayMed, fTime, mailDate } from '@/lib/format'
@@ -47,6 +47,15 @@ export function NotesView() {
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   }, [data.notes, query, kind])
   const selected = data.notes.find((n) => n.id === selectedId)
+
+  // Neu angelegte, nie beschriebene Notiz verschwindet still, sobald man sie verlässt
+  const lastSelected = useRef<string | undefined>(selectedId)
+  useEffect(() => {
+    const prev = lastSelected.current
+    lastSelected.current = selectedId
+    if (prev && prev !== selectedId) dropIfBlank(prev)
+  }, [selectedId])
+  useEffect(() => () => void (lastSelected.current && dropIfBlank(lastSelected.current)), [])
 
   return (
     <>
@@ -127,6 +136,18 @@ function NoteEditor({ note }: { note: Note }) {
   const go = useStore((s) => s.go)
   const [draft, setDraft] = useState(note)
   const [saved, setSaved] = useState(true)
+  // Beim Wechseln oder Schließen sofort sichern, was noch nicht gespeichert war
+  const pending = useRef<Note | null>(null)
+  useEffect(() => {
+    pending.current = draft === note ? null : draft
+  })
+  useEffect(
+    () => () => {
+      const d = pending.current
+      if (d) mutate((x) => ({ ...x, notes: x.notes.map((n) => (n.id === d.id ? { ...d, oneNote: n.oneNote, updatedAt: new Date().toISOString() } : n)) }))
+    },
+    [] // eslint-disable-line react-hooks/exhaustive-deps
+  )
 
   // Automatisch speichern (verzögert)
   useEffect(() => {
@@ -135,6 +156,7 @@ function NoteEditor({ note }: { note: Note }) {
     const t = setTimeout(() => {
       // oneNote-Verknüpfung kommt aus dem Speicher, nicht aus dem Entwurf
       mutate((d) => ({ ...d, notes: d.notes.map((n) => (n.id === draft.id ? { ...draft, oneNote: n.oneNote, updatedAt: new Date().toISOString() } : n)) }))
+      pending.current = null
       setSaved(true)
     }, 500)
     return () => clearTimeout(t)
@@ -281,4 +303,10 @@ export function ExtractTasksDialog({ noteId }: { noteId: string }) {
       {error && <div className="error-text">{error}</div>}
     </Dialog>
   )
+}
+
+function dropIfBlank(id: string) {
+  const st = useStore.getState()
+  const n = st.data.notes.find((x) => x.id === id)
+  if (n && isBlankNote(n)) st.replaceData({ ...st.data, notes: st.data.notes.filter((x) => x.id !== id) })
 }

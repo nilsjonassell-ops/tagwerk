@@ -5,7 +5,7 @@ import {
   ArrowDown, ArrowUp, Bell, CalendarDays, CloudSun, Database, Eye, EyeOff, FlaskConical, KeyRound, LayoutDashboard, Monitor, Shield, Sparkles, Trash2, Loader2, Check, Download,
   X, Palette, ListChecks, ArrowRight
 } from 'lucide-react'
-import { createDemoData, removeDemo } from '@shared/demo'
+import { addDemo, removeDemo } from '@shared/demo'
 import { OPEN_METEO, PRIVACY_POLICY_URL, SERVICES } from '@shared/services'
 import { CLAUDE_MODELS, type DashboardCardId, type Settings, type Source, type SuggestionKind } from '@shared/types'
 import { confirm, useStore } from '@/lib/store'
@@ -34,11 +34,12 @@ const SECTIONS: { id: Section; label: string; icon: typeof Monitor }[] = [
 
 const CARD_LABEL: Record<DashboardCardId, string> = {
   brief: 'Das Wichtigste heute',
-  focus: 'Tagesband mit freier Zeit',
-  schedule: 'Nächste Termine',
+  focus: 'Freie Zeit im Tagesplan',
+  schedule: 'Tagesplan (Kalender)',
   tasks: 'Aufgaben für heute',
   mail: 'Wichtige E-Mails',
-  weather: 'Wetter'
+  weather: 'Wetter',
+  meals: 'Essen heute'
 }
 
 export function SettingsDialog({ section }: { section?: string }) {
@@ -382,8 +383,7 @@ function Sources() {
       const ok = await confirm({ title: 'Demo-Daten entfernen?', body: 'Alle Beispieltermine, -mails, -aufgaben und -projekte werden entfernt. Eigene Einträge und Importe bleiben erhalten.', confirmLabel: 'Demo-Daten entfernen', danger: true })
       if (ok) mutate(removeDemo, { toast: 'Demo-Daten entfernt', undoable: true })
     } else {
-      const demo = createDemoData()
-      mutate((d) => ({ ...d, tasks: [...demo.tasks, ...d.tasks], events: [...d.events, ...demo.events], emails: [...d.emails, ...demo.emails], notes: [...demo.notes, ...d.notes], projects: [...demo.projects, ...d.projects], docs: [...demo.docs, ...d.docs], sources: { ...d.sources, demo: true } }), { toast: 'Demo-Daten geladen' })
+      mutate(addDemo, { toast: 'Demo-Daten geladen' })
     }
   }
 
@@ -607,171 +607,6 @@ function Privacy() {
         ))}
       </ul>
     </>
-  )
-}
-
-// ---------- Erster Start ----------
-
-export function OnboardingDialog() {
-  const settings = useStore((s) => s.settings)
-  const online = useStore((s) => s.online)
-  const [mode, setMode] = useState<'new' | 'restore'>('new')
-  const [name, setName] = useState(settings.userName)
-  const [withDemo, setWithDemo] = useState(true)
-  const [phase, setPhase] = useState<'idle' | 'signin' | 'loading' | 'done' | 'empty' | 'error'>('idle')
-  const [err, setErr] = useState('')
-  const [summary, setSummary] = useState('')
-  const finish = async () => {
-    const st = useStore.getState()
-    if (mode === 'restore') {
-      await st.updateSettings({ onboarded: true })
-    } else {
-      await st.updateSettings({ userName: name.trim(), onboarded: true })
-      if (!withDemo && st.data.sources.demo) st.replaceData(removeDemo(st.data))
-    }
-    st.openDialog(null)
-  }
-  const restore = async () => {
-    setErr('')
-    setPhase('signin')
-    const r = await window.tagwerk.microsoft.connect({ mail: true, calendar: true, notes: true, sync: true })
-    if (!r.ok) {
-      setPhase('error')
-      return setErr(r.error ?? 'Die Anmeldung hat nicht geklappt.')
-    }
-    if (!r.status.caps.sync) {
-      setPhase('error')
-      return setErr('Der Zugriff auf den Cloud-Speicher wurde nicht freigegeben. Bitte noch einmal anmelden und „OneDrive“ zustimmen.')
-    }
-    // Beispieldaten weg – gleich kommen deine echten Daten
-    const st = useStore.getState()
-    if (st.data.sources.demo) st.replaceData(removeDemo(st.data))
-    void useAccounts.getState().refresh()
-    setPhase('loading')
-    const t0 = Date.now()
-    let cs = await window.tagwerk.cloud.syncNow()
-    while (Date.now() - t0 < 30_000 && (cs.syncing || !cs.lastSync)) {
-      await new Promise((res) => setTimeout(res, 600))
-      cs = await window.tagwerk.cloud.status()
-    }
-    await new Promise((res) => setTimeout(res, 800)) // Oberfläche übernimmt den Stand
-    if (cs.error) {
-      setPhase('error')
-      return setErr(cs.error)
-    }
-    const d = useStore.getState().data
-    const others = cs.devices.filter((x) => !x.self)
-    if (!others.length) return setPhase('empty')
-    const n = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`
-    setSummary(
-      ([
-        [d.tasks.length, 'Aufgabe', 'Aufgaben'],
-        [d.notes.length, 'Notiz', 'Notizen'],
-        [d.projects.length, 'Projekt', 'Projekte'],
-        [d.events.filter((e) => e.source === 'local').length, 'eigener Termin', 'eigene Termine']
-      ] as [number, string, string][])
-        .filter(([k]) => k > 0)
-        .map(([k, a, b]) => n(k, a, b))
-        .join(' · ') +
-        ` – zuletzt gesichert auf „${others[0].name}“`
-    )
-    setPhase('done')
-  }
-  const busy = phase === 'signin' || phase === 'loading'
-  return (
-    <Dialog
-      title="Willkommen bei Tagwerk"
-      onClose={busy ? () => {} : finish}
-      footer={
-        mode === 'restore' && phase !== 'done' && phase !== 'empty' ? (
-          <>
-            <button className="btn" onClick={() => (busy ? window.tagwerk.microsoft.cancelConnect() : setMode('new'))}>
-              {busy ? 'Abbrechen' : 'Zurück'}
-            </button>
-            <button className="btn primary" onClick={restore} disabled={busy || !online}>
-              {busy ? <Loader2 className="spin" /> : null} {phase === 'error' ? 'Erneut versuchen' : 'Mit Microsoft anmelden'}
-            </button>
-          </>
-        ) : (
-          <button className="btn primary" onClick={finish}>
-            Loslegen
-          </button>
-        )
-      }
-    >
-      <p>Tagwerk bündelt Kalender, E-Mails, Aufgaben, Notizen und Projekte – ruhig und an einem Ort.</p>
-      <div className="onb-choice" role="radiogroup" aria-label="Wie möchtest du starten?">
-        <button role="radio" aria-checked={mode === 'new'} className={`onb-card ${mode === 'new' ? 'on' : ''}`} onClick={() => !busy && setMode('new')}>
-          <Sparkles />
-          <b>Neu starten</b>
-          <span>Mit Beispieldaten ausprobieren oder leer beginnen.</span>
-        </button>
-        <button role="radio" aria-checked={mode === 'restore'} className={`onb-card ${mode === 'restore' ? 'on' : ''}`} onClick={() => !busy && setMode('restore')}>
-          <Download />
-          <b>Meine Daten wiederherstellen</b>
-          <span>Du nutzt Tagwerk schon auf einem anderen PC? Mit Microsoft anmelden – alles ist wieder da.</span>
-        </button>
-      </div>
-
-      {mode === 'new' && (
-        <>
-          <label className="field">
-            <span>Wie dürfen wir dich ansprechen?</span>
-            <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Vorname" data-autofocus onKeyDown={(e) => e.key === 'Enter' && finish()} />
-          </label>
-          <div className="field">
-            <span className="field-label">Womit möchtest du starten?</span>
-            <label className="row" style={{ gap: 8 }}>
-              <input type="radio" name="start" checked={withDemo} onChange={() => setWithDemo(true)} /> Mit Beispieldaten ausprobieren (klar als „Demo“ gekennzeichnet)
-            </label>
-            <label className="row" style={{ gap: 8 }}>
-              <input type="radio" name="start" checked={!withDemo} onChange={() => setWithDemo(false)} /> Leer starten
-            </label>
-          </div>
-          <p className="hint">Konten (Outlook, Apple Kalender, Gmail) und den Cloud-Speicher verbindest du jederzeit unter Einstellungen → Konten.</p>
-        </>
-      )}
-
-      {mode === 'restore' && (
-        <div className="onb-restore" aria-live="polite">
-          {phase === 'idle' && (
-            <p className="hint">
-              Im Browser meldest du dich mit dem Microsoft-Konto an, mit dem du den Cloud-Speicher auf dem anderen PC eingeschaltet hast, und bestätigst den Zugriff (Outlook-Mail, Kalender, OneNote und der Tagwerk-Ordner in deinem OneDrive – später in den Einstellungen änderbar).
-            </p>
-          )}
-          {phase === 'signin' && (
-            <p className="row hint">
-              <Loader2 className="spin" size={14} /> Warte auf deine Anmeldung im Browser …
-            </p>
-          )}
-          {phase === 'loading' && (
-            <p className="row hint">
-              <Loader2 className="spin" size={14} /> Deine Daten werden aus OneDrive geladen …
-            </p>
-          )}
-          {phase === 'done' && (
-            <div className="onb-done">
-              <Check />
-              <div>
-                <b>Willkommen zurück{useStore.getState().settings.userName ? `, ${useStore.getState().settings.userName}` : ''}!</b>
-                <span>{summary}</span>
-                <span className="hint">Konten wie Gmail und Apple Kalender verbindest du auf diesem PC einmal neu – Passwörter werden aus Sicherheitsgründen nie in die Cloud kopiert.</span>
-              </div>
-            </div>
-          )}
-          {phase === 'empty' && (
-            <div className="onb-done">
-              <Check />
-              <div>
-                <b>Angemeldet – der Cloud-Speicher ist noch leer.</b>
-                <span>In diesem Microsoft-Konto liegen noch keine Tagwerk-Daten. Ab jetzt wird alles, was du hier anlegst, automatisch gesichert.</span>
-              </div>
-            </div>
-          )}
-          {phase === 'error' && <div className="error-text">{err}</div>}
-        </div>
-      )}
-    </Dialog>
   )
 }
 

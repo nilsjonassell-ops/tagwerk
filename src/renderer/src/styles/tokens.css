@@ -37,9 +37,13 @@
   --r-xl: 18px;
   --r-pill: 999px;
 
-  --dur-fast: 120ms;
-  --dur: 200ms;
-  --dur-slow: 320ms;
+  /* Bewegung: kurz für häufige Aktionen, länger nur für räumliche Übergänge */
+  --dur-fast: 120ms; /* Hover, Drücken */
+  --dur: 200ms; /* Zustandswechsel */
+  --dur-slow: 320ms; /* Leisten, Panels */
+  --dur-enter: 260ms; /* Bereichswechsel, neue Einträge */
+  --dur-sheet: 420ms; /* Dialoge, Seitenpanel, Hinweise */
+  --move: 1; /* Faktor für Verschieben/Skalieren/Unschärfe in Keyframes */
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 
   --titlebar: 44px;
@@ -59,9 +63,13 @@
   --shadow-3: 0 4px 12px rgba(0, 0, 0, 0.4), 0 36px 80px -16px rgba(0, 0, 0, 0.7);
 }
 :root[data-motion='reduced'] {
-  --dur-fast: 0ms;
-  --dur: 0ms;
-  --dur-slow: 0ms;
+  /* Keine Bewegung – kurze Überblendungen bleiben als Rückmeldung */
+  --dur-fast: 100ms;
+  --dur: 100ms;
+  --dur-slow: 100ms;
+  --dur-enter: 140ms;
+  --dur-sheet: 140ms;
+  --move: 0;
 }
 
 :root,

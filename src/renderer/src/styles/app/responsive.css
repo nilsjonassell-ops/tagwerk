@@ -11,9 +11,6 @@
   :root {
     --panel-w: 340px;
   }
-  .dash-grid {
-    grid-template-columns: 1fr;
-  }
   .today {
     padding: 22px 26px 40px;
   }
@@ -53,7 +50,7 @@
 }
 @keyframes spin {
   to {
-    transform: rotate(360deg);
+    transform: rotate(calc(360deg * var(--move, 1)));
   }
 }
 

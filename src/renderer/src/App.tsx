@@ -19,7 +19,8 @@ import { dockHold } from '@/lib/dockHold'
 import { ConfirmHost, Toasts } from '@/components/Overlays'
 import { EventDialog, MailNoteDialog, ProjectDialog, TaskDialog } from '@/components/Editors'
 import { SplitDialog } from '@/components/Suggestions'
-import { OnboardingDialog, SettingsDialog, ShortcutsDialog } from '@/components/SettingsDialog'
+import { SettingsDialog, ShortcutsDialog } from '@/components/SettingsDialog'
+import { Welcome } from '@/components/Welcome'
 import { TodayView } from '@/views/Today'
 import { CalendarView } from '@/views/Calendar'
 import { InboxView } from '@/views/Inbox'
@@ -247,6 +248,9 @@ export function App() {
     )
   }
 
+  // Erster Start: Begrüßung im Vollbild – die App ist dahinter nicht sichtbar
+  if (dialog?.kind === 'onboarding') return <Welcome />
+
   const platform = window.tagwerk.platform.platform
   return (
     <div className={`app platform-${platform} ${sidebarHidden ? 'sidebar-hidden' : ''} ${sidebarAuto ? 'sb-auto' : ''} ${sidebarAuto && !sidebarOpen ? 'sb-collapsed' : ''} ${assistantOpen ? 'panel-open' : ''} ${dock.edge ? `dock-${dock.edge}` : ''} ${dock.collapsed ? 'dock-collapsed' : ''}`}>
@@ -272,7 +276,6 @@ export function App() {
       {dialog?.kind === 'settings' && <SettingsDialog section={dialog.section} />}
       {dialog?.kind === 'shortcuts' && <ShortcutsDialog />}
       {dialog?.kind === 'extract' && <ExtractTasksDialog noteId={dialog.noteId} />}
-      {dialog?.kind === 'onboarding' && <OnboardingDialog />}
       {dialog?.kind === 'plan' && <PlanDialog />}
       {dialog?.kind === 'review' && <WeeklyReview />}
       <FocusHost />

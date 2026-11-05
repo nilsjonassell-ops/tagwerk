@@ -27,17 +27,21 @@ So arbeitest du:
 Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, Notizen, Projekte und Fokuszeit**. Ziel: morgens öffnen, sofort sehen was heute wichtig ist, und alles erledigen, ohne zwischen fünf Apps zu springen.
 
 - Plattform: Windows (Desktop-App), verteilt über den **Microsoft Store** („Tagwerk Planer“, Produkt-ID 9N30ZHF711XF). Der Code läuft technisch auch auf macOS.
-- Design: ruhige, Apple-inspirierte Glasoptik – Seitenleiste und Hauptfläche als durchscheinende Glasscheiben (Unschärfe, feine Lichtkante, zarte Kontur) auf einem dezenten Verlauf aus der Akzentfarbe; Deckkraft so gewählt, dass Text überall WCAG AA erfüllt (per Test geprüft). Hell/Dunkel/Wie Windows, 7 Akzentfarben (alle auf WCAG-AA-Kontrast geprüft), Inter als Schrift, Instrument Serif für große Überschriften. „Bewegung reduzieren“ wird beachtet.
+- Design: ruhige, Apple-inspirierte Glasoptik – Seitenleiste und Hauptfläche als durchscheinende Glasscheiben (Unschärfe, feine Lichtkante, zarte Kontur) auf einem dezenten Verlauf aus der Akzentfarbe; Deckkraft so gewählt, dass Text überall WCAG AA erfüllt (per Test geprüft). Hell/Dunkel/Wie Windows, 7 Akzentfarben (alle auf WCAG-AA-Kontrast geprüft), Inter als Schrift, Instrument Serif für große Überschriften. Bewegungssystem mit abgestuften Dauern (Hover 120 ms, Zustände 200 ms, Bereichswechsel 260 ms, Leisten 320 ms, Dialoge 420 ms). „Animationen: Reduziert“ (oder die Windows-Einstellung) entfernt jede Bewegung – übrig bleiben kurze Überblendungen als Rückmeldung; Ladekreisel drehen weiter.
 - Sprache der App: Deutsch.
 
 ---
 
 ## 3. Funktionsumfang (aktueller Stand)
 
+### Erster Start (Begrüßung im Vollbild)
+- Beim ersten Start eine eigene Vollbild-Begrüßung (die App ist dahinter nicht sichtbar) mit drei Wegen: **Demo ansehen** (Beispieldaten einer fiktiven Person, überall als „Demo“ markiert; Änderungen bleiben auf diesem PC, aus der Demo wird nichts verschickt; Demo-Daten jederzeit unter Einstellungen → Konten entfernbar), **Leer starten**, **Meine Daten wiederherstellen** (Microsoft-Anmeldung, holt den Cloud-Speicher; nur in der App). Lade-, Fehler- und Offline-Zustände sind sichtbar.
+
 ### Heute (Dashboard)
-- Briefing: Konflikte, Überfälliges, Dringendes.
-- Tagesband (Zeitleiste) mit Terminen und **freien Zeitblöcken**, Jetzt-Linie.
-- Heutige Aufgaben zum Abhaken, wichtige offene E-Mails, Wetter (Open-Meteo, ohne Konto; Quellenhinweis „Wetterdaten: Open-Meteo“ auf der Karte – Pflicht nach Lizenz CC BY 4.0).
+- Kopf: Begrüßung, Datum und kurze Statuszeilen (nächster Termin, überfällig, heute fällig, wartende Mails).
+- **Tagesplan** als größerer Kalenderausschnitt (Arbeitszeit, Jetzt-Linie, freie Zeit schraffiert, Überschneidungen nebeneinander, Konflikt/knapp markiert – in schmalen Spalten als Symbol, Text für Screenreader); Klick öffnet den Termin.
+- **Das Wichtigste**: Konflikte, Überfälliges, Dringendes, wartende Mails – viele Überschneidungen werden zu einem Sammelhinweis zusammengefasst, lange Titel gekürzt, Termine direkt hintereinander als „kein Puffer“ benannt.
+- Aufgaben gruppiert nach Überfällig · Heute · Erledigt, mit Schnelleingabe; „Wartet auf dich“ (wichtige Mails); „Essen heute“; Wetter (Open-Meteo, ohne Konto; Quellenhinweis „Wetterdaten: Open-Meteo“ auf der Karte – Pflicht nach Lizenz CC BY 4.0).
 - Anpassbar (welche Bereiche sichtbar sind); Wochenrückblick-Knopf.
 
 ### Kalender
@@ -79,6 +83,7 @@ Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, N
 
 ### Notizen
 - Notizen mit Aufgabenerkennung (Checkboxen werden zu Aufgaben), Schnellnotiz systemweit (Strg+Umschalt+Leertaste).
+- Automatisch gespeichert; beim Wechsel zu einer anderen Notiz wird sofort gesichert (nichts geht verloren). Eine neu angelegte, leer gelassene Notiz verschwindet beim Verlassen von selbst.
 - **OneNote-Anbindung:** Notizbücher/Abschnitte/Seiten lesen und durchsuchen, Notizen nach OneNote speichern.
 
 ### Projekte
@@ -209,7 +214,7 @@ Offene Fragen: <falls vorhanden>
 ## 9. Versionsverlauf
 
 <!--VERSIONEN-->
-- **Noch nicht veröffentlicht (gesammelt fürs große Update)** – Neues Design-System mit dezenter Glasoptik · 7 Akzentfarben + Hell/Dunkel/Wie Windows · eigene, tastaturbedienbare Menüs und Auswahlfelder · Dialoge mit Unschärfe und Rückfrage bei ungespeicherten Eingaben · Fokus-Start neu (Suche, Dauer-Umschalter, Enter startet) · Einstellungen neu gegliedert als gruppierte Karten (Darstellung, Konten, Mail-Vorschläge) · Seitenleiste fährt automatisch aus und ein · „Aus E-Mail übernehmen“ als geführter Ablauf (Aufgabe · Notiz · Termin) · Konten-Übersicht mit klaren Zuständen · Fenster am Bildschirmrand andocken · Wiederöffnen auf „Heute“ · Erkennung ausgeschriebener Monate · „Bewegung reduzieren“ · Quellenhinweis Open-Meteo auf der Wetterkarte · Datenschutz-Reiter mit Liste aller verbundenen Dienste · Datenschutzerklärung ergänzt (alle Dienste, IP-Hinweis, Marken) · **Essen**: Essensplan (Woche/Tag, optional als Kalendertermin), Rezeptsuche im Wikibooks-Kochbuch (ohne KI), Portionen umrechnen, Zutaten auswählen und zur Einkaufsliste, Einkaufsliste mit Bereichen, gemeinsam nutzbare Liste über OneDrive (Einladung, Echtzeit-Abgleich, Offline-Warteschlange, Konfliktbehandlung)
+- **Noch nicht veröffentlicht (gesammelt fürs große Update)** – Neues Design-System mit dezenter Glasoptik · 7 Akzentfarben + Hell/Dunkel/Wie Windows · eigene, tastaturbedienbare Menüs und Auswahlfelder · Dialoge mit Unschärfe und Rückfrage bei ungespeicherten Eingaben · Fokus-Start neu (Suche, Dauer-Umschalter, Enter startet) · Einstellungen neu gegliedert als gruppierte Karten (Darstellung, Konten, Mail-Vorschläge) · Seitenleiste fährt automatisch aus und ein · „Aus E-Mail übernehmen“ als geführter Ablauf (Aufgabe · Notiz · Termin) · Konten-Übersicht mit klaren Zuständen · Fenster am Bildschirmrand andocken · Wiederöffnen auf „Heute“ · Erkennung ausgeschriebener Monate · „Bewegung reduzieren“ · Quellenhinweis Open-Meteo auf der Wetterkarte · Datenschutz-Reiter mit Liste aller verbundenen Dienste · Datenschutzerklärung ergänzt (alle Dienste, IP-Hinweis, Marken) · **Essen**: Essensplan (Woche/Tag, optional als Kalendertermin), Rezeptsuche im Wikibooks-Kochbuch (ohne KI), Portionen umrechnen, Zutaten auswählen und zur Einkaufsliste, Einkaufsliste mit Bereichen, gemeinsam nutzbare Liste über OneDrive (Einladung, Echtzeit-Abgleich, Offline-Warteschlange, Konfliktbehandlung) · Begrüßung im Vollbild mit Demo-Einstieg · Dashboard neu (größerer Tagesplan, Überschneidungen nebeneinander, Aufgaben überfällig/heute/erledigt, Essen heute, ruhigeres „Das Wichtigste“) · Notizen: sofort sichern beim Wechsel, leere neue Notizen verschwinden · Regeln → Projekt als lesbarer Satz · Bewegungssystem mit Stufen, „Reduziert“ ohne Bewegung, aber mit Überblendungen
 - **1.8.0** (03.11.2026) – OneNote lesen & speichern · einklappbare Seitenleiste · Outlook-Mail & -Kalender · Apple Kalender (iCloud) · Postfach-Filter je Konto · Zielkalender beim Anlegen · einfachere Gmail-Einrichtung mit Direktlinks · Microsoft-Anmeldung ohne eigene Einrichtung · Cloud-Speicher über OneDrive (Daten auf jedem PC) · Vorschläge aus Mails („Aus Mails übernehmen“: Termine, Fristen, Aufgaben, Infos – mit Änderungen, Serien, Aufteilen/Zusammenführen, Vorlauf, Regeln) · Wiedervorlage für Mails · „Meine Daten wiederherstellen“ beim ersten Start
 - **1.7.0** – Microsoft-Store-Version (kein Blockieren mehr durch Smart App Control)
 - **1.6.0** – Kalender live, Termine aus Mails, Schnelleingabe mit Uhrzeit, Wochenrückblick

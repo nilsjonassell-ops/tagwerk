@@ -31,6 +31,14 @@ function serve() {
   })
 }
 
+/** Begrüßung: Demo wählen und öffnen (wie ein neuer Nutzer) */
+async function enterDemo(p) {
+  const demo = p.locator('.welcome-option:has-text("Demo ansehen")')
+  if (!(await demo.count())) return
+  await demo.click()
+  await p.locator('.welcome button:has-text("Demo öffnen")').click()
+}
+
 async function start(browser, url, opts = {}) {
   const ctx = await browser.newContext({ viewport: opts.viewport ?? { width: 1280, height: 820 }, colorScheme: opts.scheme ?? 'light' })
   const p = await ctx.newPage()
@@ -38,9 +46,8 @@ async function start(browser, url, opts = {}) {
   p.on('pageerror', (e) => p.errors.push(e.message))
   p.on('console', (m) => m.type() === 'error' && p.errors.push(m.text()))
   await p.goto(url)
-  await p.waitForSelector('.app, .dialog', { timeout: 15000 })
-  const go = p.locator('button:has-text("Loslegen")')
-  if (await go.count()) await go.first().click()
+  await p.waitForSelector('.app, .welcome', { timeout: 15000 })
+  await enterDemo(p)
   await p.waitForSelector('.app')
   await sleep(500)
   return p
@@ -168,6 +175,124 @@ const tests = {
     await p.context().close()
   },
 
+  async dashboard(b, url) {
+    const p = await start(b, url)
+    ok((await p.locator('.view-title').innerText()) === 'Heute', 'Start auf „Heute“')
+    const plan = p.locator('.day-plan')
+    ok((await plan.count()) === 1, 'Tagesplan vorhanden')
+    // Lesbarkeit: jeder Termin zeigt Titel und Uhrzeit vollständig oder mit Tooltip, mindestens 20 px hoch
+    const evs = await plan.locator('.plan-event').evaluateAll((els) => els.map((e) => ({ h: e.getBoundingClientRect().height, w: e.getBoundingClientRect().width, t: e.querySelector('.t')?.textContent ?? '', title: e.getAttribute('title') ?? '' })))
+    ok(evs.length >= 4, `Termine im Tagesplan (${evs.length})`)
+    ok(evs.every((e) => e.h >= 14 && e.w >= 100 && e.t.length > 2 && e.title.includes(e.t)), 'Termine sind breit und hoch genug, Titel lesbar (+ Tooltip)')
+    ok((await plan.locator('.plan-event .flag:has-text("Konflikt")').count()) >= 1, 'Konflikt mit Text gekennzeichnet (nicht nur Farbe)')
+    // Kurzinfos
+    const chips = await p.locator('.today-chips .chip-stat').allInnerTexts()
+    ok(chips.some((c) => /überfällig/.test(c)) && chips.some((c) => /heute fällig/.test(c)), `Kurzinfos: überfällig + heute fällig (${chips.join(' | ')})`)
+    // Aufgabe per Schnelleingabe für heute
+    const q = p.locator('input[aria-label="Aufgabe für heute anlegen"]')
+    await q.fill('Blumen gießen')
+    await q.press('Enter')
+    await sleep(300)
+    const todayRow = p.locator('.dash-task:has-text("Blumen gießen")')
+    ok((await todayRow.count()) === 1, 'Schnelleingabe legt Aufgabe für heute an')
+    await todayRow.locator('.check').click()
+    await sleep(500)
+    await p.locator('button.dash-sub:has-text("Heute erledigt")').click()
+    ok((await p.locator('.dash-task.is-done:has-text("Blumen gießen")').count()) === 1, 'Erledigte erscheinen unter „Heute erledigt“ (durchgestrichen)')
+    // Freie Zeit → neuer Termin mit vorgegebener Zeit
+    const free = plan.locator('.plan-free').first()
+    if (await free.count()) {
+      await free.click()
+      await p.waitForSelector('.dialog:has-text("Neuer Termin")')
+      ok(true, 'Klick auf freie Zeit öffnet „Neuer Termin“')
+      await p.keyboard.press('Escape')
+      await sleep(300)
+    }
+    ok((await p.locator('.dash-card:has-text("Essen heute")').count()) === 1, 'Karte „Essen heute“')
+    await p.locator('.dash-card:has-text("Essen heute") button:has-text("Gericht planen")').click()
+    await p.waitForSelector('.dialog:has-text("Gericht planen")')
+    ok((await p.locator('.view-title').innerText()) === 'Essen', '„Gericht planen“ führt in den Essensplan')
+    await p.keyboard.press('Escape')
+    ok(p.errors.length === 0, `keine Konsolenfehler (${p.errors.slice(0, 2).join(' | ')})`)
+    await p.context().close()
+  },
+
+  async welcome(b, url) {
+    const ctx = await b.newContext({ viewport: { width: 1280, height: 820 } })
+    const p = await ctx.newPage()
+    p.errors = []
+    p.on('pageerror', (e) => p.errors.push(e.message))
+    await p.goto(url)
+    await p.waitForSelector('.welcome', { timeout: 15000 })
+    ok((await p.locator('.app').count()) === 0, 'Begrüßung im Vollbild: die App ist dahinter nicht gerendert')
+    ok((await p.locator('.welcome-option').count()) === 3, 'Drei Wege: Demo, Leer, Microsoft')
+    ok(await p.locator('.welcome-option:has-text("Mit Microsoft anmelden")').isDisabled(), 'Web-Vorschau: Anmelden ehrlich deaktiviert (kein Cloud-Speicher)')
+    await p.locator('.welcome-option:has-text("Demo ansehen")').click()
+    const txt = await p.locator('.welcome-explain').innerText()
+    ok(/erfunden/.test(txt) && /gespeichert/.test(txt) && /entfernst/.test(txt), 'Demo: erklärt Beispieldaten, Speichern und Entfernen')
+    ok((await p.evaluate(() => document.activeElement?.getAttribute('placeholder'))) === 'Vorname', 'Fokus springt ins Namensfeld')
+    await p.locator('.welcome button:has-text("Zurück")').click()
+    await p.locator('.welcome-option:has-text("Leer starten")').click()
+    await p.fill('.welcome input[placeholder="Vorname"]', 'Nils')
+    await p.keyboard.press('Enter')
+    await p.waitForSelector('.app', { timeout: 5000 })
+    await sleep(400)
+    ok((await p.locator('.view-title').innerText()) === 'Heute', 'Danach öffnet „Heute“')
+    ok(/Nils/.test(await p.locator('.view-body').first().innerText()), 'Name wird in der Begrüßung verwendet')
+    ok((await p.evaluate(() => JSON.parse(localStorage.getItem('tagwerk-web:data')).sources.demo)) === false, 'Leer starten: keine Beispieldaten')
+    await p.reload()
+    await p.waitForSelector('.app', { timeout: 15000 })
+    ok((await p.locator('.welcome').count()) === 0, 'Nach dem Neuladen keine Begrüßung mehr')
+    ok(p.errors.length === 0, `keine Konsolenfehler (${p.errors.slice(0, 2).join(' | ')})`)
+    await ctx.close()
+  },
+
+  async motion(b, url) {
+    const p = await start(b, url)
+    const probe = (sel) => p.evaluate((s) => { const el = document.querySelector(s); if (!el) return null; const cs = getComputedStyle(el); return { name: cs.animationName, dur: parseFloat(cs.animationDuration) * (cs.animationDuration.endsWith('ms') ? 1 : 1000) } }, sel)
+    // Volle Bewegung: Ansichtswechsel und Dialoge nutzen die abgestuften Dauern
+    await p.keyboard.press('Control+4')
+    await sleep(50)
+    const full = await probe('.main > *')
+    ok(full && full.name === 'view-in' && full.dur > 150 && full.dur <= 320, `Bereichswechsel gleitet kurz ein (${full?.name}, ${full?.dur} ms)`)
+    // Reduziert: keine Bewegung, aber kurze Überblendung als Rückmeldung bleibt
+    await p.evaluate(() => (document.documentElement.dataset.motion = 'reduced'))
+    await p.keyboard.press('Control+5')
+    await sleep(50)
+    const red = await probe('.main > *')
+    ok(red && red.name === 'tw-fade' && red.dur > 0 && red.dur <= 160, `Reduziert: nur kurze Überblendung (${red?.name}, ${red?.dur} ms)`)
+    await p.keyboard.press('Control+,')
+    await sleep(50)
+    const dlg = await probe('.dialog')
+    ok(dlg && dlg.name === 'tw-fade', `Reduziert: Dialog ohne Skalieren/Weichzeichnen (${dlg?.name})`)
+    const tr = await p.evaluate(() => getComputedStyle(document.querySelector('.btn')).transitionProperty)
+    ok(!/transform|all/.test(tr), `Reduziert: keine Bewegungs-Übergänge (${tr})`)
+    await p.context().close()
+  },
+
+  async notes(b, url) {
+    const p = await start(b, url)
+    await p.keyboard.press('Control+5')
+    await p.waitForSelector('.note-row')
+    const count = () => p.locator('.note-row').count()
+    const before = await count()
+    await p.locator('.view-header button:has-text("Notiz")').last().click()
+    await sleep(200)
+    ok((await count()) === before + 1, 'Neue Notiz angelegt')
+    await p.locator('.note-row').nth(1).click()
+    await sleep(300)
+    ok((await count()) === before, 'Leer gelassene neue Notiz verschwindet beim Wechsel')
+    // Schnell tippen und sofort wechseln: nichts geht verloren
+    await p.locator('.view-header button:has-text("Notiz")').last().click()
+    await p.locator('.title-input').fill('Schnelle Idee')
+    await p.locator('.note-row').nth(1).click()
+    await sleep(400)
+    ok((await p.locator('.note-row:has-text("Schnelle Idee")').count()) === 1, 'Sofortiger Wechsel nach dem Tippen speichert den Text')
+    ok((await count()) === before + 1, 'Nur die beschriebene Notiz bleibt')
+    ok(p.errors.length === 0, `keine Konsolenfehler (${p.errors.slice(0, 2).join(' | ')})`)
+    await p.context().close()
+  },
+
   async 'meals-upgrade'(b, url) {
     // Bestehende Nutzer: gespeicherte Seitenleiste ohne „Essen“ – der neue Bereich muss trotzdem erscheinen
     const ctx = await b.newContext({ viewport: { width: 1280, height: 820 } })
@@ -178,9 +303,8 @@ const tests = {
     })
     const p = await ctx.newPage()
     await p.goto(url)
-    await p.waitForSelector('.app, .dialog')
-    const go = p.locator('button:has-text("Loslegen")')
-    if (await go.count()) await go.first().click()
+    await p.waitForSelector('.app, .welcome')
+    await enterDemo(p)
     await p.waitForSelector('.app')
     await sleep(400)
     ok((await p.locator('.nav-item[title^="Essen"]').count()) === 1, 'Nach dem Update: „Essen“ erscheint in der Seitenleiste')
@@ -372,9 +496,8 @@ const tests = {
     q.errors = []
     q.on('pageerror', (e) => q.errors.push(e.message))
     await q.goto(url + '?person=2')
-    await q.waitForSelector('.app, .dialog')
-    const go = q.locator('button:has-text("Loslegen")')
-    if (await go.count()) await go.first().click()
+    await q.waitForSelector('.app, .welcome')
+    await enterDemo(q)
     await q.waitForSelector('.app')
     await openMeals(q, 'Einkaufsliste')
     await q.locator('.shopping button:has-text("Liste beitreten")').click()

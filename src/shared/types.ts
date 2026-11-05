@@ -495,7 +495,7 @@ export type SidebarMode = 'auto' | 'pinned'
 
 export type ViewId = 'today' | 'calendar' | 'inbox' | 'tasks' | 'notes' | 'projects' | 'meals'
 
-export type DashboardCardId = 'brief' | 'schedule' | 'tasks' | 'mail' | 'focus' | 'weather'
+export type DashboardCardId = 'brief' | 'schedule' | 'tasks' | 'mail' | 'focus' | 'weather' | 'meals'
 
 export interface Settings {
   userName: string
@@ -635,7 +635,8 @@ export const DEFAULT_SETTINGS: Settings = {
     { id: 'tasks', visible: true },
     { id: 'mail', visible: true },
     { id: 'focus', visible: true },
-    { id: 'weather', visible: false }
+    { id: 'weather', visible: false },
+    { id: 'meals', visible: true }
   ],
   workHours: { start: 8, end: 18 },
   focusMinMinutes: 60,

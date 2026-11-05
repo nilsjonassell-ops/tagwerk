@@ -1,12 +1,16 @@
-import { useEffect, useMemo, useState, type ReactElement } from 'react'
-import { Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Inbox, Sparkles, Sun, CheckCircle2, Plus, Settings2, BarChart3 } from 'lucide-react'
-import { buildBrief, eventsOnDay, findConflicts, freeBlocks, groupThreads, isDueToday, isOverdue, sortTasks, eventHasConflict, type BriefItem } from '@shared/analysis'
-import type { CalEvent, DashboardCardId, ViewId, WeatherResult } from '@shared/types'
+import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
+import { AlertTriangle, BarChart3, CalendarClock, CalendarPlus, Check, CheckSquare, ChevronDown, Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Inbox, Mail, Plus, Settings2, ShoppingCart, Sparkles, Sun } from 'lucide-react'
+import { buildBrief, eventsOnDay, findConflicts, freeBlocks, groupThreads, isDueToday, isOverdue, sortTasks, eventHasConflict, ymd, type BriefItem } from '@shared/analysis'
+import { layoutDay } from '@shared/agenda'
+import { dayKey, mealsOn, SLOT_LABEL } from '@shared/meals'
+import { parseQuickTask } from '@shared/parse-de'
+import type { CalEvent, DashboardCardId, Task, ViewId, WeatherResult } from '@shared/types'
 import { OPEN_METEO } from '@shared/services'
 import { useStore } from '@/lib/store'
 import { dueLabel, fDayLong, fTime, greeting, mailDate, projectHue, projectName } from '@/lib/format'
-import { toggleTask } from '@/lib/actions'
-import { Empty, PriorityMark, ViewHeader } from '@/components/ui'
+import { addTask, newTask, toggleTask } from '@/lib/actions'
+import { useMealsUi } from '@/views/Meals'
+import { PriorityMark, ViewHeader } from '@/components/ui'
 
 function useNow(intervalMs = 60_000) {
   const [now, setNow] = useState(() => new Date())
@@ -33,7 +37,10 @@ export function TodayView() {
     [data, now, settings]
   )
   const remaining = todays.filter((e) => !e.allDay && new Date(e.end) > now)
-  const tasks = useMemo(() => sortTasks(data.tasks.filter((t) => isOverdue(t, now) || isDueToday(t, now))), [data.tasks, now])
+  const open = useMemo(() => sortTasks(data.tasks.filter((t) => isOverdue(t, now) || isDueToday(t, now))), [data.tasks, now])
+  const overdue = open.filter((t) => isOverdue(t, now))
+  const dueToday = open.filter((t) => !isOverdue(t, now))
+  const doneToday = useMemo(() => data.tasks.filter((t) => t.status === 'done' && !t.archived && t.completedAt && sameDay(new Date(t.completedAt), now)), [data.tasks, now])
   const threads = useMemo(
     () =>
       groupThreads(data.emails.filter((e) => e.folder === 'inbox'), data.replyMarks).filter(
@@ -42,141 +49,87 @@ export function TodayView() {
     [data.emails, data.replyMarks]
   )
   const visible = (id: DashboardCardId) => settings.dashboardCards.find((c) => c.id === id)?.visible
-  const order = settings.dashboardCards.filter((c) => c.visible && c.id !== 'weather' && c.id !== 'focus').map((c) => c.id)
-
+  // Links der Tagesplan, rechts alles andere in der eigenen Reihenfolge
+  const side = settings.dashboardCards.filter((c) => c.visible && !['schedule', 'focus', 'weather'].includes(c.id)).map((c) => c.id)
   const openTarget = (t?: BriefItem['target']) => t && go(t.view as ViewId, t.id)
+  const next = remaining[0]
+  const live = next && new Date(next.start) <= now
 
-  const sections: Record<string, ReactElement> = {
+  const cards: Record<string, ReactElement> = {
+    tasks: <TasksCard key="tasks" overdue={overdue} dueToday={dueToday} doneToday={doneToday} now={now} />,
     brief: (
-      <section className="dash-section" key="brief" aria-labelledby="h-brief">
-        <h2 id="h-brief">Das Wichtigste heute</h2>
-        <div className="brief">
-          {brief.length === 0 && <Empty compact title="Nichts Dringendes.">Keine Konflikte, nichts Überfälliges.</Empty>}
-          {brief.map((b, i) => (
-            <button key={i} className={`brief-item ${b.tone}`} onClick={() => openTarget(b.target)}>
-              <span className="marker" aria-hidden="true" />
-              <span>{b.text}</span>
-            </button>
-          ))}
-          <div className="brief-foot">
-            <span>Automatisch aus Kalender, Aufgaben und Posteingang</span>
-            {settings.claude.enabled && (
-              <button className="btn small" onClick={() => setAssistant(true, 'Erstelle meine Tagesübersicht für heute: Was ist wichtig, wo gibt es Konflikte und wie sollte ich die freie Zeit nutzen?')}>
-                <Sparkles /> Mit Claude planen
-              </button>
-            )}
-          </div>
-        </div>
-      </section>
-    ),
-    schedule: (
-      <section className="dash-section" key="schedule" aria-labelledby="h-sched">
-        <h2 id="h-sched">
-          Nächste Termine <span className="sub">{remaining.length ? `${remaining.length} heute` : ''}</span>
-          <button className="link" onClick={() => go('calendar')}>
-            Kalender
-          </button>
-        </h2>
-        <div className="list">
-          {remaining.length === 0 && (
-            <Empty compact title="Heute keine weiteren Termine.">
-              Der Rest des Tages gehört dir.
-            </Empty>
-          )}
-          {remaining.slice(0, 5).map((e) => {
-            const c = eventHasConflict(e, conflicts)
-            const live = new Date(e.start) <= now
-            return (
-              <button key={e.id} className="list-row" onClick={() => go('calendar', e.id)}>
-                <span className="time">{fTime.format(new Date(e.start))}</span>
-                <span className="project-dot" style={{ background: `hsl(${projectHue(data, e.projectId)} 40% 50%)` }} />
-                <span className="main-col">
-                  <span className="title">{e.title}</span>
-                  <span className="meta">
-                    {live && <span className="today-text">läuft gerade</span>}
-                    {e.location && <span>{e.location}</span>}
-                  </span>
-                </span>
-                {c && <span className={`tag ${c.kind === 'overlap' ? 'alert' : 'attention'}`}>{c.kind === 'overlap' ? 'Konflikt' : 'knapp'}</span>}
-              </button>
-            )
-          })}
-        </div>
-      </section>
-    ),
-    tasks: (
-      <section className="dash-section" key="tasks" aria-labelledby="h-tasks">
-        <h2 id="h-tasks">
-          Aufgaben für heute <span className="sub">{tasks.length || ''}</span>
-          <button className="link" onClick={() => useStore.getState().openDialog({ kind: 'plan' })} style={{ marginLeft: 'auto' }}>
-            Einplanen
-          </button>
-          <button className="link" onClick={() => go('tasks')} style={{ marginLeft: 0 }}>
-            Alle Aufgaben
-          </button>
-        </h2>
-        <div className="list">
-          {tasks.length === 0 && (
-            <Empty compact icon={<CheckCircle2 />} title="Alles erledigt für heute.">
-              <button className="link" onClick={() => openDialog({ kind: 'task' })}>
-                Aufgabe hinzufügen
-              </button>
-            </Empty>
-          )}
-          {tasks.slice(0, 7).map((t) => {
-            const dl = t.due ? dueLabel(t.due, now) : null
-            return (
-              <div key={t.id} className="list-row" style={{ cursor: 'default' }}>
-                <button className={`check ${t.priority === 'high' ? 'prio-high' : ''}`} onClick={() => toggleTask(t.id)} aria-label={`„${t.title}“ erledigen`}>
-                  <CheckCircle2 />
+      <section className="dash-card" key="brief" aria-labelledby="h-brief">
+        <header>
+          <h2 id="h-brief">Das Wichtigste</h2>
+        </header>
+        {brief.length === 0 ? (
+          <p className="dash-empty">Nichts Dringendes – keine Konflikte, nichts Überfälliges.</p>
+        ) : (
+          <ul className="brief">
+            {brief.slice(0, 5).map((b, i) => (
+              <li key={i}>
+                <button className={`brief-item ${b.tone}`} onClick={() => openTarget(b.target)}>
+                  <span className="marker" aria-hidden="true" />
+                  <span>{b.text}</span>
                 </button>
-                <button className="main-col" style={{ border: 0, background: 'none', padding: 0, textAlign: 'left' }} onClick={() => openDialog({ kind: 'task', id: t.id })}>
-                  <span className="title">{t.title}</span>
-                  <span className="meta">
-                    {dl && <span className={dl.tone === 'overdue' ? 'overdue-text' : dl.tone === 'today' ? 'today-text' : ''}>{dl.tone === 'overdue' ? `überfällig ${dl.text}` : dl.text}{t.dueTime ? ` · ${t.dueTime}` : ''}</span>}
-                    {projectName(data, t.projectId) && <span>{projectName(data, t.projectId)}</span>}
-                  </span>
-                </button>
-                <PriorityMark p={t.priority} />
-              </div>
-            )
-          })}
-          {tasks.length > 7 && (
-            <button className="link" style={{ margin: '6px 10px' }} onClick={() => go('tasks')}>
-              {tasks.length - 7} weitere
+              </li>
+            ))}
+          </ul>
+        )}
+        <footer>
+          <span>Automatisch aus Kalender, Aufgaben und Posteingang</span>
+          {settings.claude.enabled && (
+            <button className="btn small ghost" onClick={() => setAssistant(true, 'Erstelle meine Tagesübersicht für heute: Was ist wichtig, wo gibt es Konflikte und wie sollte ich die freie Zeit nutzen?')}>
+              <Sparkles /> Mit Claude planen
             </button>
           )}
-        </div>
+        </footer>
       </section>
     ),
     mail: (
-      <section className="dash-section" key="mail" aria-labelledby="h-mail">
-        <h2 id="h-mail">
-          Wartet auf dich <span className="sub">{threads.length || ''}</span>
+      <section className="dash-card" key="mail" aria-labelledby="h-mail">
+        <header>
+          <h2 id="h-mail">
+            Wartet auf dich <span className="n">{threads.length || ''}</span>
+          </h2>
           <button className="link" onClick={() => go('inbox')}>
             Posteingang
           </button>
-        </h2>
-        <div className="list">
-          {threads.length === 0 && <Empty compact icon={<Inbox />} title="Keine offenen wichtigen E-Mails." />}
-          {threads.slice(0, 5).map((th) => (
-            <button key={th.id} className="list-row" onClick={() => go('inbox', th.id)}>
-              {th.unread ? <span className="unread-dot" aria-label="ungelesen" /> : <span style={{ width: 8 }} />}
-              <span className="main-col">
-                <span className="title" style={{ fontWeight: th.unread ? 600 : 400 }}>
-                  {th.subject}
-                </span>
-                <span className="meta">
-                  <span>{th.latest.from.name}</span>
-                  <span>{mailDate(th.latest.date, now)}</span>
-                </span>
-              </span>
-              {th.needsReply && <span className="tag attention">Antwort offen</span>}
-            </button>
-          ))}
-        </div>
+        </header>
+        {threads.length === 0 ? (
+          <p className="dash-empty">
+            <Inbox aria-hidden="true" /> Keine offenen wichtigen E-Mails.
+          </p>
+        ) : (
+          <ul className="dash-list">
+            {threads.slice(0, 4).map((th) => (
+              <li key={th.id}>
+                <button className="dash-row" onClick={() => go('inbox', th.id)}>
+                  {th.unread ? <span className="unread-dot" aria-label="ungelesen" /> : <span className="dot-space" />}
+                  <span className="main-col">
+                    <span className={`title ${th.unread ? 'strong' : ''}`} title={th.subject}>
+                      {th.subject}
+                    </span>
+                    <span className="meta">
+                      {th.latest.from.name} · {mailDate(th.latest.date, now)}
+                    </span>
+                  </span>
+                  {th.needsReply && <span className="tag attention">Antwort offen</span>}
+                </button>
+              </li>
+            ))}
+            {threads.length > 4 && (
+              <li>
+                <button className="link more" onClick={() => go('inbox')}>
+                  {threads.length - 4} weitere
+                </button>
+              </li>
+            )}
+          </ul>
+        )}
       </section>
-    )
+    ),
+    meals: <MealsCard key="meals" now={now} />
   }
 
   return (
@@ -188,7 +141,10 @@ export function TodayView() {
         <button className="btn ghost small" onClick={() => openDialog({ kind: 'settings', section: 'dashboard' })} title="Übersicht anpassen">
           <Settings2 /> Anpassen
         </button>
-        <button className="btn small" onClick={() => openDialog({ kind: 'task' })}>
+        <button className="btn small" onClick={() => openDialog({ kind: 'event' })}>
+          <CalendarPlus /> Termin
+        </button>
+        <button className="btn small primary" onClick={() => openDialog({ kind: 'task' })}>
           <Plus /> Aufgabe
         </button>
       </ViewHeader>
@@ -197,101 +153,333 @@ export function TodayView() {
           <div className="greeting">
             <div>
               <h1>{greeting(now, settings.userName)}</h1>
-              <div className="date">
-                {fDayLong.format(now)}
-                {remaining.length ? ` – noch ${remaining.length} ${remaining.length === 1 ? 'Termin' : 'Termine'}` : ''}
-              </div>
+              <div className="date">{fDayLong.format(now)}</div>
             </div>
             {visible('weather') && <WeatherInline city={settings.weather.city} enabled={settings.weather.enabled} />}
           </div>
 
-          {visible('focus') && <DayRibbon events={todays} now={now} conflicts={conflicts} free={free} />}
+          <div className="today-chips" role="list" aria-label="Kurz zusammengefasst">
+            <button role="listitem" className={`chip-stat ${live ? 'live' : ''}`} onClick={() => go('calendar', next?.id)} disabled={!next && !todays.length}>
+              <CalendarClock aria-hidden="true" />
+              {next ? (
+                live ? (
+                  <span>
+                    <b>Jetzt:</b> {next.title} · bis {fTime.format(new Date(next.end))}
+                  </span>
+                ) : (
+                  <span>
+                    <b>{fTime.format(new Date(next.start))}</b> {next.title} · {untilText(new Date(next.start), now)}
+                  </span>
+                )
+              ) : (
+                <span>Heute keine weiteren Termine</span>
+              )}
+            </button>
+            {overdue.length > 0 && (
+              <button role="listitem" className="chip-stat alert" onClick={() => go('tasks')}>
+                <AlertTriangle aria-hidden="true" />
+                <span>
+                  <b>{overdue.length}</b> überfällig
+                </span>
+              </button>
+            )}
+            <button role="listitem" className="chip-stat" onClick={() => go('tasks')}>
+              <CheckSquare aria-hidden="true" />
+              <span>
+                <b>{dueToday.length}</b> heute fällig{doneToday.length ? ` · ${doneToday.length} erledigt` : ''}
+              </span>
+            </button>
+            {threads.length > 0 && (
+              <button role="listitem" className="chip-stat" onClick={() => go('inbox')}>
+                <Mail aria-hidden="true" />
+                <span>
+                  <b>{threads.length}</b> {threads.length === 1 ? 'Mail wartet' : 'Mails warten'}
+                </span>
+              </button>
+            )}
+          </div>
 
-          <div className="dash-grid">{order.map((id) => sections[id])}</div>
+          <div className={`dash-layout ${visible('schedule') ? '' : 'no-plan'}`}>
+            {visible('schedule') && <DayPlan events={todays} now={now} conflicts={conflicts} free={visible('focus') ? free : []} />}
+            <div className="dash-side">{side.map((id) => cards[id])}</div>
+          </div>
         </div>
       </div>
     </>
   )
 }
 
-function DayRibbon({ events, now, conflicts, free }: { events: CalEvent[]; now: Date; conflicts: ReturnType<typeof findConflicts>; free: ReturnType<typeof freeBlocks> }) {
+const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+function untilText(t: Date, now: Date) {
+  const m = Math.round((t.getTime() - now.getTime()) / 60000)
+  if (m < 1) return 'gleich'
+  if (m < 60) return `in ${m} Min.`
+  const h = Math.floor(m / 60)
+  return m % 60 >= 10 ? `in ${h} Std. ${m % 60} Min.` : `in ${h} Std.`
+}
+
+/** Großer Tagesplan: Termine senkrecht, Überschneidungen nebeneinander, freie Zeit anklickbar */
+function DayPlan({ events, now, conflicts, free }: { events: CalEvent[]; now: Date; conflicts: ReturnType<typeof findConflicts>; free: ReturnType<typeof freeBlocks> }) {
   const settings = useStore((s) => s.settings)
   const data = useStore((s) => s.data)
   const go = useStore((s) => s.go)
-  const timed = events.filter((e) => !e.allDay)
-  const startH = Math.min(settings.workHours.start - 1, ...timed.map((e) => new Date(e.start).getHours()))
-  const endH = Math.max(settings.workHours.end + 1, ...timed.map((e) => new Date(e.end).getHours() + (new Date(e.end).getMinutes() ? 1 : 0)))
-  const day0 = new Date(now)
-  day0.setHours(0, 0, 0, 0)
-  const span = (endH - startH) * 60
-  const pos = (d: Date) => Math.max(0, Math.min(100, (((d.getTime() - day0.getTime()) / 60000 - startH * 60) / span) * 100))
-
-  // Bahnen für überlappende Termine
-  const lanes: number[] = []
-  const laneEnd: number[] = []
-  timed.forEach((e, i) => {
-    const s = new Date(e.start).getTime()
-    let lane = laneEnd.findIndex((end) => end <= s)
-    if (lane === -1) lane = laneEnd.length
-    laneEnd[lane] = new Date(e.end).getTime()
-    lanes[i] = Math.min(lane, 1)
-  })
-  const stacked = lanes.some((l) => l === 1)
-  const hours = []
-  for (let h = startH; h <= endH; h += 2) hours.push(h)
-  const nowPct = pos(now)
-  const showNow = now.getHours() >= startH && now.getHours() < endH
+  const openDialog = useStore((s) => s.openDialog)
+  const L = useMemo(() => layoutDay(events, now, settings.workHours), [events, now.toDateString(), settings.workHours]) // eslint-disable-line react-hooks/exhaustive-deps
+  const PX = 0.8 // Pixel je Minute (48 px je Stunde)
+  const scroller = useRef<HTMLDivElement>(null)
+  const nowMin = (now.getHours() - L.startH) * 60 + now.getMinutes()
+  const showNow = nowMin >= 0 && nowMin <= (L.endH - L.startH) * 60
+  // Beim Öffnen zur aktuellen Uhrzeit (eine Stunde Vorlauf) scrollen
+  useEffect(() => {
+    if (scroller.current && showNow) scroller.current.scrollTop = Math.max(0, (nowMin - 60) * PX)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const hours: number[] = []
+  for (let h = L.startH; h < L.endH; h++) hours.push(h)
+  const minuteOf = (d: Date) => (d.getHours() - L.startH) * 60 + d.getMinutes()
+  const fmtDur = (m: number) => `${Math.floor(m / 60) ? `${Math.floor(m / 60)} Std.` : ''}${m % 60 ? ` ${m % 60} Min.` : ''}`.trim()
 
   return (
-    <div className="ribbon" role="group" aria-label="Tagesverlauf">
-      <div className="ribbon-hours" aria-hidden="true">
-        {hours.map((h) => (
-          <span key={h} style={{ left: `${((h - startH) / (endH - startH)) * 100}%` }}>
-            {String(h).padStart(2, '0')}
-          </span>
-        ))}
-      </div>
-      <div className="ribbon-track">
-        <div className="ribbon-offhours" style={{ left: 0, width: `${((settings.workHours.start - startH) / (endH - startH)) * 100}%` }} />
-        <div className="ribbon-offhours" style={{ left: `${((settings.workHours.end - startH) / (endH - startH)) * 100}%`, right: 0 }} />
-        {free.map((f, i) => (
-          <div key={i} className="ribbon-free" style={{ left: `${pos(f.start)}%`, width: `${pos(f.end) - pos(f.start)}%` }} title={`Frei ${fTime.format(f.start)}–${fTime.format(f.end)}`}>
-            frei · {Math.floor(f.minutes / 60) ? `${Math.floor(f.minutes / 60)} Std.` : ''} {f.minutes % 60 ? `${f.minutes % 60} Min.` : ''}
+    <section className="dash-card day-plan" aria-labelledby="h-plan">
+      <header>
+        <h2 id="h-plan">
+          Tagesplan <span className="n">{events.filter((e) => !e.allDay).length ? `${events.filter((e) => !e.allDay).length} Termine` : ''}</span>
+        </h2>
+        <button className="link" onClick={() => go('calendar')}>
+          Kalender
+        </button>
+      </header>
+      {L.allDay.length > 0 && (
+        <ul className="plan-allday" aria-label="Ganztägig">
+          {L.allDay.map((e) => (
+            <li key={e.id}>
+              <button className="allday-chip" onClick={() => go('calendar', e.id)} style={{ ['--h' as string]: projectHue(data, e.projectId) }}>
+                {e.title}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="plan-scroll" ref={scroller}>
+        <div className="plan-grid-day" style={{ height: (L.endH - L.startH) * 60 * PX }}>
+          {hours.map((h) => (
+            <div key={h} className={`plan-hour ${h < settings.workHours.start || h >= settings.workHours.end ? 'off' : ''}`} style={{ top: (h - L.startH) * 60 * PX, height: 60 * PX }}>
+              <span>{String(h).padStart(2, '0')}:00</span>
+            </div>
+          ))}
+          <div className="plan-lane">
+            {free.map((f, i) => {
+              const top = minuteOf(f.start)
+              const height = minuteOf(f.end) - top
+              return (
+                <button
+                  key={`f${i}`}
+                  className="plan-free"
+                  style={{ top: top * PX, height: height * PX }}
+                  onClick={() => openDialog({ kind: 'event', preset: { start: f.start.toISOString(), end: new Date(Math.min(f.end.getTime(), f.start.getTime() + 3600_000)).toISOString() } })}
+                  title={`Frei ${fTime.format(f.start)}–${fTime.format(f.end)} – Termin anlegen`}
+                >
+                  <span>
+                    frei · {fmtDur(f.minutes)}
+                    <Plus aria-hidden="true" />
+                  </span>
+                </button>
+              )
+            })}
+            {L.items.map(({ event: e, top, height, col, cols }) => {
+              const s = new Date(e.start)
+              const en = new Date(e.end)
+              const c = eventHasConflict(e, conflicts)
+              const past = en < now
+              const tall = height * PX >= 44
+              return (
+                <button
+                  key={e.id}
+                  className={`plan-event ${past ? 'past' : ''} ${c?.kind === 'overlap' ? 'conflict' : ''} ${tall ? '' : 'short'}`}
+                  style={{ top: top * PX + 1, height: height * PX - 2, left: `calc(${(col / cols) * 100}% + 2px)`, width: `calc(${100 / cols}% - 4px)`, ['--h' as string]: projectHue(data, e.projectId) }}
+                  onClick={() => go('calendar', e.id)}
+                  title={`${e.title} · ${fTime.format(s)}–${fTime.format(en)}${e.location ? ` · ${e.location}` : ''}`}
+                >
+                  <span className="t">{e.title}</span>
+                  <span className="s">
+                    {fTime.format(s)}–{fTime.format(en)}
+                    {tall && e.location ? ` · ${e.location}` : ''}
+                  </span>
+                  {c &&
+                    (cols > 2 ? (
+                      // Schmale Spalte: nur Symbol, Text für Screenreader und Tooltip – der Titel bleibt lesbar
+                      <span className={`flag icon ${c.kind === 'overlap' ? 'alert' : 'attention'}`} role="img" aria-label={c.kind === 'overlap' ? 'Konflikt' : 'knapp'}>
+                        <AlertTriangle aria-hidden="true" />
+                      </span>
+                    ) : (
+                      <span className={`flag ${c.kind === 'overlap' ? 'alert' : 'attention'}`}>{c.kind === 'overlap' ? 'Konflikt' : 'knapp'}</span>
+                    ))}
+                </button>
+              )
+            })}
+            {L.items.length === 0 && (
+              <div className="plan-empty">
+                <span>Heute keine Termine</span>
+                <button className="btn small" onClick={() => openDialog({ kind: 'event' })}>
+                  <CalendarPlus /> Termin anlegen
+                </button>
+              </div>
+            )}
           </div>
-        ))}
-        {timed.map((e, i) => {
-          const s = new Date(e.start)
-          const en = new Date(e.end)
-          const c = eventHasConflict(e, conflicts)
-          return (
-            <button
-              key={e.id}
-              className={`ribbon-event lane-${lanes[i]} ${stacked ? 'stacked' : ''} ${en < now ? 'past' : ''} ${c?.kind === 'overlap' ? 'conflict' : ''}`}
-              style={{ left: `${pos(s)}%`, width: `calc(${pos(en) - pos(s)}% - 2px)`, ['--h' as string]: projectHue(data, e.projectId) }}
-              onClick={() => go('calendar', e.id)}
-              title={`${e.title} · ${fTime.format(s)}–${fTime.format(en)}${e.location ? ` · ${e.location}` : ''}`}
-            >
-              <span className="t">{e.title}</span>
-              {!stacked && <span className="s">{fTime.format(s)}–{fTime.format(en)}</span>}
-            </button>
-          )
-        })}
+          {showNow && (
+            <div className="plan-now" style={{ top: nowMin * PX }} aria-label={`Jetzt ${fTime.format(now)}`}>
+              <span>{fTime.format(now)}</span>
+            </div>
+          )}
+        </div>
       </div>
-      {showNow && <div className="ribbon-now" style={{ left: `${nowPct}%` }} aria-label={`Jetzt ${fTime.format(now)}`} />}
-      <div className="ribbon-legend">
-        <span>
-          <i style={{ background: 'repeating-linear-gradient(135deg, var(--hatch) 0 3px, transparent 3px 6px)', boxShadow: 'inset 0 0 0 1px var(--accent-line)' }} /> Freie Zeit ab {settings.focusMinMinutes} Min.
-        </span>
-        {conflicts.some((c) => c.kind === 'overlap') && (
-          <span>
-            <i style={{ boxShadow: 'inset 0 0 0 1.5px var(--alert)' }} /> Überschneidung
+    </section>
+  )
+}
+
+function TasksCard({ overdue, dueToday, doneToday, now }: { overdue: Task[]; dueToday: Task[]; doneToday: Task[]; now: Date }) {
+  const data = useStore((s) => s.data)
+  const go = useStore((s) => s.go)
+  const openDialog = useStore((s) => s.openDialog)
+  const [input, setInput] = useState('')
+  const [showDone, setShowDone] = useState(false)
+  const parsed = input.trim() ? parseQuickTask(input, data.projects, now) : null
+  const add = () => {
+    if (!parsed?.title) return
+    addTask(newTask({ title: parsed.title, due: parsed.due ?? ymd(now), dueTime: parsed.time, priority: parsed.priority ?? 'medium', projectId: parsed.projectId, recurrence: parsed.recurrence ?? 'none' }))
+    setInput('')
+  }
+  const row = (t: Task) => {
+    const done = t.status === 'done'
+    const dl = t.due ? dueLabel(t.due, now) : null
+    const proj = projectName(data, t.projectId)
+    return (
+      <li key={t.id} className={`dash-task ${done ? 'is-done' : ''}`}>
+        <button className={`check ${done ? 'done' : ''} ${t.priority === 'high' && !done ? 'prio-high' : ''}`} onClick={() => toggleTask(t.id)} aria-label={done ? `„${t.title}“ wieder öffnen` : `„${t.title}“ erledigen`} aria-pressed={done}>
+          <Check />
+        </button>
+        <button className="main-col" onClick={() => openDialog({ kind: 'task', id: t.id })}>
+          <span className="title" title={t.title}>
+            {t.title}
           </span>
-        )}
-        <span>
-          <i style={{ background: 'var(--sunken)' }} /> außerhalb der Arbeitszeit
-        </span>
+          {(dl || proj || t.dueTime) && !done && (
+            <span className="meta">
+              {dl?.tone === 'overdue' && <span className="overdue-text">überfällig {dl.text}</span>}
+              {t.dueTime && <span>{t.dueTime} Uhr</span>}
+              {proj && <span>{proj}</span>}
+            </span>
+          )}
+        </button>
+        {!done && <PriorityMark p={t.priority} />}
+      </li>
+    )
+  }
+  const total = overdue.length + dueToday.length
+  return (
+    <section className="dash-card" aria-labelledby="h-tasks">
+      <header>
+        <h2 id="h-tasks">
+          Aufgaben <span className="n">{total || ''}</span>
+        </h2>
+        <button className="link" onClick={() => openDialog({ kind: 'plan' })}>
+          Einplanen
+        </button>
+        <button className="link" onClick={() => go('tasks')}>
+          Alle
+        </button>
+      </header>
+      <div className="dash-quick">
+        <Plus aria-hidden="true" />
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') add()
+            if (e.key === 'Escape') setInput('')
+          }}
+          placeholder="Aufgabe für heute – Enter legt an"
+          aria-label="Aufgabe für heute anlegen"
+        />
       </div>
-    </div>
+      {total === 0 && doneToday.length === 0 && <p className="dash-empty">Für heute ist nichts fällig.</p>}
+      {total === 0 && doneToday.length > 0 && <p className="dash-empty ok">Alles für heute erledigt.</p>}
+      {overdue.length > 0 && (
+        <>
+          <h3 className="dash-sub alert">Überfällig · {overdue.length}</h3>
+          <ul className="dash-list">{overdue.slice(0, 4).map(row)}</ul>
+        </>
+      )}
+      {dueToday.length > 0 && (
+        <>
+          <h3 className="dash-sub">Heute · {dueToday.length}</h3>
+          <ul className="dash-list">{dueToday.slice(0, 6).map(row)}</ul>
+        </>
+      )}
+      {overdue.length > 4 || dueToday.length > 6 ? (
+        <button className="link more" onClick={() => go('tasks')}>
+          {Math.max(0, overdue.length - 4) + Math.max(0, dueToday.length - 6)} weitere in „Aufgaben“
+        </button>
+      ) : null}
+      {doneToday.length > 0 && (
+        <>
+          <button className="dash-sub disclosure" aria-expanded={showDone} onClick={() => setShowDone(!showDone)}>
+            <ChevronDown aria-hidden="true" /> Heute erledigt · {doneToday.length}
+          </button>
+          {showDone && <ul className="dash-list">{doneToday.slice(0, 8).map(row)}</ul>}
+        </>
+      )}
+    </section>
+  )
+}
+
+function MealsCard({ now }: { now: Date }) {
+  const data = useStore((s) => s.data)
+  const go = useStore((s) => s.go)
+  const today = dayKey(now)
+  const meals = mealsOn(data.meals ?? [], today)
+  const openItems = (data.shoppingItems ?? []).filter((i) => !i.deleted && !i.done).length
+  const plan = () => {
+    useMealsUi.getState().set({ tab: 'plan', meal: { date: today } })
+    go('meals')
+  }
+  return (
+    <section className="dash-card" aria-labelledby="h-meals">
+      <header>
+        <h2 id="h-meals">Essen heute</h2>
+        <button className="link" onClick={() => (useMealsUi.getState().set({ tab: 'plan' }), go('meals'))}>
+          Essensplan
+        </button>
+      </header>
+      {meals.length === 0 ? (
+        <p className="dash-empty">
+          Nichts geplant.{' '}
+          <button className="link" onClick={plan}>
+            Gericht planen
+          </button>
+        </p>
+      ) : (
+        <ul className="dash-list">
+          {meals.map((m) => (
+            <li key={m.id}>
+              <button className="dash-row" onClick={() => (useMealsUi.getState().set({ tab: 'plan', meal: { id: m.id } }), go('meals'))}>
+                <span className="slot">{SLOT_LABEL[m.slot]}</span>
+                <span className="main-col">
+                  <span className="title" title={m.title}>
+                    {m.title}
+                  </span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {openItems > 0 && (
+        <footer>
+          <button className="link" onClick={() => (useMealsUi.getState().set({ tab: 'shopping' }), go('meals'))}>
+            <ShoppingCart aria-hidden="true" /> Einkaufsliste: {openItems} offen
+          </button>
+        </footer>
+      )}
+    </section>
   )
 }
 

@@ -133,9 +133,7 @@ body::before {
 }
 
 /* ===== Flächen (Karten) ===== */
-.brief,
-.dash-section > :not(h2):not(.brief),
-.ribbon-track,
+.dash-card,
 .connect-card,
 .google-box,
 .callout,
@@ -149,35 +147,8 @@ body::before {
   border-radius: var(--r-lg);
   box-shadow: var(--glass-rim), var(--glass-edge), var(--shadow-1);
 }
-.dash-section > :not(h2):not(.brief) {
-  padding: 8px;
-}
-.brief {
-  padding: 8px 0;
-}
-.brief-item {
-  padding: 10px 18px;
-}
-.brief-item:hover {
-  background: var(--hover);
-}
-.brief-item .marker {
-  width: 4px;
-  border-radius: 4px;
-}
-.brief-foot {
-  border-top-color: var(--line-soft);
-}
 .ai-block {
   background: var(--accent-soft);
-}
-.dash-grid {
-  gap: 30px 34px;
-}
-.dash-section h2 {
-  font-size: 15.5px;
-  font-weight: var(--fw-semibold);
-  letter-spacing: -0.015em;
 }
 
 /* Große Überschriften: Instrument Serif als Markenzeichen */
@@ -265,20 +236,19 @@ body::before {
 .day-col.is-today {
   background: color-mix(in srgb, var(--accent) 5%, transparent);
 }
-.offhours,
-.ribbon-offhours {
+.offhours {
   background: color-mix(in srgb, var(--ink) 5%, transparent);
   opacity: 1;
 }
 .cal-event,
-.ribbon-event {
+.plan-event {
   border-radius: var(--r-md);
   background: hsl(var(--h) 80% 95%);
   color: hsl(var(--h) 55% 22%);
   box-shadow: inset 3px 0 0 hsl(var(--h) 70% 50%), inset 0 0 0 1px hsl(var(--h) 60% 82%);
 }
 :root[data-theme='dark'] .cal-event,
-:root[data-theme='dark'] .ribbon-event {
+:root[data-theme='dark'] .plan-event {
   background: hsl(var(--h) 35% 22%);
   color: hsl(var(--h) 70% 90%);
   box-shadow: inset 3px 0 0 hsl(var(--h) 70% 65%), inset 0 0 0 1px hsl(var(--h) 40% 32%);
@@ -287,15 +257,7 @@ body::before {
   background: var(--accent);
   color: var(--accent-ink);
 }
-.ribbon-free {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  border-left: 0;
-  border-right: 0;
-  color: var(--accent-text);
-  font-weight: var(--fw-medium);
-}
-.now-line,
-.ribbon-now {
+.now-line {
   color: var(--alert);
 }
 

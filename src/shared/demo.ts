@@ -250,6 +250,13 @@ export function emptyData(): AppData {
   return { version: 1, tasks: [], events: [], emails: [], notes: [], projects: [], docs: [], chat: [], sources: { demo: false, icsImports: [] } }
 }
 
+/** Beispieldaten zu vorhandenen Daten hinzufügen (eigene Einträge bleiben). */
+export function addDemo(d: AppData): AppData {
+  if (d.sources.demo) return d
+  const demo = createDemoData()
+  return { ...d, tasks: [...demo.tasks, ...d.tasks], events: [...d.events, ...demo.events], emails: [...d.emails, ...demo.emails], notes: [...demo.notes, ...d.notes], projects: [...demo.projects, ...d.projects], docs: [...demo.docs, ...d.docs], sources: { ...d.sources, demo: true } }
+}
+
 /** Entfernt alle Demo-Datensätze, behält eigene und importierte Einträge. */
 export function removeDemo(data: AppData): AppData {
   const notDemo = <T extends { source?: string; id: string }>(x: T) => x.source !== 'demo' && !x.id.startsWith('demo-')

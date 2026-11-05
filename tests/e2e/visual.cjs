@@ -79,10 +79,15 @@ async function diff(page, a, b) {
     const ctx = await b.newContext({ viewport: { width: 1360, height: 860 }, deviceScaleFactor: 1, ...opts })
     const p = await ctx.newPage()
     await p.goto(url)
-    await p.waitForSelector('.app')
+    await p.waitForSelector('.app, .welcome')
     await sleep(2500)
-    const go = p.locator('button:has-text("Loslegen")')
-    if (await go.count()) await go.first().click()
+    const demo = p.locator('.welcome-option:has-text("Demo ansehen")')
+    if (await demo.count()) {
+      await demo.click()
+      await p.locator('.welcome button:has-text("Demo öffnen")').click()
+      await p.waitForSelector('.app')
+      await sleep(600)
+    }
     for (const [name, open] of VIEWS) {
       await p.keyboard.press('Escape')
       await sleep(200)

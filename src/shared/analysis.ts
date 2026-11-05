@@ -254,6 +254,9 @@ export interface BriefItem {
   target?: { view: string; id?: string }
 }
 
+/** Titel für Hinweise kürzen, damit „Das Wichtigste“ überschaubar bleibt */
+const short = (t: string, n = 38) => (t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t)
+
 /** Regelbasiertes „Das Wichtigste heute“ – ohne KI, vollständig nachvollziehbar. */
 export function buildBrief(
   data: AppData,
@@ -263,17 +266,27 @@ export function buildBrief(
   const items: BriefItem[] = []
   const today = eventsOnDay(data.events, now)
   const conflicts = findConflicts(today, opts.bufferMinutes)
+  // Viele Überschneidungen: ein Sammelhinweis statt einer langen Liste von Paaren
+  const overlaps = conflicts.filter((c) => c.kind === 'overlap')
+  if (overlaps.length > 2) {
+    const involved = new Map<string, CalEvent>()
+    for (const c of overlaps) for (const e of [c.a, c.b]) involved.set(e.id, e)
+    const list = [...involved.values()].sort((a, b) => a.start.localeCompare(b.start))
+    const end = list.reduce((m, e) => (e.end > m ? e.end : m), list[0].end)
+    items.push({ tone: 'alert', text: `${list.length} Termine überschneiden sich zwischen ${hm(list[0].start)} und ${hm(end)}\u00a0Uhr.`, target: { view: 'calendar', id: list[0].id } })
+  }
   for (const c of conflicts) {
+    if (c.kind === 'overlap' && overlaps.length > 2) continue
     if (c.kind === 'overlap') {
       items.push({
         tone: 'alert',
-        text: `„${c.a.title}“ überschneidet sich mit „${c.b.title}“ (${hm(c.b.start)} Uhr).`,
+        text: `„${short(c.a.title)}“ überschneidet sich mit „${short(c.b.title)}“ (${hm(c.b.start)}\u00a0Uhr).`,
         target: { view: 'calendar', id: c.b.id }
       })
     } else {
       items.push({
         tone: 'attention',
-        text: `Nur ${c.gapMinutes} Min. zwischen „${c.a.title}“ und „${c.b.title}“ – Ortswechsel einplanen.`,
+        text: (c.gapMinutes ?? 0) <= 0 ? `„${short(c.a.title)}“ und „${short(c.b.title)}“ liegen direkt hintereinander – kein Puffer.` : `Nur ${c.gapMinutes} Min. zwischen „${short(c.a.title)}“ und „${short(c.b.title)}“ – Ortswechsel einplanen.`,
         target: { view: 'calendar', id: c.b.id }
       })
     }
@@ -312,7 +325,7 @@ export function buildBrief(
     const f = free[0]
     items.push({
       tone: 'info',
-      text: `Freie Zeit zum konzentrierten Arbeiten: ${hmDate(f.start)}–${hmDate(f.end)} Uhr.`,
+      text: `Freie Zeit zum konzentrierten Arbeiten: ${hmDate(f.start)}–${hmDate(f.end)}\u00a0Uhr.`,
       target: { view: 'calendar' }
     })
   }
@@ -320,7 +333,7 @@ export function buildBrief(
   if (next) {
     items.push({
       tone: 'info',
-      text: `Nächster Termin: „${next.title}“ um ${hm(next.start)} Uhr${next.location ? `, ${next.location}` : ''}.`,
+      text: `Nächster Termin: „${next.title}“ um ${hm(next.start)}\u00a0Uhr${next.location ? `, ${next.location}` : ''}.`,
       target: { view: 'calendar', id: next.id }
     })
   }
@@ -666,4 +679,10 @@ export function weekReview(data: AppData, now: Date): WeekReview {
       .sort((a, b) => a.start.localeCompare(b.start)),
     nextTasks: data.tasks.filter((t) => isActive(t) && !!t.due && t.due >= nextFrom && t.due <= nextTo)
   }
+}
+
+/** Neu angelegte, nie beschriebene Notiz – darf beim Verlassen still verschwinden */
+export function isBlankNote(n: Note): boolean {
+  const empty = (s?: string) => !s || !s.trim()
+  return empty(n.title) && empty(n.body) && empty(n.decisions) && empty(n.nextSteps) && !n.eventId && !n.projectId && !n.oneNote && !n.mailRef
 }

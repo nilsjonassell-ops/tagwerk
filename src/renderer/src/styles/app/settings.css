@@ -192,18 +192,28 @@
 .rule-builder .input {
   width: 100%;
 }
+/* Schmal: als Satz in zwei Zeilen – „Absender enthält …“ / „→ Projekt  Hinzufügen“ */
 @container (max-width: 560px) {
   .rule-builder {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: 16px minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-areas:
+      'field field value value'
+      'arrow project project add';
   }
-  .rb-arrow {
-    display: none;
+  .rb-field {
+    grid-area: field;
   }
   .rb-value {
-    grid-column: 2;
+    grid-area: value;
+  }
+  .rb-arrow {
+    grid-area: arrow;
+  }
+  .rb-project {
+    grid-area: project;
   }
   .rb-add {
-    grid-column: 1 / -1;
+    grid-area: add;
   }
 }
 

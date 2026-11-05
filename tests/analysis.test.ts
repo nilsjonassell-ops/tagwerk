@@ -93,3 +93,32 @@ test('Aufbewahrung löscht alte archivierte Aufgaben', () => {
   assert.ok(!r.tasks.some((t) => t.archived))
   assert.equal(ymd(now), '2026-10-28')
 })
+
+test('Das Wichtigste: viele Überschneidungen werden zu einem Hinweis, lange Titel gekürzt', () => {
+  const base = { version: 1 as const, tasks: [], emails: [], notes: [], projects: [], docs: [], chat: [], sources: { demo: false, icsImports: [] } }
+  const at = (h: number, m = 0) => new Date(2026, 9, 28, h, m).toISOString()
+  const long = 'Sehr langer Termintitel mit vielen Wörtern für die Abstimmung zum Quartalsabschluss'
+  const events = [0, 1, 2, 3].map((i) => ({ id: `e${i}`, title: `${long} ${i}`, start: at(13, i * 10), end: at(14, 30), attendees: [], source: 'local' as const }))
+  const many = buildBrief({ ...base, events }, now, opts)
+  const overlaps = many.filter((b) => /überschneid/i.test(b.text))
+  assert.equal(overlaps.length, 1, 'ein Sammelhinweis statt einer Zeile je Paar')
+  assert.match(overlaps[0].text, /4 Termine überschneiden sich/)
+  assert.match(overlaps[0].text, /13:00/)
+  // Ein einzelnes Paar bleibt konkret, Titel gekürzt
+  const two = buildBrief({ ...base, events: events.slice(0, 2) }, now, opts)
+  const one = two.find((b) => /überschneidet/.test(b.text))!
+  assert.ok(one.text.length < 140, `kurz genug (${one.text.length})`)
+  assert.match(one.text, /…/)
+})
+
+test('Termine direkt hintereinander: verständlicher Text statt „Nur 0 Min.“', () => {
+  const base = { version: 1 as const, tasks: [], emails: [], notes: [], projects: [], docs: [], chat: [], sources: { demo: false, icsImports: [] } }
+  const at = (h: number, m = 0) => new Date(2026, 9, 28, h, m).toISOString()
+  const events = [
+    { id: 'a', title: 'Review', start: at(10), end: at(11), location: 'Büro', attendees: [], source: 'local' as const },
+    { id: 'b', title: 'Kunde', start: at(11), end: at(12), location: 'Kunde vor Ort', attendees: [], source: 'local' as const }
+  ]
+  const t = buildBrief({ ...base, events }, now, opts).find((b) => /Kunde/.test(b.text))!
+  assert.doesNotMatch(t.text, /0 Min/)
+  assert.match(t.text, /direkt hintereinander/i)
+})
