@@ -1,0 +1,36 @@
+{
+ "_quelle": "Auszüge aus dem Wikibooks-Kochbuch (https://de.wikibooks.org/wiki/Kochbuch), Lizenz CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/deed.de), Autorinnen und Autoren siehe Versionsgeschichte der jeweiligen Seite. Nur als Testmaterial.",
+ "search": {
+  "batchcomplete": "",
+  "query": {
+   "searchinfo": {
+    "totalhits": 3
+   },
+   "search": [
+    {
+     "ns": 0,
+     "title": "Kochbuch/ Spaghetti mit Tomatensoße",
+     "pageid": 5648,
+     "snippet": "500 g Spaghetti 40 g Schinkenwürfel 1 Dose (400&nbsp;g) <span class=\"searchmatch\">Tomaten</span>"
+    },
+    {
+     "ns": 0,
+     "title": "Kochbuch/ Tomatensauce",
+     "pageid": 2032,
+     "snippet": "traditionelle italienische Nudelsauce 2 kg frische <span class=\"searchmatch\">Tomaten</span>"
+    },
+    {
+     "ns": 0,
+     "title": "Kochbuch/ Apfelpfannkuchen",
+     "pageid": 1,
+     "snippet": "Pfannkuchen mit Apfelstückchen"
+    }
+   ]
+  }
+ },
+ "pages": {
+  "Kochbuch/ Tomatensauce": "__NOTOC__\n{{:Kochbuch/ Navigationsleiste/ Ebenen}}\n{| width=\"300px\" align=\"right\" border=\"1\"\n!align=\"center\" colspan=\"2\"|Überblick\n|-----\n||Rezeptmenge für:\n||2-3 Personen\n|-----\n||Zeitbedarf:\n||30 Minuten\n|}\n\n''' Tomatensauce '''\n\nDie traditionelle italienische Nudelsauce\n\n== Zutaten ==\n* 2 kg frische Tomaten (oder die entsprechende Menge eingemachte Tomaten im Glas ohne Gewürze etc.)\n* 1 kleine Zwiebel (kann auch weggelassen werden)\n* 1-3 Knoblauchzehen\n* Salz\n* 1/4 - 1 getrocknete (winzige) Peperoncino oder Pfeffer\n* 1 EL Tomatenmark\n\n== Zubereitung ==\n* Tomaten schälen, Kerne auslösen und zerteilen.\n* Gehackte Zwiebel in ca. 2-3 EL Olivenöl andünsten.\n\n== Tipps/Anmerkungen ==\n* schmeckt herrlich zu jeder Art von Nudeln\n\n[[Kategorie:Kochbuch/ Alle Rezepte|Tomatensauce]]",
+  "Kochbuch/ Spaghetti mit Tomatensoße": "'''Spaghetti mit Tomatensoße'''\n\nWeltweit bekannt als Spaghetti Napoli.\n[[Bild: Spaghetti.jpg|thumb|Spaghetti]]\n\n== Zutaten ==\n* 500 g [[w: Spaghetti|Spaghetti]]\n* 1 Dose (400&nbsp;g) Tomaten\n* 100g Sellerie\n* etwas Olivenöl\n* geriebener [[w: Parmesan|Parmesankäse]]\n\n== Zubereitung ==\n* Schinkenwürfel in etwas Olivenöl anbraten\n* Spaghetti [[w: al dente|''al dente'']] kochen\n{{wikipedia|Spaghetti}}",
+  "Kochbuch/ Apfelpfannkuchen": "{{:Kochbuch/_Vorlage/_RezeptBox\n|Kategorie          =Eier- und Mehlspeisen\n|Portionen          =2\n|Zubereitungszeit   =15 Minuten\n}}\n\n=Apfelpfannkuchen - I=\n==Zutaten==\n\n* 250 g [[Kochbuch/ Getreidemehl|Mehl]]\n* 3 [[Kochbuch/ Ei|Eier]]\n* 1/2 l [[Kochbuch/ Milch|Milch]]\n\n== Zubereitung==\n\n* Schritt 1 – Der Teig\nDie Äpfel werden geschält.\nMehl und Eier vermengen.\n* Schritt 2 - Braten\nVon beiden Seiten goldbraun braten.\n\n=Apfelpfannkuchen - II=\n==Zutaten==\n* 75 g Weizen-Vollkornmehl\n\n==Zubereitung==\n* Anders."
+ }
+}

@@ -25,7 +25,7 @@ const URLS = MOCK
 
 // So wenig wie möglich: eigene OneNote-Notizbücher lesen/schreiben, dazu Name und E-Mail.
 const BASE_SCOPES = ['openid', 'profile', 'email', 'offline_access', 'User.Read']
-const SCOPE = { notes: 'Notes.ReadWrite', mailRead: 'Mail.ReadWrite', mailSend: 'Mail.Send', calendar: 'Calendars.ReadWrite', sync: 'Files.ReadWrite.AppFolder' }
+const SCOPE = { notes: 'Notes.ReadWrite', mailRead: 'Mail.ReadWrite', mailSend: 'Mail.Send', calendar: 'Calendars.ReadWrite', sync: 'Files.ReadWrite.AppFolder', share: 'Files.ReadWrite.All' }
 
 /** In Tagwerk eingebaute App-Registrierung (öffentlicher Client, alle Microsoft-Konten). Eine eigene ID in den Einstellungen hat Vorrang. */
 const BUILT_IN_CLIENT_ID = '293e5dfa-72e5-4a58-bd9b-32648cce5a87'
@@ -36,6 +36,8 @@ function scopesFor(o: MicrosoftConnectOptions): string[] {
   if (o.mail) s.push(SCOPE.mailRead, SCOPE.mailSend)
   if (o.calendar) s.push(SCOPE.calendar)
   if (o.sync) s.push(SCOPE.sync)
+  // Geteilte Einkaufslisten: eine Datei in OneDrive teilen bzw. eine mit mir geteilte Datei öffnen
+  if (o.share) s.push(SCOPE.share)
   return s
 }
 /** Ältere Verbindungen (nur OneNote) kennen ihre Bereiche nicht */
@@ -86,7 +88,7 @@ export async function msStatus(): Promise<MicrosoftStatus> {
 
 function capsOf(a: Account | null): MicrosoftStatus['caps'] {
   const has = (x: string) => !!a && !a.expired && accountScopes(a).some((s) => s.toLowerCase().endsWith(x.toLowerCase()))
-  return { notes: has(SCOPE.notes), mail: has(SCOPE.mailRead), calendar: has(SCOPE.calendar), sync: has(SCOPE.sync) }
+  return { notes: has(SCOPE.notes), mail: has(SCOPE.mailRead), calendar: has(SCOPE.calendar), sync: has(SCOPE.sync), share: has(SCOPE.share) }
 }
 
 export const msCaps = () => capsOf(account())
@@ -116,7 +118,7 @@ export async function connect(opts: MicrosoftConnectOptions): Promise<{ ok: bool
   const id = clientId()
   if (!id) return { ok: false, error: 'Zuerst die Anwendungs-ID hinterlegen.', status: await msStatus() }
   if (!net.isOnline() && !MOCK) return { ok: false, error: 'Keine Internetverbindung.', status: await msStatus() }
-  if (!opts.notes && !opts.mail && !opts.calendar && !opts.sync) return { ok: false, error: 'Wähle mindestens Mail, Kalender, OneNote oder Cloud-Speicher.', status: await msStatus() }
+  if (!opts.notes && !opts.mail && !opts.calendar && !opts.sync && !opts.share) return { ok: false, error: 'Wähle mindestens Mail, Kalender, OneNote oder Cloud-Speicher.', status: await msStatus() }
   cancelConnect()
   const scopes = scopesFor(opts)
   const verifier = b64url(randomBytes(48))

@@ -25,10 +25,10 @@ npm run dist:mac   # macOS-Image (.dmg) – auf einem Mac ausführen
 
 Electron + React + TypeScript (Vite über electron-vite).
 
-- **Hauptprozess** (`src/main`): Fenster, Tray-/Menüleistensymbol, systemweite Tastenkombination, Benachrichtigungen, Autostart, lokale Datenablage (JSON im App-Datenordner, atomar geschrieben), verschlüsselter API-Schlüssel (`safeStorage` – Windows DPAPI / macOS-Schlüsselbund), Claude-API-Aufrufe, ICS-Import, Wetter.
+- **Hauptprozess** (`src/main`): Fenster, Tray-/Menüleistensymbol, systemweite Tastenkombination, Benachrichtigungen, Autostart, lokale Datenablage (JSON im App-Datenordner, atomar geschrieben), verschlüsselter API-Schlüssel (`safeStorage` – Windows DPAPI / macOS-Schlüsselbund), Claude-API-Aufrufe, ICS-Import, Wetter, Rezeptsuche (Wikibooks-Kochbuch), geteilte Einkaufslisten (OneDrive).
 - **Preload** (`src/preload`): schmale, typisierte Brücke (`window.tagwerk`). Die Oberfläche läuft isoliert und ohne Node-Zugriff (contextIsolation, sandbox, CSP).
-- **Oberfläche** (`src/renderer`): React-Ansichten Heute, Kalender, Posteingang, Aufgaben, Notizen, Projekte, Claude-Panel, Befehlspalette, Einstellungen.
-- **Gemeinsame Logik** (`src/shared`): Konflikterkennung, freie Zeitblöcke, Briefing, Wiederholungen, Aufgabenerkennung in Notizen, Suche, Demo-Datenquelle.
+- **Oberfläche** (`src/renderer`): React-Ansichten Heute, Kalender, Posteingang, Aufgaben, Notizen, Projekte, Essen (Essensplan, Rezepte, Einkaufsliste), Claude-Panel, Befehlspalette, Einstellungen.
+- **Gemeinsame Logik** (`src/shared`): Konflikterkennung, freie Zeitblöcke, Briefing, Wiederholungen, Aufgabenerkennung in Notizen, Suche, Demo-Datenquelle, Zutaten-/Rezept-Erkennung, Einkaufsliste mit feldweisem Zusammenführen.
 
 ## Datenquellen
 
@@ -71,4 +71,4 @@ Hinweise:
 
 ## Tastenkürzel
 
-`Strg/⌘ K` Suche & Befehle · `Strg/⌘ 1–6` Bereiche · `Strg/⌘ J` Claude · `Strg/⌘ N` Aufgabe · `Strg/⌘ ⇧ N` Termin · `Strg/⌘ ⇧ Leertaste` Schnellnotiz (systemweit) · `Strg/⌘ /` alle Kürzel
+`Strg/⌘ K` Suche & Befehle · `Strg/⌘ 1–7` Bereiche · `Strg/⌘ J` Claude · `Strg/⌘ N` Aufgabe · `Strg/⌘ ⇧ N` Termin · `Strg/⌘ ⇧ Leertaste` Schnellnotiz (systemweit) · `Strg/⌘ /` alle Kürzel

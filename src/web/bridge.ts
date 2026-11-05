@@ -3,9 +3,20 @@
 // simulierte Testkonten mit Beispielinhalten – es werden keine echten Konten verbunden
 // und nichts verschickt.
 
+import { getWikibooksRecipe, searchWikibooks, WIKI_AGENT } from '@shared/recipe-wiki'
+import { shareSim, shareSimHooks } from './share-sim'
 import { DEFAULT_SETTINGS, type AppData, type CalEvent, type CloudStatus, type Email, type GoogleStatus, type ICloudStatus, type MicrosoftStatus, type Settings, type TagwerkApi } from '@shared/types'
 
-const K = { data: 'tagwerk-web:data', settings: 'tagwerk-web:settings', ms: 'tagwerk-web:ms', ic: 'tagwerk-web:icloud' }
+// ?person=2 öffnet eine zweite, getrennte Person (eigene Daten) – zum Ausprobieren geteilter Einkaufslisten in zwei Tabs
+const PERSON = (() => {
+  try {
+    const p = new URLSearchParams(location.search).get('person')
+    return p && /^[a-z0-9]{1,12}$/i.test(p) && p !== '1' ? `:${p}` : ''
+  } catch {
+    return ''
+  }
+})()
+const K = { data: `tagwerk-web:data${PERSON}`, settings: `tagwerk-web:settings${PERSON}`, ms: `tagwerk-web:ms${PERSON}`, ic: `tagwerk-web:icloud${PERSON}` }
 const read = <T>(k: string): T | null => {
   try {
     const v = localStorage.getItem(k)
@@ -122,6 +133,13 @@ let ic: ICloudStatus = read<ICloudStatus>(K.ic) ?? { connected: false, calendars
 const google: GoogleStatus = { clientConfigured: false, connected: false, expired: false, encrypted: true, caps: { calendarRead: false, calendarWrite: false, gmailRead: false, gmailWrite: false } }
 const cloud: CloudStatus = { available: false, enabled: false, syncing: false, devices: [], deviceName: 'Web-Vorschau' }
 const ok = <T>(value: T) => ({ ok: true as const, value })
+const wikiFetch = async (url: string) => {
+  const res = await fetch(url, { headers: { 'Api-User-Agent': WIKI_AGENT } })
+  if (!res.ok) throw new Error(String(res.status))
+  return res.json()
+}
+// Testhaken für die Oberflächen-Tests (nur Web-Vorschau)
+;(globalThis as unknown as { __tagwerkShareSim: typeof shareSimHooks }).__tagwerkShareSim = shareSimHooks
 /** Simulierte Konten antworten wie im echten Netz mit kurzer Verzögerung */
 const net = () => new Promise((r) => setTimeout(r, 600))
 
@@ -182,7 +200,7 @@ export const webApi: TagwerkApi = {
     clearClient: async () => {},
     connect: async (o) => {
       await new Promise((r) => setTimeout(r, 600))
-      ms = { ...ms, connected: true, email: ME, caps: { notes: false, mail: !!o.mail, calendar: !!o.calendar, sync: false } }
+      ms = { ...ms, connected: true, email: ME, caps: { notes: false, mail: !!o.mail, calendar: !!o.calendar, sync: false, share: !!o.share } }
       write(K.ms, ms)
       toastPopup('Simuliertes Testkonto verbunden', 'In der Web-Vorschau wird kein echtes Microsoft-Konto verbunden. OneNote und Cloud-Speicher gibt es nur in der App.')
       return { ok: true, status: ms }
@@ -267,6 +285,12 @@ export const webApi: TagwerkApi = {
       }
     }
   },
+  // Rezepte kommen auch in der Vorschau echt aus dem Wikibooks-Kochbuch (die API erlaubt Abrufe aus dem Browser)
+  recipes: {
+    search: (q) => searchWikibooks(wikiFetch, q),
+    get: (page) => getWikibooksRecipe(wikiFetch, page)
+  },
+  shopping: shareSim,
   app: {
     notify: async (req) => {
       toastPopup(req.title, [req.body, ...(req.lines ?? [])].filter(Boolean).join('\n'))

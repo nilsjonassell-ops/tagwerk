@@ -779,7 +779,7 @@ export function ShortcutsDialog() {
   const m = modKey()
   const rows: [string, string][] = [
     [`${m} K`, 'Suchen & Befehle'],
-    [`${m} 1–6`, 'Bereiche wechseln'],
+    [`${m} 1–7`, 'Bereiche wechseln'],
     [`${m} J`, 'Claude-Assistent ein/aus'],
     [`${m} N`, 'Neue Aufgabe'],
     [`${m} ⇧ N`, 'Neuer Termin'],

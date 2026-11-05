@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { CalendarDays, CheckSquare, FolderKanban, Inbox, NotebookPen, Settings as SettingsIcon, Sparkles, Sun, WifiOff } from 'lucide-react'
+import { CalendarDays, CheckSquare, FolderKanban, Inbox, NotebookPen, Settings as SettingsIcon, Sparkles, Sun, UtensilsCrossed, WifiOff } from 'lucide-react'
 import { groupThreads, isDueToday, isOverdue } from '@shared/analysis'
 import type { ViewId } from '@shared/types'
 import { useStore } from '@/lib/store'
@@ -14,7 +14,8 @@ export const VIEW_META: Record<ViewId, { label: string; icon: typeof Sun; key: s
   inbox: { label: 'Posteingang', icon: Inbox, key: '3' },
   tasks: { label: 'Aufgaben', icon: CheckSquare, key: '4' },
   notes: { label: 'Notizen', icon: NotebookPen, key: '5' },
-  projects: { label: 'Projekte', icon: FolderKanban, key: '6' }
+  projects: { label: 'Projekte', icon: FolderKanban, key: '6' },
+  meals: { label: 'Essen', icon: UtensilsCrossed, key: '7' }
 }
 
 export function Sidebar() {

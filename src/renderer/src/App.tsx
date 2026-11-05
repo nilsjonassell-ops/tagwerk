@@ -26,8 +26,10 @@ import { InboxView } from '@/views/Inbox'
 import { TasksView } from '@/views/Tasks'
 import { ExtractTasksDialog, NotesView } from '@/views/Notes'
 import { ProjectsView } from '@/views/Projects'
+import { MealsView } from '@/views/Meals'
+import { startShareSync } from '@/lib/shoppingSync'
 
-const VIEWS: ViewId[] = ['today', 'calendar', 'inbox', 'tasks', 'notes', 'projects']
+const VIEWS: ViewId[] = ['today', 'calendar', 'inbox', 'tasks', 'notes', 'projects', 'meals']
 
 export function App() {
   const ready = useStore((s) => s.ready)
@@ -119,6 +121,11 @@ export function App() {
     }
   }, [ready, online, msOn, icOn])
 
+  // Geteilte Einkaufslisten regelmäßig und nach eigenen Änderungen abgleichen
+  useEffect(() => {
+    if (ready) startShareSync()
+  }, [ready])
+
   // Cloud-Abgleich: Stände anderer PCs auf die aktuellen Daten anwenden
   useEffect(() => {
     if (!ready) return
@@ -176,7 +183,7 @@ export function App() {
       const mod = e.metaKey || e.ctrlKey
       const st = useStore.getState()
       const typing = (e.target as HTMLElement)?.closest?.('input, textarea, select, [contenteditable]')
-      if (mod && !e.altKey && /^[1-6]$/.test(e.key)) {
+      if (mod && !e.altKey && /^[1-7]$/.test(e.key)) {
         const visible = st.settings.sidebar.filter((s) => s.visible).map((s) => s.id)
         const target = visible[Number(e.key) - 1] ?? VIEWS[Number(e.key) - 1]
         if (target) st.go(target)
@@ -252,6 +259,7 @@ export function App() {
         {view === 'tasks' && <TasksView />}
         {view === 'notes' && <NotesView />}
         {view === 'projects' && <ProjectsView />}
+        {view === 'meals' && <MealsView />}
       </main>
       {assistantOpen && settings.claude.enabled ? <AssistantPanel /> : <div />}
 

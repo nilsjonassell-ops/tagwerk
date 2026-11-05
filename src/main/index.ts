@@ -18,12 +18,14 @@ import { join } from 'node:path'
 import { uptime } from 'node:os'
 import { randomUUID } from 'node:crypto'
 import { eventsOnDay, hm } from '@shared/analysis'
-import type { MicrosoftConnectOptions, OutlookMailAction, OneNoteSaveRequest, AppData, CalEvent, ClaudeRequest, GoogleConnectOptions, GoogleSendParams, Note, Settings, FocusSignal, NotifyRequest } from '@shared/types'
+import type { MicrosoftConnectOptions, OutlookMailAction, OneNoteSaveRequest, ShoppingShare, AppData, CalEvent, ClaudeRequest, GoogleConnectOptions, GoogleSendParams, Note, Settings, FocusSignal, NotifyRequest } from '@shared/types'
 import { store } from './store'
 import { secrets } from './secrets'
 import { sendToClaude, verifyKey } from './claude'
 import { parseIcs } from './ics'
 import { getWeather } from './weather'
+import { getRecipe, searchRecipes } from './recipes'
+import * as shoppingShare from './shopping-share'
 import { check as checkUpdate, initUpdater, installNow, updateStatus } from './updater'
 import { handlePopupAction, initNotify, notify } from './notify'
 import { initPopup } from './popup'
@@ -409,6 +411,7 @@ function buildAppMenu() {
         nav('Aufgaben', 'tasks', '4'),
         nav('Notizen', 'notes', '5'),
         nav('Projekte', 'projects', '6'),
+        nav('Essen', 'meals', '7'),
         { type: 'separator' },
         cmd('Claude-Assistent', 'toggle-assistant', 'CmdOrCtrl+J'),
         cmd('Seitenleiste ein-/ausklappen', 'toggle-sidebar', 'CmdOrCtrl+B'),
@@ -649,6 +652,18 @@ function registerIpc() {
   handle('google:send', (_e, p: GoogleSendParams) => google.send(p))
 
   handle('weather:get', (_e, city: string) => getWeather(String(city ?? '')))
+  handle('recipes:search', (_e, q: string) => searchRecipes(String(q ?? '')))
+  handle('recipes:get', (_e, page: string) => getRecipe(String(page ?? '')))
+  handle('shopping:available', () => shoppingShare.available())
+  handle('shopping:create', (_e, name: string, items) => shoppingShare.create(String(name ?? ''), Array.isArray(items) ? items : []))
+  // Freigabe-Angaben aus der Oberfläche nur in bereinigter Form verwenden
+  const sh = (s: Partial<ShoppingShare> | undefined): ShoppingShare => ({ role: s?.role === 'owner' ? 'owner' : 'member', driveId: String(s?.driveId ?? ''), itemId: String(s?.itemId ?? '') })
+  handle('shopping:invite', (_e, share, emails: string[], message?: string) => shoppingShare.invite(sh(share), Array.isArray(emails) ? emails : [], message))
+  handle('shopping:members', (_e, share) => shoppingShare.members(sh(share)))
+  handle('shopping:removeMember', (_e, share, id: string) => shoppingShare.removeMember(sh(share), String(id ?? '')))
+  handle('shopping:join', (_e, input: string) => shoppingShare.join(String(input ?? '')))
+  handle('shopping:sync', (_e, share, items, name: string) => shoppingShare.sync(sh(share), items, String(name ?? '')))
+  handle('shopping:leave', (_e, share) => shoppingShare.leave(sh(share)))
 
   handle('app:notify', (_e, req: NotifyRequest) => {
     if (!req || typeof req !== 'object') return { shown: false }

@@ -95,6 +95,20 @@ const api: TagwerkApi = {
     send: (p) => ipcRenderer.invoke('google:send', p)
   },
   weather: { get: (city) => ipcRenderer.invoke('weather:get', city) },
+  recipes: {
+    search: (q) => ipcRenderer.invoke('recipes:search', q),
+    get: (page) => ipcRenderer.invoke('recipes:get', page)
+  },
+  shopping: {
+    available: () => ipcRenderer.invoke('shopping:available'),
+    create: (name, items) => ipcRenderer.invoke('shopping:create', name, items),
+    invite: (share, emails, message) => ipcRenderer.invoke('shopping:invite', share, emails, message),
+    members: (share) => ipcRenderer.invoke('shopping:members', share),
+    removeMember: (share, id) => ipcRenderer.invoke('shopping:removeMember', share, id),
+    join: (input) => ipcRenderer.invoke('shopping:join', input),
+    sync: (share, items, name) => ipcRenderer.invoke('shopping:sync', share, items, name),
+    leave: (share) => ipcRenderer.invoke('shopping:leave', share)
+  },
   app: {
     notify: (req) => ipcRenderer.invoke('app:notify', req),
     onNavigate: (cb) => on('app:navigate', cb),

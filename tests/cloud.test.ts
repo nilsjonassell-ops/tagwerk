@@ -139,3 +139,24 @@ test('Wieder verbundener PC überschreibt keine neueren Änderungen der anderen 
   a.data = applyCloudPatch(a.data, mergeRemote(a.book, docs).patch)
   assert.equal(a.data.tasks[0].title, 'Neu von B')
 })
+
+test('Essen wandert zwischen eigenen PCs; Einträge geteilter Listen nicht (die laufen über die gemeinsame Datei)', () => {
+  const a = device('a')
+  const now = '2026-11-05T10:00:00Z'
+  a.data.recipes = [{ id: 'wb:Kochbuch/ Tomatensauce', title: 'Tomatensauce', source: { kind: 'wikibooks', name: 'Wikibooks-Kochbuch' }, ingredients: [], steps: [], savedAt: now, updatedAt: now }]
+  a.data.meals = [{ id: 'm1', date: '2026-11-09', slot: 'dinner', title: 'Tomatensauce', createdAt: now, updatedAt: now }]
+  a.data.shoppingLists = [
+    { id: 'own', name: 'Einkaufsliste', createdAt: now },
+    { id: 'wg', name: 'WG', createdAt: now, share: { role: 'owner', driveId: 'd', itemId: 'i' } }
+  ]
+  const item = (id: string, listId: string) => ({ id, listId, name: 'Milch', category: 'dairy' as const, done: false, stamps: { name: 1 }, createdAt: now })
+  a.data.shoppingItems = [item('i1', 'own'), item('i2', 'wg')]
+  const b = device('b')
+  sync(a, [], 1000)
+  sync(b, [a], 2000)
+  const next = b.data
+  assert.equal(next.recipes?.length, 1)
+  assert.equal(next.meals?.length, 1)
+  assert.equal(next.shoppingLists?.length, 2, 'Verweis auf die geteilte Liste kommt mit')
+  assert.deepEqual(next.shoppingItems?.map((i) => i.id), ['i1'])
+})

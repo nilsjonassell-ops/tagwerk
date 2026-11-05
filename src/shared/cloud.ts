@@ -7,7 +7,7 @@
 
 import type { AppData, CloudCollection, CloudPatch, FollowUp, ReplyMark, Settings, SuggestionState } from './types'
 
-export const CLOUD_COLLECTIONS: CloudCollection[] = ['tasks', 'notes', 'projects', 'docs', 'events', 'focusLog']
+export const CLOUD_COLLECTIONS: CloudCollection[] = ['tasks', 'notes', 'projects', 'docs', 'events', 'focusLog', 'recipes', 'meals', 'shoppingLists', 'shoppingItems']
 export type CloudGroup = CloudCollection | 'replyMarks' | 'suggestions' | 'followUps' | 'reviewQueue' | 'settings'
 export const CLOUD_GROUPS: CloudGroup[] = [...CLOUD_COLLECTIONS, 'replyMarks', 'suggestions', 'followUps', 'reviewQueue', 'settings']
 const MAP_GROUPS = new Set<CloudGroup>(['replyMarks', 'suggestions', 'followUps', 'reviewQueue', 'settings'])
@@ -67,6 +67,7 @@ export function extractRecords(data: AppData, settings: Settings): Record<CloudG
     for (const x of list ?? []) if (x && typeof x.id === 'string' && !isDemo(x.id) && keep(x)) o[x.id] = x
     return o
   }
+  const sharedLists = new Set((data.shoppingLists ?? []).filter((l) => l.share).map((l) => l.id))
   const s: Record<string, unknown> = {}
   for (const k of SYNCED_SETTINGS) if (settings[k] !== undefined) s[k] = settings[k]
   return {
@@ -76,6 +77,11 @@ export function extractRecords(data: AppData, settings: Settings): Record<CloudG
     docs: by(data.docs, (d) => d.source !== 'demo'),
     events: by(data.events, (e) => e.source === 'local' && !e.readOnly),
     focusLog: by(data.focusLog, () => true),
+    recipes: by(data.recipes, () => true),
+    meals: by(data.meals, () => true),
+    shoppingLists: by(data.shoppingLists, () => true),
+    // Einträge geteilter Listen gleicht jeder PC direkt mit der gemeinsamen Datei ab
+    shoppingItems: by(data.shoppingItems, (i) => !sharedLists.has(i.listId)),
     replyMarks: { ...(data.replyMarks ?? {}) },
     suggestions: { ...(data.suggestions ?? {}) },
     followUps: { ...(data.followUps ?? {}) },
@@ -144,7 +150,11 @@ const REQUIRED: Record<CloudCollection, string[]> = {
   notes: ['title', 'body', 'createdAt'],
   projects: ['name'],
   docs: ['title'],
-  focusLog: ['start', 'end']
+  focusLog: ['start', 'end'],
+  recipes: ['title', 'savedAt'],
+  meals: ['date', 'slot', 'title'],
+  shoppingLists: ['name'],
+  shoppingItems: ['listId', 'name', 'category', 'createdAt']
 }
 
 /** Ist der Wert eines anderen Geräts plausibel? */

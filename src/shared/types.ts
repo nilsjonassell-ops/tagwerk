@@ -68,6 +68,9 @@ export interface CalEvent {
   calendarName?: string
   /** Aus dieser Mail-Unterhaltung übernommen */
   mailRef?: string
+  /** Termin gehört zu diesem geplanten Gericht (Essensplan) */
+  mealId?: string
+  mealSlot?: MealSlot
 }
 
 export type MailFolder = 'inbox' | 'sent' | 'archive'
@@ -226,7 +229,7 @@ export interface MicrosoftStatus {
   email?: string
   expired: boolean
   /** Freigegebene Bereiche */
-  caps: { notes: boolean; mail: boolean; calendar: boolean; sync: boolean }
+  caps: { notes: boolean; mail: boolean; calendar: boolean; sync: boolean; share?: boolean }
   /** Anwendungs-ID ist in Tagwerk eingebaut (keine eigene Registrierung nötig) */
   builtInClient?: boolean
 }
@@ -237,6 +240,8 @@ export interface MicrosoftConnectOptions {
   calendar: boolean
   /** Daten über OneDrive (App-Ordner) zwischen PCs abgleichen */
   sync?: boolean
+  /** Geteilte Einkaufslisten: Dateien in OneDrive teilen und geteilte Dateien öffnen */
+  share?: boolean
 }
 
 // ---------- Cloud-Abgleich (OneDrive-App-Ordner) ----------
@@ -259,7 +264,7 @@ export interface CloudStatus {
   deviceName: string
 }
 
-export type CloudCollection = 'tasks' | 'notes' | 'projects' | 'docs' | 'events' | 'focusLog'
+export type CloudCollection = 'tasks' | 'notes' | 'projects' | 'docs' | 'events' | 'focusLog' | 'recipes' | 'meals' | 'shoppingLists' | 'shoppingItems'
 
 /** Änderungen von anderen Geräten, die die Oberfläche auf ihren aktuellen Stand anwendet */
 export interface CloudPatch {
@@ -459,6 +464,11 @@ export interface AppData {
   docs: DocRef[]
   chat: ChatMessage[]
   focusLog?: FocusEntry[]
+  /** Essen: gespeicherte Rezepte, geplante Gerichte, Einkaufslisten und deren Einträge */
+  recipes?: Recipe[]
+  meals?: Meal[]
+  shoppingLists?: ShoppingList[]
+  shoppingItems?: ShoppingItem[]
   /** Von Hand gesetztes „Antwort offen“ je Unterhaltung (überlebt den Gmail-Abgleich) */
   replyMarks?: Record<string, ReplyMark>
   /** Bearbeitungsstand der Vorschläge aus Mails (übernommen, ignoriert, zurückgestellt) */
@@ -483,7 +493,7 @@ export type MotionMode = 'system' | 'reduced'
 
 export type SidebarMode = 'auto' | 'pinned'
 
-export type ViewId = 'today' | 'calendar' | 'inbox' | 'tasks' | 'notes' | 'projects'
+export type ViewId = 'today' | 'calendar' | 'inbox' | 'tasks' | 'notes' | 'projects' | 'meals'
 
 export type DashboardCardId = 'brief' | 'schedule' | 'tasks' | 'mail' | 'focus' | 'weather'
 
@@ -616,7 +626,8 @@ export const DEFAULT_SETTINGS: Settings = {
     { id: 'inbox', visible: true },
     { id: 'tasks', visible: true },
     { id: 'notes', visible: true },
-    { id: 'projects', visible: true }
+    { id: 'projects', visible: true },
+    { id: 'meals', visible: true }
   ],
   dashboardCards: [
     { id: 'brief', visible: true },
@@ -826,6 +837,8 @@ export interface TagwerkApi {
   icloud: ICloudApi
   cloud: CloudApi
   weather: { get(city: string): Promise<WeatherResult> }
+  recipes: RecipesApi
+  shopping: ShoppingShareApi
   app: {
     notify(req: NotifyRequest): Promise<{ shown: boolean; reason?: string }>
     onNavigate(cb: (view: string) => void): () => void
@@ -863,4 +876,181 @@ export interface TagwerkApi {
 export interface DockState {
   edge: 'left' | 'right' | null
   collapsed: boolean
+}
+
+// ---------- Essen: Rezepte, Essensplan, Einkaufsliste ----------
+
+/** Eine Zutat mit erkannter Menge – qty fehlt bei „Salz“ oder „etwas Öl“ */
+export interface Ingredient {
+  id: string
+  /** Originaltext aus der Quelle */
+  raw: string
+  qty?: number
+  /** Obergrenze bei Spannen wie „1–3“ */
+  qtyMax?: number
+  /** Einheit in Kurzform (g, kg, ml, l, EL, TL, Dose …) */
+  unit?: string
+  name: string
+  /** Zusatz in Klammern oder nach dem Komma */
+  note?: string
+  /** Unterabschnitt („Für den Teig“) */
+  group?: string
+}
+
+export interface RecipeSource {
+  kind: 'wikibooks' | 'own'
+  /** Link zum Original */
+  url?: string
+  /** Name der Quelle, z. B. „Wikibooks-Kochbuch“ */
+  name: string
+  /** Lizenz der übernommenen Inhalte */
+  license?: { name: string; url: string }
+  /** Versionsgeschichte = Autorinnen und Autoren */
+  authorsUrl?: string
+  revision?: number
+}
+
+export interface Recipe {
+  id: string
+  title: string
+  source: RecipeSource
+  /** Portionen, auf die sich die Mengen beziehen (fehlt = unbekannt, keine Umrechnung) */
+  servings?: number
+  servingsText?: string
+  time?: string
+  ingredients: Ingredient[]
+  steps: string[]
+  /** Hinweis, wenn das Original mehrere Varianten enthält */
+  variantNote?: string
+  savedAt: string
+  updatedAt: string
+}
+
+export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack'
+
+export interface Meal {
+  id: string
+  /** Tag im Format JJJJ-MM-TT */
+  date: string
+  slot: MealSlot
+  title: string
+  recipeId?: string
+  servings?: number
+  note?: string
+  /** Zusätzlich als Tagwerk-Termin gespeichert */
+  calendarEventId?: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** Geteilte Liste: Datei im OneDrive der Eigentümerin, nur für eingeladene Microsoft-Konten */
+export interface ShoppingShare {
+  role: 'owner' | 'member'
+  driveId: string
+  itemId: string
+  ownerName?: string
+  /** Letzter erfolgreicher Abgleich */
+  lastSync?: string
+}
+
+export interface ShoppingList {
+  id: string
+  name: string
+  createdAt: string
+  share?: ShoppingShare
+}
+
+export type ShoppingCategory = 'produce' | 'bakery' | 'dairy' | 'meat' | 'pantry' | 'spices' | 'frozen' | 'drinks' | 'household' | 'other'
+
+/** Woher eine Menge stammt – verhindert doppeltes Hinzufügen und erlaubt sauberes Zurücknehmen */
+export interface ItemOrigin {
+  /** recipeId:ingredientId oder meal:mealId:ingredientId */
+  key: string
+  label: string
+  qty?: number
+  unit?: string
+}
+
+export type ShoppingField = 'name' | 'amount' | 'note' | 'category' | 'done' | 'deleted'
+
+export interface ShoppingItem {
+  id: string
+  listId: string
+  name: string
+  qty?: number
+  unit?: string
+  note?: string
+  category: ShoppingCategory
+  done: boolean
+  /** Gelöscht (bleibt kurz als Grabstein für den Abgleich) */
+  deleted?: boolean
+  origins?: ItemOrigin[]
+  /** Menge von Hand geändert – wird bei Folgeaktionen nicht automatisch angepasst */
+  edited?: boolean
+  /** Aus einem Rezept entstanden (nicht von Hand angelegt) */
+  fromRecipe?: boolean
+  qtyMax?: number
+  /** Stand des letzten gemeinsamen Abgleichs (ms) – was danach geändert wurde, ist „neu“ */
+  syncedAt?: number
+  /** Zeitpunkt der letzten Änderung je Feld (ms) – Grundlage für das Zusammenführen */
+  stamps: Partial<Record<ShoppingField, number>>
+  /** Wer zuletzt geändert hat */
+  by?: string
+  createdAt: string
+}
+
+export interface RecipeHit {
+  title: string
+  /** Seitenname im Wikibooks-Kochbuch */
+  page: string
+  snippet: string
+}
+
+export type RecipeResult<T> = { ok: true; value: T } | { ok: false; error: string; offline?: boolean }
+
+export interface RecipesApi {
+  search(q: string): Promise<RecipeResult<RecipeHit[]>>
+  get(page: string): Promise<RecipeResult<Recipe>>
+}
+
+export interface ShareMember {
+  id: string
+  name: string
+  email?: string
+  role: 'owner' | 'write' | 'read'
+  /** Einladung noch nicht angenommen */
+  pending?: boolean
+}
+
+/** Inhalt der geteilten Datei */
+export interface SharedListDoc {
+  v: 1
+  name: string
+  items: Record<string, ShoppingItem>
+}
+
+export type ShareResult<T> = { ok: true; value: T } | { ok: false; error: string; code?: 'offline' | 'expired' | 'not-connected' | 'not-found' | 'denied' | 'unknown' }
+
+export interface ShareSyncResult {
+  items: ShoppingItem[]
+  name: string
+  etag: string
+  /** Gleichzeitige Änderungen am selben Feld, bei denen die neuere gewonnen hat */
+  conflicts: { itemId: string; name: string; field: ShoppingField; by?: string }[]
+}
+
+export interface ShoppingShareApi {
+  /** Erweiterten OneDrive-Zugriff erlaubt? */
+  available(): Promise<boolean>
+  /** Liste in OneDrive anlegen und Personen einladen */
+  create(name: string, items: ShoppingItem[]): Promise<ShareResult<ShoppingShare>>
+  invite(share: ShoppingShare, emails: string[], message?: string): Promise<ShareResult<ShareMember[]>>
+  members(share: ShoppingShare): Promise<ShareResult<ShareMember[]>>
+  removeMember(share: ShoppingShare, memberId: string): Promise<ShareResult<null>>
+  /** Per Einladungslink oder Beitrittscode beitreten */
+  join(linkOrCode: string): Promise<ShareResult<{ share: ShoppingShare; name: string }>>
+  /** Lokale Einträge einarbeiten und den gemeinsamen Stand zurückgeben */
+  sync(share: ShoppingShare, local: ShoppingItem[], name: string): Promise<ShareResult<ShareSyncResult>>
+  /** Teilen beenden (Eigentümer) bzw. Liste verlassen (Mitglied) */
+  leave(share: ShoppingShare): Promise<ShareResult<null>>
 }

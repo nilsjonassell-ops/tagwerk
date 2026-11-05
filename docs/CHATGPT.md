@@ -84,6 +84,17 @@ Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, N
 ### Projekte
 - Projekte (z. B. Website-Relaunch, Q4-Planung, Wohnung) bündeln Aufgaben, Termine, Mails und Notizen.
 
+### Essen (Essensplan, Rezepte, Einkaufsliste)
+- Eigener Bereich „Essen“ (Strg+7) mit drei Reitern: **Essensplan · Rezepte · Einkaufsliste**.
+- **Rezepte** aus dem **Wikibooks-Kochbuch** (de.wikibooks.org, ~640 Rezepte, frei lizenziert CC BY-SA 4.0, kostenlos, kein Schlüssel). Suche nach Gericht oder Zutat; bei wenigen Treffern sucht Tagwerk automatisch breiter. Jedes Rezept zeigt Quelle, Link zum Original, Autorinnen/Autoren (Versionsgeschichte) und Lizenz. Mengen/Einheiten erkennt Tagwerk **regelbasiert ohne KI** (Stichprobe: Zutatenliste bei ~93 % der Rezepte erkannt, Menge bei ~3/4 der Zeilen – Rest sind meist „Salz“ & Co.). Zusätzlich anklickbare Websuche (Chefkoch, DuckDuckGo) – dort wird nichts automatisch übernommen. Eigene Rezepte (eine Zutat pro Zeile) möglich; gespeicherte Rezepte sind offline da.
+- **Rezeptansicht**: Portionen umrechnen (sinnvoll gerundet, Mengenlose bleiben gleich), Zutaten einzeln an-/abwählen („Hast du etwas schon zu Hause?“), Zubereitung aufklappbar. **Übersicht vor dem Hinzufügen**: je Zutat „Neu“, „Wird ergänzt → zusammen 700 g“, „Eigener Eintrag (andere Einheit)“ oder „Übersprungen (schon auf der Liste)“.
+- **Zusammenfassen nur, wenn sicher vergleichbar**: gleiche Zutat (auch Singular/Plural) und umrechenbare Einheit (g/kg, ml/l, EL/TL, gleiche Zähleinheit). Dose vs. Gramm, Mengenspannen („1–3“) und Gekauftes bleiben getrennt. Gleiches Rezept zweimal → keine doppelten Mengen.
+- **Essensplan**: Woche (Mo–So) oder Tag, je Gericht Mahlzeit (Frühstück, Mittag, Snack, Abend). Beim Planen: Schalter **„Auch im Kalender eintragen“** → eigener Tagwerk-Termin (nicht in Google/Outlook/Apple), verknüpft, **nie doppelt**, wandert beim Verschieben mit (eigene Uhrzeit am selben Tag bleibt). Jede Karte zeigt „Auch im Kalender“ oder „Nur im Essensplan“. Danach optional Zutaten zur Liste.
+- **Löschen eines Gerichts** fragt die Folgen ab: Kalendertermin entfernen? Zutaten von der Liste nehmen (bei zusammengefassten Einträgen nur der Anteil des Gerichts)? **Von Hand geänderte und gekaufte Einträge bleiben immer.** Rückgängig möglich.
+- **Einkaufsliste**: Schnelleingabe („500 g Nudeln“), gruppiert nach Bereichen (Obst & Gemüse, Brot, Milch/Käse/Eier, Fleisch & Fisch, Vorrat, Gewürze, Tiefkühl, Getränke, Haushalt, Sonstiges), Gekauftes darunter (einklappbar, „Gekaufte entfernen“), Bearbeiten (Menge, Name, Notiz, Bereich), Löschen mit Rückgängig, Herkunft „für <Gericht>“. Mehrere Listen möglich.
+- **Geteilte Liste**: über **OneDrive** – Datei im eigenen OneDrive („Tagwerk Geteilt“), Einladung per E-Mail durch Microsoft, **nur eingeladene Microsoft-Konten, kein öffentlicher Link**. Mitglieder treten per Link aus der Einladungs-Mail oder Beitrittscode (TW1-…) bei. Zugriffsliste mit Entfernen; „Teilen beenden“ / „Liste verlassen“. Abgleich alle 5 s (Fenster aktiv, sonst 30 s) und kurz nach jeder Änderung; Status „Geteilt · aktuell“, „Gleicht ab …“, „Offline – 2 Änderungen warten“, Fehler mit „Erneut versuchen“. **Konflikte**: feldweise zusammengeführt (Abhaken der einen + Mengenänderung der anderen bleiben beide); bei gleichem Feld gewinnt die neuere Änderung und Tagwerk meldet es. Schreiben nur mit passendem ETag → nichts geht unbemerkt verloren.
+- Grenzen: Mitmachen braucht Tagwerk + Microsoft-Konto; Microsofts Liste „Mit mir geteilt“ wird seit Nov. 2026 nicht mehr geliefert, daher Beitritt per Link/Code. Mit echten Konten noch nicht getestet (Web-Vorschau simuliert OneDrive).
+
 ### Fokus
 - Fokus-Sitzungen (Pomodoro-artig) mit Hintergrundklang; stummschaltet Benachrichtigungen, Termine dürfen optional durch.
 - Start-Bildschirm: Aufgabe per Suche wählen, Dauer als Umschalter (15/25/45/60/90/Eigene, Pfeiltasten), **Enter startet sofort**.
@@ -101,7 +112,7 @@ Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, N
 - Dialoge mit Unschärfe dahinter; bei ungespeicherten Eingaben fragt Tagwerk vor dem Schließen nach („Änderungen verwerfen?“).
 - **Einstellungen** im Stil der macOS-Systemeinstellungen: gruppierte Glas-Karten, festes Raster (Beschriftung | Bedienelement, bei wenig Platz untereinander), Bereiche: Darstellung (Modus-Vorschaukarten, Akzentfarbe, Animationen, Seitenleiste) · Allgemein · Übersicht · Kalender · Benachrichtigungen · Konten · Mail-Vorschläge · Claude · Datenschutz.
 - Seitenleiste „automatisch“: bleibt als schmaler Streifen am Rand, fährt beim Überfahren aus (Inhalt rückt synchron mit) und wieder ein; kein Knopf. Strg+B oder Einstellung „Immer ausgeklappt“.
-- Tastenkürzel: Strg+1–6 Bereiche, Strg+N Aufgabe, Strg+Umschalt+N Termin, Strg+/ alle Kürzel.
+- Tastenkürzel: Strg+1–7 Bereiche, Strg+N Aufgabe, Strg+Umschalt+N Termin, Strg+/ alle Kürzel.
 - Start mit Windows, Infobereich-Symbol, Startanimation. Wieder geöffnet (Infobereich, Taskleiste) beginnt Tagwerk immer auf „Heute“; Klicks auf Benachrichtigungen öffnen direkt ihr Ziel.
 - **Fenster andocken** (Einstellung, standardmäßig aus, nur dieser PC): an den linken oder rechten Bildschirmrand geschoben, fährt das Fenster ein, wenn die Maus es verlässt (~0,65 s), nur der Symbolstreifen bleibt sichtbar; Maus auf den Streifen fährt es nach ~0,1 s wieder aus. Gleitet ohne Größenänderung, nur an Außenkanten (nicht zwischen zwei Bildschirmen), berücksichtigt die Taskleiste, fährt nicht ein, solange ein Dialog/Menü offen ist. Rechts angedockt liegt die Seitenleiste rechts.
 
@@ -124,10 +135,12 @@ Einstellungen → Konten zeigt oben eine Übersicht nach **E-Mail · Kalender ·
 | **OneNote** | über Microsoft Graph |
 | **Erster Start auf neuem PC** | „Meine Daten wiederherstellen“: mit Microsoft anmelden → Aufgaben, Notizen, Projekte, eigene Termine und Einstellungen sind nach Sekunden da; Beispieldaten werden dabei entfernt |
 | **Cloud-Speicher (OneDrive)** | Aufgaben, Notizen, Projekte, eigene Termine, „Antwort offen“ und Einstellungen liegen zusätzlich im OneDrive-App-Ordner „Apps/Tagwerk“ – auf jedem PC mit demselben Microsoft-Konto anmelden, alles ist wieder da; Abgleich alle 30 s und kurz nach jeder Änderung |
+| **Geteilte Einkaufslisten (OneDrive)** | Datei im eigenen OneDrive, Einladung per Microsoft; braucht zusätzlich die Berechtigung Files.ReadWrite.All (einmalige Rückfrage). Kostenlos im OneDrive-Speicher, es gelten Microsofts Limits |
+| **Rezepte (Wikibooks-Kochbuch)** | MediaWiki-API, ohne Konto/Schlüssel, Inhalte CC BY-SA 4.0 (Quelle + Autoren + Lizenz werden angezeigt); Abruflimit für Programme ohne Anmeldung ca. 500 Anfragen/Stunde je IP – reicht weit, da jeder PC selbst abfragt |
 | .ics-Dateien | Import, schreibgeschützt |
 | Wetter | Open-Meteo, ohne Konto – kostenlose Nutzung nur nicht-kommerziell (Tagwerk ist gratis & werbefrei); bei Bezahl-Version/Werbung wäre ein bezahlter Tarif nötig. Quellenangabe CC BY 4.0 Pflicht |
 | Demo-Daten | zum Ausprobieren, entfernbar |
-| Nicht vorhanden | IMAP/SMTP allgemein, Pendelzeit/Routen, Messenger (WhatsApp, Teams-Chat), Microsoft To Do, Apple Erinnerungen |
+| Nicht vorhanden | IMAP/SMTP allgemein, Pendelzeit/Routen, Messenger (WhatsApp, Teams-Chat), Microsoft To Do, Apple Erinnerungen, Nährwerte, Supermarkt-Preise/Lieferdienste |
 
 ---
 
@@ -158,6 +171,7 @@ Einstellungen → Konten zeigt oben eine Übersicht nach **E-Mail · Kalender ·
 ## 6b. Testen ohne Store
 
 - **Web-Vorschau:** https://nilsjonassell-ops.github.io/tagwerk/ – nach jeder Änderung automatisch aktualisiert, läuft im Browser (auch am Handy), mit Beispieldaten und simulierten Testkonten (Outlook, Apple). Echte Konten, Pop-up-Fenster, Autostart, OneNote und Cloud-Speicher gibt es nur in der installierten App.
+- **Geteilte Einkaufsliste testen:** In der Web-Vorschau einen zweiten Tab mit `?person=2` hinten an der Adresse öffnen – das ist eine zweite Person mit eigenen Daten, beide teilen sich ein simuliertes OneDrive. Liste im ersten Tab teilen, Beitrittscode im zweiten Tab einfügen.
 - Updates werden gesammelt und erst als großes Update in den Store gebracht.
 
 ## 7. Format für Aufträge an Claude
@@ -195,7 +209,7 @@ Offene Fragen: <falls vorhanden>
 ## 9. Versionsverlauf
 
 <!--VERSIONEN-->
-- **Noch nicht veröffentlicht (gesammelt fürs große Update)** – Neues Design-System mit dezenter Glasoptik · 7 Akzentfarben + Hell/Dunkel/Wie Windows · eigene, tastaturbedienbare Menüs und Auswahlfelder · Dialoge mit Unschärfe und Rückfrage bei ungespeicherten Eingaben · Fokus-Start neu (Suche, Dauer-Umschalter, Enter startet) · Einstellungen neu gegliedert als gruppierte Karten (Darstellung, Konten, Mail-Vorschläge) · Seitenleiste fährt automatisch aus und ein · „Aus E-Mail übernehmen“ als geführter Ablauf (Aufgabe · Notiz · Termin) · Konten-Übersicht mit klaren Zuständen · Fenster am Bildschirmrand andocken · Wiederöffnen auf „Heute“ · Erkennung ausgeschriebener Monate · „Bewegung reduzieren“ · Quellenhinweis Open-Meteo auf der Wetterkarte · Datenschutz-Reiter mit Liste aller verbundenen Dienste · Datenschutzerklärung ergänzt (alle Dienste, IP-Hinweis, Marken)
+- **Noch nicht veröffentlicht (gesammelt fürs große Update)** – Neues Design-System mit dezenter Glasoptik · 7 Akzentfarben + Hell/Dunkel/Wie Windows · eigene, tastaturbedienbare Menüs und Auswahlfelder · Dialoge mit Unschärfe und Rückfrage bei ungespeicherten Eingaben · Fokus-Start neu (Suche, Dauer-Umschalter, Enter startet) · Einstellungen neu gegliedert als gruppierte Karten (Darstellung, Konten, Mail-Vorschläge) · Seitenleiste fährt automatisch aus und ein · „Aus E-Mail übernehmen“ als geführter Ablauf (Aufgabe · Notiz · Termin) · Konten-Übersicht mit klaren Zuständen · Fenster am Bildschirmrand andocken · Wiederöffnen auf „Heute“ · Erkennung ausgeschriebener Monate · „Bewegung reduzieren“ · Quellenhinweis Open-Meteo auf der Wetterkarte · Datenschutz-Reiter mit Liste aller verbundenen Dienste · Datenschutzerklärung ergänzt (alle Dienste, IP-Hinweis, Marken) · **Essen**: Essensplan (Woche/Tag, optional als Kalendertermin), Rezeptsuche im Wikibooks-Kochbuch (ohne KI), Portionen umrechnen, Zutaten auswählen und zur Einkaufsliste, Einkaufsliste mit Bereichen, gemeinsam nutzbare Liste über OneDrive (Einladung, Echtzeit-Abgleich, Offline-Warteschlange, Konfliktbehandlung)
 - **1.8.0** (03.11.2026) – OneNote lesen & speichern · einklappbare Seitenleiste · Outlook-Mail & -Kalender · Apple Kalender (iCloud) · Postfach-Filter je Konto · Zielkalender beim Anlegen · einfachere Gmail-Einrichtung mit Direktlinks · Microsoft-Anmeldung ohne eigene Einrichtung · Cloud-Speicher über OneDrive (Daten auf jedem PC) · Vorschläge aus Mails („Aus Mails übernehmen“: Termine, Fristen, Aufgaben, Infos – mit Änderungen, Serien, Aufteilen/Zusammenführen, Vorlauf, Regeln) · Wiedervorlage für Mails · „Meine Daten wiederherstellen“ beim ersten Start
 - **1.7.0** – Microsoft-Store-Version (kein Blockieren mehr durch Smart App Control)
 - **1.6.0** – Kalender live, Termine aus Mails, Schnelleingabe mit Uhrzeit, Wochenrückblick
