@@ -10,6 +10,18 @@ import { AccountStatus, Segmented, SourceTag, ViewHeader } from '@/components/ui
 
 type Mode = 'day' | 'week' | 'month'
 const HOUR_PX = 48
+/** Zeilenhöhen im Termin (px) – passend zu .cal-event in calendar.css */
+const LINE_T = 16.25
+const LINE_S = 15
+const PAD_Y = 8
+/** Wie viel Text passt ganz in einen Termin dieser Höhe? */
+export function eventTextFit(height: number, hasLocation: boolean): { titleLines: number; time: boolean; location: boolean } {
+  const inner = height - PAD_Y
+  const time = inner >= LINE_T + LINE_S
+  const location = hasLocation && inner >= LINE_T * 2 + LINE_S * 2
+  const titleLines = Math.max(1, Math.floor((inner - (time ? LINE_S : 0) - (location ? LINE_S : 0)) / LINE_T))
+  return { titleLines, time, location }
+}
 
 export function CalendarView() {
   const data = useStore((s) => s.data)
@@ -190,7 +202,8 @@ function TimeGrid({
     return () => clearInterval(t)
   }, [])
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = Math.max(0, (settings.workHours.start - 1) * HOUR_PX)
+    // Etwas Luft oben, damit die erste Stundenmarke nicht unter der Kopfzeile verschwindet
+    if (scrollRef.current) scrollRef.current.scrollTop = Math.max(0, (settings.workHours.start - 1) * HOUR_PX - 12)
   }, [settings.workHours.start, days.length])
 
   const cols = `56px repeat(${days.length}, minmax(0, 1fr))`
@@ -203,7 +216,8 @@ function TimeGrid({
       timed,
       layout: layoutDay(timed),
       conflicts: findConflicts(timed, settings.transitionBufferMinutes),
-      free: ymd(d) < ymd(now) || d.getDay() === 0 || d.getDay() === 6 ? [] : freeBlocks(timed, d, settings.workHours, settings.focusMinMinutes, ymd(d) === ymd(now) ? now : undefined)
+      // Freie Zeit nur als Lücke zwischen Terminen – ein leerer Tag braucht keinen „frei · 10 Std.“-Block
+      free: ymd(d) < ymd(now) || d.getDay() === 0 || d.getDay() === 6 || timed.length === 0 ? [] : freeBlocks(timed, d, settings.workHours, settings.focusMinMinutes, ymd(d) === ymd(now) ? now : undefined)
     }
   })
 
@@ -379,13 +393,23 @@ function TimeGrid({
                       onDoubleClick={() => openDialog({ kind: 'event', id: e.id })}
                       title={c ? (c.kind === 'overlap' ? 'Überschneidung mit einem anderen Termin' : `Knapper Übergang (${c.gapMinutes} Min.)`) : undefined}
                     >
-                      <span className="t">{e.title}</span>
-                      {height > 34 && (
-                        <span className="s">
-                          {fTime.format(s)}–{fTime.format(new Date(e.end))}
-                          {e.location && height > 52 ? ` · ${e.location}` : ''}
-                        </span>
-                      )}
+                      {(() => {
+                        // Nur so viel Text, wie ganz hineinpasst: Titelzeilen aus der Höhe, Zeit und Ort je eine eigene Zeile
+                        const fit = eventTextFit(height, !!e.location)
+                        return (
+                          <>
+                            <span className="t" style={{ WebkitLineClamp: fit.titleLines }}>
+                              {e.title}
+                            </span>
+                            {fit.time && (
+                              <span className="s">
+                                {fTime.format(s)}–{fTime.format(new Date(e.end))}
+                              </span>
+                            )}
+                            {fit.location && <span className="s">{e.location}</span>}
+                          </>
+                        )
+                      })()}
                       {draggable && <span className="resize-handle" aria-hidden="true" />}
                     </button>
                   )

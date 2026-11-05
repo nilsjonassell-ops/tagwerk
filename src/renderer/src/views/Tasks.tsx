@@ -15,6 +15,7 @@ export function TasksView() {
   const data = useStore((s) => s.data)
   const [tab, setTab] = useState<Tab>('today')
   const [input, setInput] = useState('')
+  const [focused, setFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const now = new Date()
   const parsed = input.trim() ? parseQuickTask(input, data.projects, now) : null
@@ -64,6 +65,8 @@ export function TasksView() {
                   id="quick-add-task"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
+                  onFocus={() => setFocused(true)}
+                  onBlur={() => setFocused(false)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') add()
                     if (e.key === 'Escape') setInput('')
@@ -89,7 +92,12 @@ export function TasksView() {
                     {parsed.recurrence && <span className="tag"><Repeat /> {RECURRENCE_LABEL[parsed.recurrence]}</span>}
                   </>
                 ) : (
-                  <span>Datum: heute, morgen, Freitag, in 3 Tagen, 12.11. · Uhrzeit: 10 Uhr, 14:30 · Priorität: !hoch, !mittel, !niedrig · Projekt: #Name · Wiederholung: täglich, werktags …</span>
+                  // Ruhig, solange nicht getippt wird – die ganze Übersicht erst im Feld
+                  <span>
+                    {focused
+                      ? 'Datum: heute, morgen, Freitag, in 3 Tagen, 12.11. · Uhrzeit: 10 Uhr, 14:30 · Priorität: !hoch, !mittel, !niedrig · Projekt: #Name · Wiederholung: täglich, werktags …'
+                      : 'Datum, Uhrzeit, !Priorität und #Projekt einfach mitschreiben.'}
+                  </span>
                 )}
               </div>
             </>

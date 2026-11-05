@@ -247,6 +247,54 @@ const tests = {
     await ctx.close()
   },
 
+  async 'empty-states'(b, url) {
+    const ctx = await b.newContext({ viewport: { width: 1280, height: 820 } })
+    const p = await ctx.newPage()
+    await p.goto(url)
+    await p.waitForSelector('.welcome')
+    await p.locator('.welcome-option:has-text("Leer starten")').click()
+    await p.locator('.welcome button.primary').first().click()
+    await p.waitForSelector('.app .view-body')
+    await sleep(600)
+    await p.keyboard.press('Control+3')
+    await sleep(400)
+    ok((await p.locator('.empty:has-text("Noch kein Postfach verbunden") button:has-text("Konto verbinden")').count()) === 1, 'Posteingang ohne Konto: klarer nächster Schritt')
+    ok((await p.locator('kbd').count()) === 0, 'Keine Tastatur-Tipps für eine leere Liste')
+    await p.keyboard.press('Control+2')
+    await sleep(400)
+    ok((await p.locator('.week-grid .focus-block').count()) === 0, 'Leere Woche: keine „frei · 10 Std.“-Blöcke')
+    await ctx.close()
+  },
+
+  async 'calendar-text'(b, url) {
+    for (const vp of [{ width: 1320, height: 860 }, { width: 960, height: 700 }]) {
+      const p = await start(b, url, { viewport: vp })
+      await p.keyboard.press('Control+2')
+      await sleep(700)
+      // Keine Textzeile darf unten halb abgeschnitten sein: jedes Textstück liegt ganz im Termin
+      const cut = await p.evaluate(() => {
+        const bad = []
+        for (const ev of document.querySelectorAll('.week-grid .cal-event:not(.drag-ghost)')) {
+          const box = ev.getBoundingClientRect()
+          for (const el of ev.querySelectorAll('.t, .s')) {
+            const r = el.getBoundingClientRect()
+            if (r.height > 0 && r.bottom > box.bottom + 0.5) bad.push(`${ev.textContent.slice(0, 30)} (${Math.round(r.bottom - box.bottom)} px)`)
+          }
+        }
+        return bad
+      })
+      ok(cut.length === 0, `${vp.width}px: kein Termintext wird mittendrin abgeschnitten (${cut.slice(0, 3).join(' | ')})`)
+      // Erste sichtbare Stundenmarke liegt ganz im sichtbaren Bereich
+      const hour = await p.evaluate(() => {
+        const sc = document.querySelector('.week-scroll').getBoundingClientRect()
+        const labels = [...document.querySelectorAll('.hour-col .hour span')].map((s) => s.getBoundingClientRect()).filter((r) => r.bottom > sc.top)
+        return labels.length ? Math.round(labels[0].top - sc.top) : null
+      })
+      ok(hour !== null && hour >= 0, `${vp.width}px: oberste Stundenmarke nicht angeschnitten (${hour} px)`)
+      await p.context().close()
+    }
+  },
+
   async motion(b, url) {
     const p = await start(b, url)
     const probe = (sel) => p.evaluate((s) => { const el = document.querySelector(s); if (!el) return null; const cs = getComputedStyle(el); return { name: cs.animationName, dur: parseFloat(cs.animationDuration) * (cs.animationDuration.endsWith('ms') ? 1 : 1000) } }, sel)

@@ -137,14 +137,24 @@
 }
 .cal-event .t {
   font-weight: 600;
-  display: block;
+  /* Zeilenzahl setzt die Ansicht passend zur Höhe (WebkitLineClamp) */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
   overflow: hidden;
-  text-overflow: ellipsis;
+  /* lange Wörter mit Trennstrich nach deutschen Regeln (lang="de") statt mitten im Wort */
+  hyphens: auto;
+  overflow-wrap: break-word;
 }
 .cal-event .s {
+  display: block;
   opacity: 0.8;
   font-size: var(--fs-xs);
+  line-height: 15px;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .cal-event.selected {
   outline: 2px solid var(--accent);
@@ -158,7 +168,8 @@
   box-shadow: inset 3px 0 0 var(--attention), 0 0 0 1.5px var(--attention);
 }
 .cal-event.past {
-  opacity: 0.55;
+  /* vergangen: zurückgenommen, aber gut lesbar */
+  opacity: 0.72;
 }
 .cal-event.allday-chip {
   position: static;

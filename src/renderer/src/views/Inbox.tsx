@@ -6,7 +6,7 @@ import { activeFollowUp, setFollowUp, snoozeOptions, toggleReview } from '@/lib/
 import { existingFromThread } from '@shared/capture'
 import { startCapture } from '@/lib/capture'
 import type { Source } from '@shared/types'
-import { SOURCE_LABEL } from '@/lib/accounts'
+import { SOURCE_LABEL, useAccounts } from '@/lib/accounts'
 
 const ACCOUNT_ORDER: Source[] = ['google', 'outlook', 'demo', 'local']
 import { useStore } from '@/lib/store'
@@ -119,6 +119,10 @@ export function InboxView() {
     return () => window.removeEventListener('keydown', onKey)
   }, [threads, selectedId, selected, select, filter])
 
+  // Kein Postfach verbunden und keine Mails (auch keine Demo)
+  const msMail = useAccounts((a) => a.ms.connected && a.ms.caps.mail)
+  const noMailbox = data.emails.length === 0 && !google.caps.gmailRead && !msMail
+
   return (
     <>
       <ViewHeader title="Posteingang">
@@ -198,7 +202,15 @@ export function InboxView() {
                 <input className="input" type="search" placeholder="Person, Projekt oder Thema" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="E-Mails durchsuchen" />
               </div>
             </div>
-            {threads.length === 0 ? (
+            {noMailbox ? (
+              // Noch kein Postfach: klarer nächster Schritt statt „Hier ist nichts“
+              <Empty icon={<InboxIcon />} title="Noch kein Postfach verbunden">
+                Verbinde Gmail oder Outlook – Tagwerk liest deine Mails direkt von diesem PC aus.{' '}
+                <button className="link" onClick={() => openDialog({ kind: 'settings', section: 'sources' })}>
+                  Konto verbinden
+                </button>
+              </Empty>
+            ) : threads.length === 0 ? (
               <Empty icon={<InboxIcon />} title={query || projectFilter ? 'Keine Treffer' : 'Hier ist nichts'}>
                 {query || projectFilter ? 'Passe Suche oder Filter an.' : 'Keine Unterhaltungen in diesem Ordner.'}
               </Empty>
@@ -215,9 +227,15 @@ export function InboxView() {
             <Reader key={selected.id} thread={selected} />
           ) : (
             <div className="reader">
-              <Empty icon={<MailOpen />} title="Keine Unterhaltung ausgewählt">
-                Wähle links eine E-Mail. Mit <kbd>J</kbd> und <kbd>K</kbd> springst du durch die Liste.
-              </Empty>
+              {noMailbox ? (
+                <Empty icon={<MailOpen />} title="Hier liest du deine E-Mails">
+                  Aus jeder Mail kannst du mit einem Klick eine Aufgabe, Notiz oder einen Termin machen.
+                </Empty>
+              ) : (
+                <Empty icon={<MailOpen />} title="Keine Unterhaltung ausgewählt">
+                  Wähle links eine E-Mail. Mit <kbd>J</kbd> und <kbd>K</kbd> springst du durch die Liste.
+                </Empty>
+              )}
             </div>
           )}
           </>

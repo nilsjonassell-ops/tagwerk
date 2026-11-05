@@ -213,7 +213,9 @@ body::before {
   background: color-mix(in srgb, var(--sunken) 55%, transparent);
 }
 .reader,
-.detail-pane {
+.detail-pane,
+.project-detail {
+  /* Inhaltsflächen liegen direkt auf dem Glas – wie Posteingang und Notizen */
   background: transparent;
 }
 .detail-pane {
