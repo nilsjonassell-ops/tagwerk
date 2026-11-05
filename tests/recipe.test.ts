@@ -342,3 +342,10 @@ test('Zweckangabe vor dem Doppelpunkt („Zum Backen: Speiseöl“)', () => {
   const a = parseIngredient('Zum Backen: Speiseöl')
   assert.deepEqual([a.name, a.note], ['Speiseöl', 'Zum Backen'])
 })
+
+test('Suchvorschau ohne Kochbuch-Navigationsleiste', async () => {
+  const fetchJson = async () => ({ query: { search: Array.from({ length: 6 }, (_, i) => ({ title: `Kochbuch/ R${i}`, snippet: i ? 'Kochkurs Kochtechniken Zutaten Rezepte Kochzubehör Maßangaben Gebratene Nudeln sind' : 'Startseite Kochkurs Kochtechniken Zutaten Rezepte Kochzubehör Maßangaben <span class="searchmatch">Tomatensauce</span> Die traditionelle' })) } })
+  const r = await searchWikibooks(fetchJson, 'x')
+  assert.equal(r.ok && r.value[0].snippet, 'Tomatensauce Die traditionelle')
+  assert.equal(r.ok && r.value[1].snippet, 'Gebratene Nudeln sind')
+})

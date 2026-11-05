@@ -276,7 +276,9 @@ export function parseWikibooksRecipe(page: string, wikitext: string, revision?: 
 
 export type FetchJson = (url: string) => Promise<unknown>
 
-const strip = (html: string) => cleanWiki(html.replace(/<span class="searchmatch">|<\/span>/g, ''))
+/** Vorschautext: Hervorhebungen und die Navigationsleiste des Kochbuchs entfernen */
+const NAV = /^(Startseite\s+)?Kochkurs\s+Kochtechniken\s+Zutaten\s+Rezepte\s+Kochzubehör\s+Maßangaben\s*/
+const strip = (html: string) => cleanWiki(html.replace(/<span class="searchmatch">|<\/span>/g, '')).replace(NAV, '')
 
 /** Seiten in der Rezept-Kategorie, die keine Rezepte sind */
 const NOT_RECIPE = /\/ (Vorlage|Druckversion|Navigationsleiste|Inhaltsverzeichnis|Adventskalender)/i
