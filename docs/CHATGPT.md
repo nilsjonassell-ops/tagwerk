@@ -37,7 +37,7 @@ Ein Dashboard für den ganzen Tag an einem Ort: **Kalender, E-Mails, Aufgaben, N
 ### Heute (Dashboard)
 - Briefing: Konflikte, Überfälliges, Dringendes.
 - Tagesband (Zeitleiste) mit Terminen und **freien Zeitblöcken**, Jetzt-Linie.
-- Heutige Aufgaben zum Abhaken, wichtige offene E-Mails, Wetter (Open-Meteo, ohne Konto).
+- Heutige Aufgaben zum Abhaken, wichtige offene E-Mails, Wetter (Open-Meteo, ohne Konto; Quellenhinweis „Wetterdaten: Open-Meteo“ auf der Karte – Pflicht nach Lizenz CC BY 4.0).
 - Anpassbar (welche Bereiche sichtbar sind); Wochenrückblick-Knopf.
 
 ### Kalender
@@ -125,7 +125,7 @@ Einstellungen → Konten zeigt oben eine Übersicht nach **E-Mail · Kalender ·
 | **Erster Start auf neuem PC** | „Meine Daten wiederherstellen“: mit Microsoft anmelden → Aufgaben, Notizen, Projekte, eigene Termine und Einstellungen sind nach Sekunden da; Beispieldaten werden dabei entfernt |
 | **Cloud-Speicher (OneDrive)** | Aufgaben, Notizen, Projekte, eigene Termine, „Antwort offen“ und Einstellungen liegen zusätzlich im OneDrive-App-Ordner „Apps/Tagwerk“ – auf jedem PC mit demselben Microsoft-Konto anmelden, alles ist wieder da; Abgleich alle 30 s und kurz nach jeder Änderung |
 | .ics-Dateien | Import, schreibgeschützt |
-| Wetter | Open-Meteo, ohne Konto |
+| Wetter | Open-Meteo, ohne Konto – kostenlose Nutzung nur nicht-kommerziell (Tagwerk ist gratis & werbefrei); bei Bezahl-Version/Werbung wäre ein bezahlter Tarif nötig. Quellenangabe CC BY 4.0 Pflicht |
 | Demo-Daten | zum Ausprobieren, entfernbar |
 | Nicht vorhanden | IMAP/SMTP allgemein, Pendelzeit/Routen, Messenger (WhatsApp, Teams-Chat), Microsoft To Do, Apple Erinnerungen |
 
@@ -137,7 +137,7 @@ Einstellungen → Konten zeigt oben eine Übersicht nach **E-Mail · Kalender ·
 2. **Daten bleiben beim Nutzer:** lokal auf dem PC (JSON im App-Ordner) und – wenn eingeschaltet – im eigenen OneDrive (App-Ordner, kostenlos). Passwörter/Tokens nur verschlüsselt lokal, nie in der Cloud.
 3. **Keine laufenden Kosten.** Nur kostenlose Dienste/APIs; kostenpflichtige Dinge nur optional.
 4. **Bestätigung vor Wirkung nach außen:** Senden, Löschen, Termine mit Teilnehmenden verschieben → immer Rückfrage; vieles hat „Rückgängig“.
-5. **Datenschutz:** Logs ohne Inhalte; Export & komplettes Löschen in den Einstellungen.
+5. **Datenschutz:** Logs ohne Inhalte; Export & komplettes Löschen in den Einstellungen; Reiter „Datenschutz“ listet alle verbundenen Dienste mit Links zu deren Datenschutzbestimmungen und verlinkt PRIVACY.md (Dienste-Liste in `src/shared/services.ts`). Rechtliches: Gmail nur mit eigenem Google-Zugang je Nutzer (ein gemeinsamer Zugang bräuchte Google-Prüfung + CASA-Sicherheitsprüfung); Microsoft Graph und iCloud-CalDAV kostenlos.
 6. **Microsoft-Store-Regeln:** Updates laufen über den Store; keine Funktionen, die Systemeinstellungen ändern oder heimlich etwas ausführen.
 7. **Updates gebündelt:** Nils möchte lieber wenige große Updates statt vieler kleiner.
 8. **Design-Anspruch:** hochwertig, ruhig, übersichtlich. Lieber weniger Knöpfe, dafür die richtigen.
@@ -195,7 +195,7 @@ Offene Fragen: <falls vorhanden>
 ## 9. Versionsverlauf
 
 <!--VERSIONEN-->
-- **Noch nicht veröffentlicht (gesammelt fürs große Update)** – Neues Design-System mit dezenter Glasoptik · 7 Akzentfarben + Hell/Dunkel/Wie Windows · eigene, tastaturbedienbare Menüs und Auswahlfelder · Dialoge mit Unschärfe und Rückfrage bei ungespeicherten Eingaben · Fokus-Start neu (Suche, Dauer-Umschalter, Enter startet) · Einstellungen neu gegliedert als gruppierte Karten (Darstellung, Konten, Mail-Vorschläge) · Seitenleiste fährt automatisch aus und ein · „Aus E-Mail übernehmen“ als geführter Ablauf (Aufgabe · Notiz · Termin) · Konten-Übersicht mit klaren Zuständen · Fenster am Bildschirmrand andocken · Wiederöffnen auf „Heute“ · Erkennung ausgeschriebener Monate · „Bewegung reduzieren“
+- **Noch nicht veröffentlicht (gesammelt fürs große Update)** – Neues Design-System mit dezenter Glasoptik · 7 Akzentfarben + Hell/Dunkel/Wie Windows · eigene, tastaturbedienbare Menüs und Auswahlfelder · Dialoge mit Unschärfe und Rückfrage bei ungespeicherten Eingaben · Fokus-Start neu (Suche, Dauer-Umschalter, Enter startet) · Einstellungen neu gegliedert als gruppierte Karten (Darstellung, Konten, Mail-Vorschläge) · Seitenleiste fährt automatisch aus und ein · „Aus E-Mail übernehmen“ als geführter Ablauf (Aufgabe · Notiz · Termin) · Konten-Übersicht mit klaren Zuständen · Fenster am Bildschirmrand andocken · Wiederöffnen auf „Heute“ · Erkennung ausgeschriebener Monate · „Bewegung reduzieren“ · Quellenhinweis Open-Meteo auf der Wetterkarte · Datenschutz-Reiter mit Liste aller verbundenen Dienste · Datenschutzerklärung ergänzt (alle Dienste, IP-Hinweis, Marken)
 - **1.8.0** (03.11.2026) – OneNote lesen & speichern · einklappbare Seitenleiste · Outlook-Mail & -Kalender · Apple Kalender (iCloud) · Postfach-Filter je Konto · Zielkalender beim Anlegen · einfachere Gmail-Einrichtung mit Direktlinks · Microsoft-Anmeldung ohne eigene Einrichtung · Cloud-Speicher über OneDrive (Daten auf jedem PC) · Vorschläge aus Mails („Aus Mails übernehmen“: Termine, Fristen, Aufgaben, Infos – mit Änderungen, Serien, Aufteilen/Zusammenführen, Vorlauf, Regeln) · Wiedervorlage für Mails · „Meine Daten wiederherstellen“ beim ersten Start
 - **1.7.0** – Microsoft-Store-Version (kein Blockieren mehr durch Smart App Control)
 - **1.6.0** – Kalender live, Termine aus Mails, Schnelleingabe mit Uhrzeit, Wochenrückblick

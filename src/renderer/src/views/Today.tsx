@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactElement } from 'react'
 import { Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Inbox, Sparkles, Sun, CheckCircle2, Plus, Settings2, BarChart3 } from 'lucide-react'
 import { buildBrief, eventsOnDay, findConflicts, freeBlocks, groupThreads, isDueToday, isOverdue, sortTasks, eventHasConflict, type BriefItem } from '@shared/analysis'
 import type { CalEvent, DashboardCardId, ViewId, WeatherResult } from '@shared/types'
+import { OPEN_METEO } from '@shared/services'
 import { useStore } from '@/lib/store'
 import { dueLabel, fDayLong, fTime, greeting, mailDate, projectHue, projectName } from '@/lib/format'
 import { toggleTask } from '@/lib/actions'
@@ -328,13 +329,17 @@ function WeatherInline({ city, enabled }: { city: string; enabled: boolean }) {
   if (!w.ok) return <div className="weather">{w.error}</div>
   const Icon = weatherIcon(w.code)
   return (
-    <div className="weather" title="Quelle: Open-Meteo">
+    <div className="weather">
       <Icon aria-hidden="true" />
       <div>
         <div className="temp">{Math.round(w.temperature ?? 0)}°</div>
         <div style={{ fontSize: 'var(--fs-sm)' }}>
           {w.city} · {Math.round(w.min ?? 0)}°/{Math.round(w.max ?? 0)}°{w.precipitation ? ` · ${w.precipitation}% Regen` : ''}
         </div>
+        {/* Pflichthinweis der Lizenz (CC BY 4.0) */}
+        <a className="weather-credit" href={OPEN_METEO.url} target="_blank" rel="noreferrer" title={`Wetterdaten von Open-Meteo.com, Lizenz ${OPEN_METEO.license.text}`}>
+          Wetterdaten: Open-Meteo
+        </a>
       </div>
     </div>
   )

@@ -540,3 +540,36 @@
   width: 36px;
   height: 36px;
 }
+
+/* Datenschutz: verbundene Dienste */
+.settings-content > p a,
+.setting .label span a,
+.source-row .label span a,
+.services a {
+  color: var(--accent-text);
+}
+.services {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  border-radius: var(--r-md);
+  background: var(--raised);
+  box-shadow: inset 0 0 0 1px var(--line-soft);
+}
+.services li {
+  display: grid;
+  grid-template-columns: minmax(120px, 30%) 1fr;
+  gap: 12px;
+  padding: 10px 14px;
+  line-height: var(--lh);
+}
+.services li + li {
+  border-top: 1px solid var(--line-soft);
+}
+.services li > a {
+  font-weight: var(--fw-medium);
+}
+.services li > span {
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+}

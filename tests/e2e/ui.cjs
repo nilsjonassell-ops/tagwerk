@@ -149,6 +149,41 @@ const tests = {
     await p.context().close()
   },
 
+  async credits(b, url) {
+    const p = await start(b, url)
+    // Wetterdienst abfangen – der Test braucht kein Internet
+    await p.route(/geocoding-api\.open-meteo\.com/, (r) => r.fulfill({ json: { results: [{ name: 'Frankfurt am Main', latitude: 50.1, longitude: 8.7 }] } }))
+    await p.route(/api\.open-meteo\.com\/v1\/forecast/, (r) => r.fulfill({ json: { current: { temperature_2m: 12, weather_code: 3 }, daily: { temperature_2m_max: [14], temperature_2m_min: [6], precipitation_probability_max: [20] } } }))
+    await p.keyboard.press('Control+,')
+    await p.waitForSelector('.settings-nav')
+    await p.locator('.settings-nav button:has-text("Konten")').click()
+    await sleep(250)
+    ok(/CC BY 4\.0/.test(await p.locator('.settings-content').innerText()), 'Einstellungen nennen Open-Meteo-Lizenz (CC BY 4.0)')
+    await p.locator('[role="switch"][aria-label="Wetter aktivieren"]').click()
+    const city = p.locator('input[placeholder="z. B. Frankfurt am Main"]')
+    await city.fill('Frankfurt')
+    await city.press('Enter')
+    await p.locator('.settings-nav button:has-text("Datenschutz")').click()
+    await sleep(250)
+    const priv = await p.locator('.settings-content').innerText()
+    ok(!/ausschließlich lokal/.test(priv), 'Datenschutz behauptet nicht „ausschließlich lokal“ (OneDrive-Sicherung möglich)')
+    for (const name of ['Google', 'Microsoft', 'Apple', 'Open-Meteo', 'Anthropic']) {
+      ok((await p.locator(`.services a[href^="https://"]:has-text("${name}")`).count()) > 0, `Dienste-Liste verlinkt ${name}`)
+    }
+    ok((await p.locator('a[href*="PRIVACY.md"]').count()) > 0, 'Link zur Datenschutzerklärung')
+    const linkColor = await p.locator('.services a').first().evaluate((el) => getComputedStyle(el).color)
+    const want = await p.evaluate(() => { const d = document.createElement('i'); d.style.color = 'var(--accent-text)'; document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c })
+    ok(linkColor === want, `Links in Akzent-Textfarbe (${linkColor})`)
+    await p.keyboard.press('Escape')
+    await sleep(300)
+    await p.keyboard.press('Control+1')
+    await p.waitForSelector('.weather .temp', { timeout: 5000 }).catch(() => {})
+    const credit = p.locator('.weather a[href^="https://open-meteo.com"]')
+    ok((await credit.count()) === 1 && (await credit.isVisible()), 'Wetterkarte nennt sichtbar „Open-Meteo“ als Quelle (verlinkt)')
+    ok(p.errors.length === 0, `keine Konsolenfehler (${p.errors.slice(0, 2).join(' | ')})`)
+    await p.context().close()
+  },
+
   async appearance(b, url) {
     const p = await start(b, url)
     await p.keyboard.press('Control+,')

@@ -38,6 +38,17 @@
   stroke-width: 1.5;
   color: var(--ink-2);
 }
+.weather-credit {
+  display: block;
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  text-decoration: none;
+}
+.weather-credit:hover,
+.weather-credit:focus-visible {
+  color: var(--ink-2);
+  text-decoration: underline;
+}
 .weather .temp {
   font-size: var(--fs-xl);
   color: var(--ink);

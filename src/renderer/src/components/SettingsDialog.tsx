@@ -6,6 +6,7 @@ import {
   X, Palette, ListChecks, ArrowRight
 } from 'lucide-react'
 import { createDemoData, removeDemo } from '@shared/demo'
+import { OPEN_METEO, PRIVACY_POLICY_URL, SERVICES } from '@shared/services'
 import { CLAUDE_MODELS, type DashboardCardId, type Settings, type Source, type SuggestionKind } from '@shared/types'
 import { confirm, useStore } from '@/lib/store'
 import { VIEW_META } from './Sidebar'
@@ -435,7 +436,11 @@ function Sources() {
         <div className="icon"><CloudSun /></div>
         <div className="label">
           <b>Open-Meteo {s.weather.enabled && s.weather.city ? <span className="tag ok">aktiv</span> : <span className="tag">aus</span>}</b>
-          <span>Kein Konto nötig. Übertragen wird nur der eingetragene Ort. Erscheint auf „Heute“, wenn die Karte „Wetter“ eingeblendet ist.</span>
+          <span>
+            Kein Konto nötig. Übertragen wird nur der eingetragene Ort. Erscheint auf „Heute“, wenn die Karte „Wetter“ eingeblendet ist. Wetterdaten von{' '}
+            <a href={OPEN_METEO.url} target="_blank" rel="noreferrer">Open-Meteo.com</a>, Lizenz{' '}
+            <a href={OPEN_METEO.license.url} target="_blank" rel="noreferrer">{OPEN_METEO.license.text}</a>.
+          </span>
         </div>
         <Switch
           label="Wetter aktivieren"
@@ -564,7 +569,10 @@ function Privacy() {
   return (
     <>
       <h3>Datenschutz & Aufbewahrung</h3>
-      <p>Alle Daten werden ausschließlich lokal gespeichert. Protokolle enthalten keine Inhalte aus Mails, Notizen oder Gesprächen.</p>
+      <p>
+        Deine Daten liegen auf diesem PC – und, wenn du den Cloud-Speicher einschaltest, zusätzlich in deinem eigenen OneDrive. Tagwerk hat keinen eigenen Server, kein Tracking und keine Werbung. Protokolle enthalten keine Inhalte aus Mails, Notizen oder Gesprächen.{' '}
+        <a href={PRIVACY_POLICY_URL} target="_blank" rel="noreferrer">Datenschutzerklärung lesen</a>
+      </p>
       <Row label="Archivierte Aufgaben aufbewahren">
         <Select aria-label="Archivierte Aufgaben aufbewahren" value={String(s.retention.archivedTasksDays)} onChange={(v) => set({ retention: { archivedTasksDays: Number(v) } })} options={[{ value: '30', label: '30 Tage' }, { value: '90', label: '90 Tage' }, { value: '180', label: '6 Monate' }, { value: '365', label: '1 Jahr' }, { value: '0', label: 'Unbegrenzt' }]} />
       </Row>
@@ -580,6 +588,24 @@ function Privacy() {
       <Row label="Alle Daten löschen" hint="Setzt Tagwerk vollständig zurück.">
         <button className="btn small danger" onClick={wipe}><Trash2 /> Alles löschen</button>
       </Row>
+
+      <h3>Verbundene Dienste</h3>
+      <p>Daten gehen nur an Dienste, die du selbst verbindest oder einschaltest – direkt von deinem PC aus. Es gelten zusätzlich deren Datenschutzbestimmungen.</p>
+      <ul className="services">
+        {SERVICES.map((x) => (
+          <li key={x.id}>
+            <a href={x.privacy} target="_blank" rel="noreferrer">{x.name}</a>
+            <span>
+              {x.what}
+              {x.license && (
+                <>
+                  {' '}· Lizenz <a href={x.license.url} target="_blank" rel="noreferrer">{x.license.text}</a>
+                </>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
     </>
   )
 }
