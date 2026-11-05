@@ -168,6 +168,25 @@ const tests = {
     await p.context().close()
   },
 
+  async 'meals-upgrade'(b, url) {
+    // Bestehende Nutzer: gespeicherte Seitenleiste ohne „Essen“ – der neue Bereich muss trotzdem erscheinen
+    const ctx = await b.newContext({ viewport: { width: 1280, height: 820 } })
+    await ctx.addInitScript(() => {
+      if (localStorage.getItem('tagwerk-web:settings')) return
+      const ids = ['today', 'calendar', 'inbox', 'tasks', 'notes', 'projects']
+      localStorage.setItem('tagwerk-web:settings', JSON.stringify({ onboarded: true, sidebar: ids.map((id) => ({ id, visible: true })) }))
+    })
+    const p = await ctx.newPage()
+    await p.goto(url)
+    await p.waitForSelector('.app, .dialog')
+    const go = p.locator('button:has-text("Loslegen")')
+    if (await go.count()) await go.first().click()
+    await p.waitForSelector('.app')
+    await sleep(400)
+    ok((await p.locator('.nav-item[title^="Essen"]').count()) === 1, 'Nach dem Update: „Essen“ erscheint in der Seitenleiste')
+    await ctx.close()
+  },
+
   async 'meals-shopping'(b, url) {
     const p = await start(b, url)
     await openMeals(p, 'Einkaufsliste')

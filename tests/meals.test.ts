@@ -71,3 +71,12 @@ test('Folgeaktionen beim Löschen: Termin und Zutaten werden benannt, Bearbeitet
   const none = mealFollowUps(meal({ id: 'zzz' }), [], [])
   assert.deepEqual([none.eventId, none.removable, none.keptEdited.length], [undefined, 0, 0])
 })
+
+test('Update: gespeicherte Seitenleiste bekommt „Essen“ dazu, eigene Reihenfolge bleibt', async () => {
+  const { completeList } = await import('../src/shared/lists.ts')
+  const { DEFAULT_SETTINGS } = await import('../src/shared/types.ts')
+  const old = [{ id: 'inbox', visible: true }, { id: 'today', visible: false }] as typeof DEFAULT_SETTINGS.sidebar
+  const next = completeList(old, DEFAULT_SETTINGS.sidebar)
+  assert.deepEqual(next.slice(0, 2).map((x) => [x.id, x.visible]), [['inbox', true], ['today', false]])
+  assert.ok(next.some((x) => x.id === 'meals' && x.visible))
+})

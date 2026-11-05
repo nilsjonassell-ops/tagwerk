@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { DEFAULT_SETTINGS, type AppData, type Settings } from '@shared/types'
 import { normalizeAppearance, normalizeSidebarMode } from '@shared/appearance'
 import { log } from './log'
+import { completeList } from '@shared/lists'
 
 const dir = () => {
   const d = join(app.getPath('userData'), 'data')
@@ -99,10 +100,3 @@ function mergeSettings(raw: Partial<Settings>): Settings {
   return s
 }
 
-function completeList<T extends { id: string }>(user: T[] | undefined, defaults: T[]): T[] {
-  if (!Array.isArray(user)) return defaults.map((x) => ({ ...x }))
-  const known = new Set(defaults.map((x) => x.id))
-  const kept = user.filter((x) => known.has(x.id))
-  for (const def of defaults) if (!kept.some((x) => x.id === def.id)) kept.push({ ...def })
-  return kept
-}
