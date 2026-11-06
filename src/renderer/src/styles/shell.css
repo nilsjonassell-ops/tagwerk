@@ -68,8 +68,34 @@ body::before {
   box-shadow: var(--glass-rim), var(--glass-edge), var(--shadow-2);
 }
 .view-header {
-  border-bottom-color: var(--line-soft);
+  position: relative;
+  z-index: 5;
   padding-left: 26px;
+}
+/* Kopfzeile ohne Trennlinie: zarte Glastönung, die nach unten weich ausläuft (wie macOS-Fenster) */
+.view-header::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 -18px 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--canvas) 55%, transparent), color-mix(in srgb, var(--canvas) 0%, transparent));
+}
+/* Folgt der Inhalt direkt, schwebt die Kopfzeile darüber */
+.view-header:has(+ .view-body) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+.view-header + .view-body {
+  padding-top: var(--titlebar);
+  scroll-padding-top: calc(var(--titlebar) + 12px);
+}
+/* Scrollender Inhalt blendet unter der Kopfzeile weich aus statt an einer Linie abzubrechen */
+.view-header + .view-body.scrolls {
+  -webkit-mask-image: linear-gradient(to bottom, transparent calc(var(--titlebar) - 10px), #000 calc(var(--titlebar) + 18px));
+  mask-image: linear-gradient(to bottom, transparent calc(var(--titlebar) - 10px), #000 calc(var(--titlebar) + 18px));
 }
 .view-title {
   font-size: 16px;

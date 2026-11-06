@@ -54,7 +54,7 @@ export function TasksView() {
           ]}
         />
       </ViewHeader>
-      <div className="view-body">
+      <div className="view-body scrolls">
         <div className="tasks-view">
           {tab !== 'done' && (
             <>

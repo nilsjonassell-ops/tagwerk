@@ -148,7 +148,7 @@ export function TodayView() {
           <Plus /> Aufgabe
         </button>
       </ViewHeader>
-      <div className="view-body">
+      <div className="view-body scrolls">
         <div className="today">
           <div className="greeting">
             <div>

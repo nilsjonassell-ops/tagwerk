@@ -181,7 +181,6 @@
   gap: 12px;
   padding: 0 20px 0 24px;
   padding-right: max(20px, calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw) + 12px));
-  border-bottom: 1px solid var(--line-soft);
 }
 .app.panel-open .view-header {
   padding-right: 20px;

@@ -46,7 +46,7 @@ export function MealsView() {
           ]}
         />
       </ViewHeader>
-      <div className="view-body">
+      <div className="view-body scrolls">
         <div className="meals-view" data-tab={tab}>
           {tab === 'plan' && <MealPlan />}
           {tab === 'recipes' && <Recipes />}
