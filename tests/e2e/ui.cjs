@@ -217,6 +217,41 @@ const tests = {
     await p.context().close()
   },
 
+  async intro(b, url) {
+    const p = await start(b, url)
+    await sleep(1500)
+    await p.reload({ waitUntil: 'commit' })
+    await p.waitForSelector('.intro .intro-tile', { timeout: 5000 })
+    await p.waitForSelector('.intro', { state: 'detached', timeout: 4000 })
+    // in der Seite gemessen (ab Navigationsbeginn), ohne Playwright-Abfrageverzug
+    const ms = await p.evaluate(
+      () =>
+        new Promise((res) => {
+          const t = performance.now()
+          res(Math.round(t))
+        })
+    )
+    ok(ms < 3000, `Startanimation ist kurz (App frei nach ${ms} ms ab Seitenstart)`)
+    ok((await p.locator('.sidebar .brand-mark').count()) === 1, 'Ziel für den Übergang: Logo in der Seitenleiste')
+    // Überspringen per Taste
+    await p.reload({ waitUntil: 'commit' })
+    await p.waitForSelector('.intro .intro-tile')
+    await sleep(400)
+    const t1 = Date.now()
+    await p.keyboard.press('Space')
+    await p.waitForSelector('.intro', { state: 'detached', timeout: 3000 })
+    ok(Date.now() - t1 < 900, 'Taste überspringt die Startanimation')
+    ok(p.errors.length === 0, `keine Fehler (${p.errors[0] ?? ''})`)
+    await p.context().close()
+    // Reduzierte Bewegung: keine Startanimation
+    const ctx = await b.newContext({ viewport: { width: 1280, height: 820 }, reducedMotion: 'reduce' })
+    const q = await ctx.newPage()
+    await q.goto(url)
+    await q.waitForSelector('.welcome')
+    ok((await q.locator('.intro').count()) === 0, 'Reduzierte Bewegung: keine Startanimation')
+    await ctx.close()
+  },
+
   async welcome(b, url) {
     const ctx = await b.newContext({ viewport: { width: 1280, height: 820 } })
     const p = await ctx.newPage()
