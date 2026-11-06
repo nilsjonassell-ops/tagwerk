@@ -74,13 +74,13 @@
 
 :root,
 :root[data-theme='light'] {
-  --glass-side: rgb(235 235 238 / 0.48);
-  --glass-main: rgb(245 245 247 / 0.64);
-  --glass-card: rgb(255 255 255 / 0.72);
+  --glass-side: rgb(235 235 238 / 0.56);
+  --glass-main: rgb(245 245 247 / 0.5);
+  --glass-card: rgb(255 255 255 / 0.78);
   --glass-dialog: rgb(255 255 255 / 0.8);
   --glass-pop: rgb(255 255 255 / 0.84);
-  --wash-strength: 85%;
-  --wash-3: #94e6d8;
+  --wash-strength: 100%;
+  --wash-3: #7ddccd;
   --glass-rim: inset 0 0 0 0.5px rgb(255 255 255 / 0.75), inset 0 1px 0 rgb(255 255 255 / 0.9);
   --glass-edge: 0 0 0 0.5px rgb(0 0 0 / 0.12);
   --bg: #e9eaef;
@@ -109,13 +109,13 @@
   --ok-soft: #e6f4ea;
 }
 :root[data-theme='dark'] {
-  --glass-side: rgb(35 35 37 / 0.42);
-  --glass-main: rgb(28 28 30 / 0.6);
+  --glass-side: rgb(35 35 37 / 0.54);
+  --glass-main: rgb(28 28 30 / 0.55);
   --glass-card: rgb(44 44 46 / 0.66);
   --glass-dialog: rgb(44 44 46 / 0.84);
   --glass-pop: rgb(44 44 46 / 0.86);
-  --wash-strength: 80%;
-  --wash-3: #0e4f52;
+  --wash-strength: 100%;
+  --wash-3: #11666a;
   --glass-rim: inset 0 0 0 0.5px rgb(255 255 255 / 0.09), inset 0 1px 0 rgb(255 255 255 / 0.06);
   --glass-edge: 0 0 0 0.5px rgb(0 0 0 / 0.55);
   --bg: #0f0f10;
@@ -199,15 +199,15 @@
 :root[data-accent='blue'] {
   --accent: #0071e3;
   --accent-ink: #ffffff;
-  --accent-text: #0057b3;
+  --accent-text: #0051a3;
   --accent-soft: #e8f1fc;
   --accent-line: #a9cbf3;
   --selected: #e8f1fc;
   --focus-ring: #0071e3;
   --ring: 0 0 0 2px var(--canvas), 0 0 0 4px #0071e3;
   --hatch: color-mix(in srgb, #0071e3 8%, transparent);
-  --wash-1: #7cb8ff;
-  --wash-2: #c4b0ff;
+  --wash-1: #5ea6ff;
+  --wash-2: #b39bff;
 }
 :root[data-theme='dark'][data-accent='blue'],
 :root[data-theme='dark']:not([data-accent]) {
@@ -220,8 +220,8 @@
   --focus-ring: #0a74e6;
   --ring: 0 0 0 2px var(--canvas), 0 0 0 4px #0a74e6;
   --hatch: color-mix(in srgb, #0a74e6 8%, transparent);
-  --wash-1: #1d4f9e;
-  --wash-2: #45308a;
+  --wash-1: #1b4fa6;
+  --wash-2: #4d339e;
 }
 :root[data-accent='green'] {
   --accent: #1d7346;
@@ -252,7 +252,7 @@
 :root[data-accent='amber'] {
   --accent: #9a5300;
   --accent-ink: #ffffff;
-  --accent-text: #8f4d00;
+  --accent-text: #824500;
   --accent-soft: #fbeedb;
   --accent-line: #ecc58e;
   --selected: #fbeedb;

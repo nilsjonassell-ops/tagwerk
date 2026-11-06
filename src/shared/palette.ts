@@ -93,8 +93,8 @@ export const PALETTE: {
   },
   // Glas wie macOS: durchscheinende Flächen über einem weichen Verlauf in Apple-Farben (Himmelblau, Lavendel, Mint)
   glass: {
-    light: { side: 0.48, main: 0.64, card: 0.72, dialog: 0.8, pop: 0.84, wash: 0.85 },
-    dark: { side: 0.42, main: 0.6, card: 0.66, dialog: 0.84, pop: 0.86, wash: 0.8 }
+    light: { side: 0.56, main: 0.5, card: 0.78, dialog: 0.8, pop: 0.84, wash: 1 },
+    dark: { side: 0.54, main: 0.55, card: 0.66, dialog: 0.84, pop: 0.86, wash: 1 }
   },
   status: {
     light: { alert: '#d70015', alertSoft: '#fdecee', attention: '#a64b00', attentionSoft: '#fdf1e3', ok: '#1d7a36', okSoft: '#e6f4ea' },
@@ -111,15 +111,15 @@ export const PALETTE: {
     },
     // Systemblau wie bei Apple (Standard)
     blue: {
-      light: { base: '#0071e3', ink: '#ffffff', text: '#0057b3', soft: '#e8f1fc', line: '#a9cbf3', wash: ['#7cb8ff', '#c4b0ff'] },
-      dark: { base: '#0a74e6', ink: '#ffffff', text: '#5eaeff', soft: '#16314f', line: '#2d5687', wash: ['#1d4f9e', '#45308a'] }
+      light: { base: '#0071e3', ink: '#ffffff', text: '#0051a3', soft: '#e8f1fc', line: '#a9cbf3', wash: ['#5ea6ff', '#b39bff'] },
+      dark: { base: '#0a74e6', ink: '#ffffff', text: '#5eaeff', soft: '#16314f', line: '#2d5687', wash: ['#1b4fa6', '#4d339e'] }
     },
     green: {
       light: { base: '#1d7346', ink: '#ffffff', text: '#1b6b41', soft: '#e2f2e8', line: '#a7d4b8', wash: ['#a9dcbc', '#d4e9b4'] },
       dark: { base: '#6fd09c', ink: '#0a2416', text: '#85dbac', soft: '#15301f', line: '#2d6243', wash: ['#195536', '#3c5218'] }
     },
     amber: {
-      light: { base: '#9a5300', ink: '#ffffff', text: '#8f4d00', soft: '#fbeedb', line: '#ecc58e', wash: ['#f5cf96', '#f6b9a4'] },
+      light: { base: '#9a5300', ink: '#ffffff', text: '#824500', soft: '#fbeedb', line: '#ecc58e', wash: ['#f5cf96', '#f6b9a4'] },
       dark: { base: '#f2b35a', ink: '#2b1800', text: '#f5c27a', soft: '#36260f', line: '#6e4d1c', wash: ['#6a4310', '#6a2a1c'] }
     },
     rose: {

@@ -92,7 +92,7 @@ function neutral(n: Neutral, s: Status, g: Glass, mode: 'light' | 'dark'): strin
     `  --glass-pop: ${rgb(n.raised, g.pop)};`,
     `  --wash-strength: ${Math.round(g.wash * 100)}%;`,
     // dritter, fester Ton im Verlauf: Apple-Mint
-    `  --wash-3: ${dark ? '#0e4f52' : '#94e6d8'};`,
+    `  --wash-3: ${dark ? '#11666a' : '#7ddccd'};`,
     // feine Kontur: innen eine helle Lichtkante, außen eine zarte Linie
     dark ? `  --glass-rim: inset 0 0 0 0.5px rgb(255 255 255 / 0.09), inset 0 1px 0 rgb(255 255 255 / 0.06);` : `  --glass-rim: inset 0 0 0 0.5px rgb(255 255 255 / 0.75), inset 0 1px 0 rgb(255 255 255 / 0.9);`,
     dark ? `  --glass-edge: 0 0 0 0.5px rgb(0 0 0 / 0.55);` : `  --glass-edge: 0 0 0 0.5px rgb(0 0 0 / 0.12);`,
