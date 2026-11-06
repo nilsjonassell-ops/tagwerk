@@ -74,24 +74,25 @@
 
 :root,
 :root[data-theme='light'] {
-  --glass-side: rgb(235 235 238 / 0.8);
-  --glass-main: rgb(245 245 247 / 0.97);
-  --glass-card: rgb(255 255 255 / 1);
-  --glass-dialog: rgb(255 255 255 / 0.88);
-  --glass-pop: rgb(255 255 255 / 0.9);
-  --wash-strength: 0%;
+  --glass-side: rgb(235 235 238 / 0.48);
+  --glass-main: rgb(245 245 247 / 0.64);
+  --glass-card: rgb(255 255 255 / 0.72);
+  --glass-dialog: rgb(255 255 255 / 0.8);
+  --glass-pop: rgb(255 255 255 / 0.84);
+  --wash-strength: 85%;
+  --wash-3: #94e6d8;
   --glass-rim: inset 0 0 0 0.5px rgb(255 255 255 / 0.75), inset 0 1px 0 rgb(255 255 255 / 0.9);
   --glass-edge: 0 0 0 0.5px rgb(0 0 0 / 0.12);
-  --bg: #dfdfe3;
+  --bg: #e9eaef;
   --canvas: #f5f5f7;
   --raised: #ffffff;
   --sunken: #ededf0;
   --ink: #1d1d1f;
   --ink-2: #424245;
-  --ink-3: #646469;
+  --ink-3: #545459;
   --line: #d9d9de;
   --line-soft: #ebebef;
-  --surface-0: #dfdfe3;
+  --surface-0: #e9eaef;
   --surface-1: #f5f5f7;
   --surface-2: rgba(255, 255, 255, 0.86);
   --surface-2-solid: #ffffff;
@@ -108,12 +109,13 @@
   --ok-soft: #e6f4ea;
 }
 :root[data-theme='dark'] {
-  --glass-side: rgb(35 35 37 / 0.82);
-  --glass-main: rgb(28 28 30 / 0.97);
-  --glass-card: rgb(44 44 46 / 0.96);
-  --glass-dialog: rgb(44 44 46 / 0.9);
-  --glass-pop: rgb(44 44 46 / 0.92);
-  --wash-strength: 0%;
+  --glass-side: rgb(35 35 37 / 0.42);
+  --glass-main: rgb(28 28 30 / 0.6);
+  --glass-card: rgb(44 44 46 / 0.66);
+  --glass-dialog: rgb(44 44 46 / 0.84);
+  --glass-pop: rgb(44 44 46 / 0.86);
+  --wash-strength: 80%;
+  --wash-3: #0e4f52;
   --glass-rim: inset 0 0 0 0.5px rgb(255 255 255 / 0.09), inset 0 1px 0 rgb(255 255 255 / 0.06);
   --glass-edge: 0 0 0 0.5px rgb(0 0 0 / 0.55);
   --bg: #0f0f10;
@@ -144,7 +146,7 @@
 :root[data-accent='indigo'] {
   --accent: #3a5af0;
   --accent-ink: #ffffff;
-  --accent-text: #3150e0;
+  --accent-text: #2a44c4;
   --accent-soft: #e8ecfe;
   --accent-line: #b7c3fb;
   --selected: #e8ecfe;
@@ -197,15 +199,15 @@
 :root[data-accent='blue'] {
   --accent: #0071e3;
   --accent-ink: #ffffff;
-  --accent-text: #0066cc;
+  --accent-text: #0057b3;
   --accent-soft: #e8f1fc;
   --accent-line: #a9cbf3;
   --selected: #e8f1fc;
   --focus-ring: #0071e3;
   --ring: 0 0 0 2px var(--canvas), 0 0 0 4px #0071e3;
   --hatch: color-mix(in srgb, #0071e3 8%, transparent);
-  --wash-1: #a3cdfa;
-  --wash-2: #bfe4f5;
+  --wash-1: #7cb8ff;
+  --wash-2: #c4b0ff;
 }
 :root[data-theme='dark'][data-accent='blue'],
 :root[data-theme='dark']:not([data-accent]) {
@@ -218,8 +220,8 @@
   --focus-ring: #0a74e6;
   --ring: 0 0 0 2px var(--canvas), 0 0 0 4px #0a74e6;
   --hatch: color-mix(in srgb, #0a74e6 8%, transparent);
-  --wash-1: #16457e;
-  --wash-2: #174f66;
+  --wash-1: #1d4f9e;
+  --wash-2: #45308a;
 }
 :root[data-accent='green'] {
   --accent: #1d7346;
@@ -276,7 +278,7 @@
 :root[data-accent='rose'] {
   --accent: #c22d5c;
   --accent-ink: #ffffff;
-  --accent-text: #b52855;
+  --accent-text: #a3214b;
   --accent-soft: #fce6ed;
   --accent-line: #f1b0c4;
   --selected: #fce6ed;

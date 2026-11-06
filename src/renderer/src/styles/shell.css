@@ -27,7 +27,8 @@ body::before {
     radial-gradient(55% 65% at 8% 6%, color-mix(in srgb, var(--wash-1) var(--wash-strength), transparent), transparent 72%),
     radial-gradient(50% 60% at 96% 10%, color-mix(in srgb, var(--wash-2) calc(var(--wash-strength) * 0.8), transparent), transparent 72%),
     radial-gradient(60% 60% at 70% 100%, color-mix(in srgb, var(--wash-1) calc(var(--wash-strength) * 0.7), transparent), transparent 74%),
-    radial-gradient(45% 55% at 0% 100%, color-mix(in srgb, var(--wash-2) calc(var(--wash-strength) * 0.6), transparent), transparent 72%),
+    radial-gradient(45% 55% at 0% 100%, color-mix(in srgb, var(--wash-3) calc(var(--wash-strength) * 0.7), transparent), transparent 72%),
+    radial-gradient(40% 45% at 48% 42%, color-mix(in srgb, var(--wash-2) calc(var(--wash-strength) * 0.35), transparent), transparent 72%),
     var(--bg);
 }
 ::selection {

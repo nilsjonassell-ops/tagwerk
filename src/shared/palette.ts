@@ -67,13 +67,13 @@ export const PALETTE: {
   // Neutral wie macOS: reines Grau ohne Farbstich, Weiß als Arbeitsfläche, Text in Apple-Tinte
   neutral: {
     light: {
-      bg: '#dfdfe3',
+      bg: '#e9eaef',
       canvas: '#f5f5f7',
       raised: '#ffffff',
       sunken: '#ededf0',
       ink: '#1d1d1f',
       ink2: '#424245',
-      ink3: '#646469',
+      ink3: '#545459',
       line: '#d9d9de',
       lineSoft: '#ebebef',
       side: '#ebebee'
@@ -91,10 +91,10 @@ export const PALETTE: {
       side: '#232325'
     }
   },
-  // kein Farbverlauf mehr im Hintergrund – Glas nur als Milchglas der Seitenleiste und schwebender Ebenen
+  // Glas wie macOS: durchscheinende Flächen über einem weichen Verlauf in Apple-Farben (Himmelblau, Lavendel, Mint)
   glass: {
-    light: { side: 0.8, main: 0.97, card: 1, dialog: 0.88, pop: 0.9, wash: 0 },
-    dark: { side: 0.82, main: 0.97, card: 0.96, dialog: 0.9, pop: 0.92, wash: 0 }
+    light: { side: 0.48, main: 0.64, card: 0.72, dialog: 0.8, pop: 0.84, wash: 0.85 },
+    dark: { side: 0.42, main: 0.6, card: 0.66, dialog: 0.84, pop: 0.86, wash: 0.8 }
   },
   status: {
     light: { alert: '#d70015', alertSoft: '#fdecee', attention: '#a64b00', attentionSoft: '#fdf1e3', ok: '#1d7a36', okSoft: '#e6f4ea' },
@@ -102,7 +102,7 @@ export const PALETTE: {
   },
   accents: {
     indigo: {
-      light: { base: '#3a5af0', ink: '#ffffff', text: '#3150e0', soft: '#e8ecfe', line: '#b7c3fb', wash: ['#9fb2ff', '#f2b8dc'] },
+      light: { base: '#3a5af0', ink: '#ffffff', text: '#2a44c4', soft: '#e8ecfe', line: '#b7c3fb', wash: ['#9fb2ff', '#f2b8dc'] },
       dark: { base: '#8fa3ff', ink: '#0c1233', text: '#a5b5ff', soft: '#1e2550', line: '#3a4794', wash: ['#2a3a9a', '#6a2a6e'] }
     },
     petrol: {
@@ -111,8 +111,8 @@ export const PALETTE: {
     },
     // Systemblau wie bei Apple (Standard)
     blue: {
-      light: { base: '#0071e3', ink: '#ffffff', text: '#0066cc', soft: '#e8f1fc', line: '#a9cbf3', wash: ['#a3cdfa', '#bfe4f5'] },
-      dark: { base: '#0a74e6', ink: '#ffffff', text: '#5eaeff', soft: '#16314f', line: '#2d5687', wash: ['#16457e', '#174f66'] }
+      light: { base: '#0071e3', ink: '#ffffff', text: '#0057b3', soft: '#e8f1fc', line: '#a9cbf3', wash: ['#7cb8ff', '#c4b0ff'] },
+      dark: { base: '#0a74e6', ink: '#ffffff', text: '#5eaeff', soft: '#16314f', line: '#2d5687', wash: ['#1d4f9e', '#45308a'] }
     },
     green: {
       light: { base: '#1d7346', ink: '#ffffff', text: '#1b6b41', soft: '#e2f2e8', line: '#a7d4b8', wash: ['#a9dcbc', '#d4e9b4'] },
@@ -123,7 +123,7 @@ export const PALETTE: {
       dark: { base: '#f2b35a', ink: '#2b1800', text: '#f5c27a', soft: '#36260f', line: '#6e4d1c', wash: ['#6a4310', '#6a2a1c'] }
     },
     rose: {
-      light: { base: '#c22d5c', ink: '#ffffff', text: '#b52855', soft: '#fce6ed', line: '#f1b0c4', wash: ['#f6b0c8', '#d8b8f5'] },
+      light: { base: '#c22d5c', ink: '#ffffff', text: '#a3214b', soft: '#fce6ed', line: '#f1b0c4', wash: ['#f6b0c8', '#d8b8f5'] },
       dark: { base: '#ff8fb1', ink: '#330a19', text: '#ffa3bf', soft: '#3d1a27', line: '#7a3550', wash: ['#6e1f40', '#4b2373'] }
     },
     graphite: {
