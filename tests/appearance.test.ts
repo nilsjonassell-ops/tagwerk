@@ -5,18 +5,25 @@ import { SYNCED_SETTINGS } from '../src/shared/cloud.ts'
 
 test('unbekannte Akzent- und Bewegungswerte fallen auf die Standards zurück', () => {
   const r = normalizeAppearance({ accent: 'purple' as never, motion: 'x' as never, theme: 'neon' as never })
-  assert.deepEqual(r, { theme: 'system', accent: 'indigo', motion: 'system' })
+  assert.deepEqual(r, { theme: 'system', accent: 'blue', motion: 'system', designRev: 2 })
 })
 
 test('gültige Werte bleiben erhalten', () => {
-  assert.deepEqual(normalizeAppearance({ theme: 'dark', accent: 'rose', motion: 'reduced' }), { theme: 'dark', accent: 'rose', motion: 'reduced' })
+  assert.deepEqual(normalizeAppearance({ theme: 'dark', accent: 'rose', motion: 'reduced' }), { theme: 'dark', accent: 'rose', motion: 'reduced', designRev: 2 })
 })
 
-test('sieben Akzente, Indigo zuerst', () => {
+test('sieben Akzente, Systemblau zuerst', () => {
   assert.deepEqual(
     ACCENTS.map((a) => a.id),
-    ['indigo', 'petrol', 'blue', 'green', 'amber', 'rose', 'graphite']
+    ['blue', 'indigo', 'petrol', 'green', 'amber', 'rose', 'graphite']
   )
+})
+
+test('neues Design: altes Standard-Indigo wird einmalig zu Blau, bewusst gewähltes Indigo bleibt danach', () => {
+  assert.equal(normalizeAppearance({ accent: 'indigo' }).accent, 'blue')
+  assert.equal(normalizeAppearance({ accent: 'indigo', designRev: 1 }).accent, 'blue')
+  assert.equal(normalizeAppearance({ accent: 'indigo', designRev: 2 }).accent, 'indigo')
+  assert.equal(normalizeAppearance({ accent: 'petrol' }).accent, 'petrol')
 })
 
 test('Akzent und Bewegung werden zwischen PCs übertragen', () => {

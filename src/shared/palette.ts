@@ -12,6 +12,8 @@ export interface Neutral {
   ink3: string
   line: string
   lineSoft: string
+  /** Seitenleiste (Milchglas wie in macOS) */
+  side: string
 }
 
 export interface AccentTone {
@@ -62,37 +64,41 @@ export const PALETTE: {
   glass: Pair<Glass>
   accents: Record<AccentId, Pair<AccentTone>>
 } = {
+  // Neutral wie macOS: reines Grau ohne Farbstich, Weiß als Arbeitsfläche, Text in Apple-Tinte
   neutral: {
     light: {
-      bg: '#eceef5',
-      canvas: '#f7f8fb',
+      bg: '#dfdfe3',
+      canvas: '#f5f5f7',
       raised: '#ffffff',
-      sunken: '#eef0f5',
-      ink: '#141726',
-      ink2: '#454a5d',
-      ink3: '#5b6175',
-      line: '#dcdfe8',
-      lineSoft: '#e8eaf0'
+      sunken: '#ededf0',
+      ink: '#1d1d1f',
+      ink2: '#424245',
+      ink3: '#646469',
+      line: '#d9d9de',
+      lineSoft: '#ebebef',
+      side: '#ebebee'
     },
     dark: {
-      bg: '#0b0d14',
-      canvas: '#12141d',
-      raised: '#191c27',
-      sunken: '#0f1119',
-      ink: '#eceef5',
-      ink2: '#b6bbcb',
-      ink3: '#9097aa',
-      line: '#2a2e3c',
-      lineSoft: '#212432'
+      bg: '#0f0f10',
+      canvas: '#1c1c1e',
+      raised: '#2c2c2e',
+      sunken: '#18181a',
+      ink: '#f5f5f7',
+      ink2: '#c7c7cc',
+      ink3: '#a1a1a6',
+      line: '#3a3a3c',
+      lineSoft: '#2e2e31',
+      side: '#232325'
     }
   },
+  // kein Farbverlauf mehr im Hintergrund – Glas nur als Milchglas der Seitenleiste und schwebender Ebenen
   glass: {
-    light: { side: 0.62, main: 0.72, card: 0.7, dialog: 0.8, pop: 0.82, wash: 0.85 },
-    dark: { side: 0.55, main: 0.7, card: 0.62, dialog: 0.82, pop: 0.84, wash: 0.6 }
+    light: { side: 0.8, main: 0.97, card: 1, dialog: 0.88, pop: 0.9, wash: 0 },
+    dark: { side: 0.82, main: 0.97, card: 0.96, dialog: 0.9, pop: 0.92, wash: 0 }
   },
   status: {
-    light: { alert: '#c0243f', alertSoft: '#fbe7ea', attention: '#93520a', attentionSoft: '#f8ecd9', ok: '#16704f', okSoft: '#e1f2ea' },
-    dark: { alert: '#ff8a9a', alertSoft: '#3a1c24', attention: '#f0b25a', attentionSoft: '#352914', ok: '#6fd3a5', okSoft: '#16302a' }
+    light: { alert: '#d70015', alertSoft: '#fdecee', attention: '#a64b00', attentionSoft: '#fdf1e3', ok: '#1d7a36', okSoft: '#e6f4ea' },
+    dark: { alert: '#ff6961', alertSoft: '#3b1d1c', attention: '#ffb340', attentionSoft: '#3a2a12', ok: '#32d74b', okSoft: '#16301c' }
   },
   accents: {
     indigo: {
@@ -103,9 +109,10 @@ export const PALETTE: {
       light: { base: '#1c6570', ink: '#ffffff', text: '#1a5f69', soft: '#e0eff0', line: '#a6ced2', wash: ['#9fd3d6', '#b9d7f2'] },
       dark: { base: '#74bcc3', ink: '#0d1e20', text: '#8acbd1', soft: '#173235', line: '#2f5f64', wash: ['#174f55', '#1e3760'] }
     },
+    // Systemblau wie bei Apple (Standard)
     blue: {
-      light: { base: '#0b6bcb', ink: '#ffffff', text: '#0a63bd', soft: '#e3effc', line: '#a9cbf3', wash: ['#a3cdfa', '#bfe4f5'] },
-      dark: { base: '#6cb2ff', ink: '#06182e', text: '#86c0ff', soft: '#132b47', line: '#2d5687', wash: ['#16457e', '#174f66'] }
+      light: { base: '#0071e3', ink: '#ffffff', text: '#0066cc', soft: '#e8f1fc', line: '#a9cbf3', wash: ['#a3cdfa', '#bfe4f5'] },
+      dark: { base: '#0a74e6', ink: '#ffffff', text: '#5eaeff', soft: '#16314f', line: '#2d5687', wash: ['#16457e', '#174f66'] }
     },
     green: {
       light: { base: '#1d7346', ink: '#ffffff', text: '#1b6b41', soft: '#e2f2e8', line: '#a7d4b8', wash: ['#a9dcbc', '#d4e9b4'] },
@@ -120,8 +127,8 @@ export const PALETTE: {
       dark: { base: '#ff8fb1', ink: '#330a19', text: '#ffa3bf', soft: '#3d1a27', line: '#7a3550', wash: ['#6e1f40', '#4b2373'] }
     },
     graphite: {
-      light: { base: '#3d4354', ink: '#ffffff', text: '#3a4050', soft: '#e9ebf0', line: '#c2c6d1', wash: ['#c9cfdc', '#dcd7e6'] },
-      dark: { base: '#c4c9d6', ink: '#14161d', text: '#d0d4df', soft: '#252834', line: '#4a4f60', wash: ['#2c3142', '#352d42'] }
+      light: { base: '#48484d', ink: '#ffffff', text: '#3a3a3e', soft: '#ececef', line: '#c7c7cc', wash: ['#d1d1d6', '#dcdce0'] },
+      dark: { base: '#c7c7cc', ink: '#1c1c1e', text: '#d1d1d6', soft: '#38383b', line: '#545458', wash: ['#2c2c2e', '#3a3a3c'] }
     }
   }
 }

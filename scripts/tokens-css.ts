@@ -11,7 +11,7 @@ const HEAD = `/* ===============================================================
 const STATIC = `:root {
   color-scheme: light;
   --font-ui: 'Inter Variable', 'Segoe UI Variable Text', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-display: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --font-display: var(--font-ui);
 
   --fs-xs: 11.5px;
   --fs-sm: 12.5px;
@@ -54,9 +54,9 @@ const STATIC = `:root {
   --sidebar-w: 224px;
   --panel-w: 380px;
 
-  --shadow-1: 0 1px 2px rgba(20, 24, 45, 0.05), 0 1px 1px rgba(20, 24, 45, 0.03);
-  --shadow-2: 0 2px 6px rgba(20, 24, 45, 0.06), 0 12px 32px -6px rgba(20, 24, 45, 0.16);
-  --shadow-3: 0 4px 12px rgba(20, 24, 45, 0.08), 0 32px 72px -16px rgba(20, 24, 45, 0.3);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.05), 0 1px 1px rgba(0, 0, 0, 0.03);
+  --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.06), 0 12px 32px -6px rgba(0, 0, 0, 0.16);
+  --shadow-3: 0 4px 12px rgba(0, 0, 0, 0.08), 0 32px 72px -16px rgba(0, 0, 0, 0.3);
   --blur: saturate(170%) blur(24px);
   --blur-strong: saturate(180%) blur(40px);
 }
@@ -85,7 +85,7 @@ const rgb = (h: string, a: number) => {
 function neutral(n: Neutral, s: Status, g: Glass, mode: 'light' | 'dark'): string {
   const dark = mode === 'dark'
   return [
-    `  --glass-side: ${rgb(n.canvas, g.side)};`,
+    `  --glass-side: ${rgb(n.side, g.side)};`,
     `  --glass-main: ${rgb(n.canvas, g.main)};`,
     `  --glass-card: ${rgb(n.raised, g.card)};`,
     `  --glass-dialog: ${rgb(n.raised, g.dialog)};`,
@@ -93,7 +93,7 @@ function neutral(n: Neutral, s: Status, g: Glass, mode: 'light' | 'dark'): strin
     `  --wash-strength: ${Math.round(g.wash * 100)}%;`,
     // feine Kontur: innen eine helle Lichtkante, außen eine zarte Linie
     dark ? `  --glass-rim: inset 0 0 0 0.5px rgb(255 255 255 / 0.09), inset 0 1px 0 rgb(255 255 255 / 0.06);` : `  --glass-rim: inset 0 0 0 0.5px rgb(255 255 255 / 0.75), inset 0 1px 0 rgb(255 255 255 / 0.9);`,
-    dark ? `  --glass-edge: 0 0 0 0.5px rgb(0 0 0 / 0.55);` : `  --glass-edge: 0 0 0 0.5px rgb(20 24 45 / 0.12);`,
+    dark ? `  --glass-edge: 0 0 0 0.5px rgb(0 0 0 / 0.55);` : `  --glass-edge: 0 0 0 0.5px rgb(0 0 0 / 0.12);`,
     `  --bg: ${n.bg};`,
     `  --canvas: ${n.canvas};`,
     `  --raised: ${n.raised};`,
@@ -105,12 +105,13 @@ function neutral(n: Neutral, s: Status, g: Glass, mode: 'light' | 'dark'): strin
     `  --line-soft: ${n.lineSoft};`,
     `  --surface-0: ${n.bg};`,
     `  --surface-1: ${n.canvas};`,
-    dark ? `  --surface-2: rgba(30, 33, 46, 0.82);` : `  --surface-2: rgba(255, 255, 255, 0.86);`,
+    dark ? `  --surface-2: rgba(44, 44, 46, 0.86);` : `  --surface-2: rgba(255, 255, 255, 0.86);`,
     `  --surface-2-solid: ${n.raised};`,
-    dark ? `  --surface-3: rgba(5, 6, 12, 0.55);` : `  --surface-3: rgba(20, 24, 45, 0.28);`,
-    dark ? `  --hover: rgba(255, 255, 255, 0.06);` : `  --hover: rgba(20, 24, 45, 0.045);`,
-    dark ? `  --pressed: rgba(255, 255, 255, 0.1);` : `  --pressed: rgba(20, 24, 45, 0.08);`,
-    `  --disabled-ink: ${dark ? '#5d6376' : '#9ca1b2'};`,
+    dark ? `  --surface-3: rgba(0, 0, 0, 0.5);` : `  --surface-3: rgba(0, 0, 0, 0.28);`,
+    dark ? `  --hover: rgba(255, 255, 255, 0.06);` : `  --hover: rgba(0, 0, 0, 0.045);`,
+    dark ? `  --pressed: rgba(255, 255, 255, 0.1);` : `  --pressed: rgba(0, 0, 0, 0.08);`,
+    dark ? `  --nav-selected: rgba(255, 255, 255, 0.1);` : `  --nav-selected: rgba(0, 0, 0, 0.075);`,
+    `  --disabled-ink: ${dark ? '#636366' : '#aeaeb2'};`,
     `  --alert: ${s.alert};`,
     `  --alert-soft: ${s.alertSoft};`,
     `  --attention: ${s.attention};`,
@@ -141,9 +142,9 @@ export function renderTokens(): string {
   out.push(`:root,\n:root[data-theme='light'] {\n${neutral(PALETTE.neutral.light, PALETTE.status.light, PALETTE.glass.light, 'light')}\n}`)
   out.push(`:root[data-theme='dark'] {\n${neutral(PALETTE.neutral.dark, PALETTE.status.dark, PALETTE.glass.dark, 'dark')}\n}`)
   for (const [id, pair] of Object.entries(PALETTE.accents)) {
-    const sel = id === 'indigo' ? `:root,\n:root[data-accent='indigo']` : `:root[data-accent='${id}']`
+    const sel = id === 'blue' ? `:root,\n:root[data-accent='blue']` : `:root[data-accent='${id}']`
     out.push(`${sel} {\n${accent(pair.light)}\n}`)
-    out.push(`:root[data-theme='dark'][data-accent='${id}']${id === 'indigo' ? `,\n:root[data-theme='dark']:not([data-accent])` : ''} {\n${accent(pair.dark)}\n}`)
+    out.push(`:root[data-theme='dark'][data-accent='${id}']${id === 'blue' ? `,\n:root[data-theme='dark']:not([data-accent])` : ''} {\n${accent(pair.dark)}\n}`)
   }
   return out.join('\n') + '\n'
 }

@@ -72,7 +72,7 @@ for (const mode of ['light', 'dark'] as const) {
       for (const w of PALETTE.accents[id][mode].wash) {
         // stärkste Stelle des Verlaufs (Mitte des Farbflecks)
         const backdrop = hex(over(hex(w), g.wash, hex(n.bg)))
-        for (const [name, surface, alpha] of [['Seitenleiste', n.canvas, g.side], ['Hauptfläche', n.canvas, g.main]] as const) {
+        for (const [name, surface, alpha] of [['Seitenleiste', n.side, g.side], ['Hauptfläche', n.canvas, g.main]] as const) {
           const eff = over(hex(surface), alpha, backdrop)
           for (const ink of ['ink', 'ink2', 'ink3'] as const) {
             const c = contrast(n[ink], eff)

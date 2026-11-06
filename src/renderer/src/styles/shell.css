@@ -113,8 +113,8 @@ body::before {
 .nav-pill,
 .settings-nav .nav-item[aria-current='page'] {
   position: relative;
-  background: var(--glass-card);
-  box-shadow: var(--glass-rim), var(--glass-edge), var(--shadow-1);
+  background: var(--nav-selected);
+  box-shadow: none;
 }
 .nav-item .count {
   white-space: nowrap;
@@ -151,12 +151,12 @@ body::before {
   background: var(--accent-soft);
 }
 
-/* Große Überschriften: Instrument Serif als Markenzeichen */
+/* Große Überschriften: klar und kräftig wie bei Apple */
 .greeting h1 {
-  font-family: var(--font-display);
-  font-weight: 400;
-  font-size: 44px;
-  letter-spacing: -0.01em;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 40px;
+  letter-spacing: -0.032em;
   line-height: 1.05;
   color: var(--ink);
 }

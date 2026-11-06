@@ -29,30 +29,17 @@
   top: 0;
   left: 10px;
   right: 10px;
-  border-radius: 10px;
-  background: var(--surface-2);
-  box-shadow: 0 0 0 1px var(--line-soft), var(--shadow-1);
+  border-radius: 8px;
+  /* wie die Auswahl in der macOS-Seitenleiste: flache graue Fläche, kein Schatten */
+  background: var(--nav-selected);
+  box-shadow: none;
   transition:
     transform 0.5s var(--ease-spring),
     height 0.3s var(--ease-out);
   pointer-events: none;
 }
-.nav-pill::before {
-  content: '';
-  position: absolute;
-  left: -6px;
-  top: 9px;
-  bottom: 9px;
-  width: 3px;
-  border-radius: 3px;
-  background: var(--accent);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 70%, transparent);
-}
 .nav-item svg {
   transition: transform 0.35s var(--ease-spring), color 0.2s;
-}
-.nav-item:hover svg {
-  transform: scale(1.12);
 }
 .nav-item:active svg {
   transform: scale(0.92);

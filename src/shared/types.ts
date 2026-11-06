@@ -502,6 +502,8 @@ export interface Settings {
   theme: ThemeMode
   /** Akzentfarbe der Oberfläche */
   accent: AccentId
+  /** Stand des Erscheinungsbilds (für einmalige Umstellungen) */
+  designRev?: number
   motion: MotionMode
   launchAtLogin: boolean
   /** veraltet (bis 1.8): Seitenleiste als Streifen – ersetzt durch sidebarMode */
@@ -600,7 +602,8 @@ export const GMAIL_CATEGORIES: { id: GmailCategory; label: string; hint: string 
 export const DEFAULT_SETTINGS: Settings = {
   userName: '',
   theme: 'system',
-  accent: 'indigo',
+  accent: 'blue',
+  designRev: 2,
   motion: 'system',
   sidebarMode: 'auto',
   windowDock: false,

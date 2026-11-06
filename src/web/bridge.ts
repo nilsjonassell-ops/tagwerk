@@ -6,6 +6,7 @@
 import { getWikibooksRecipe, searchWikibooks, WIKI_AGENT } from '@shared/recipe-wiki'
 import { shareSim, shareSimHooks } from './share-sim'
 import { completeList } from '@shared/lists'
+import { normalizeAppearance } from '@shared/appearance'
 import { DEFAULT_SETTINGS, type AppData, type CalEvent, type CloudStatus, type Email, type GoogleStatus, type ICloudStatus, type MicrosoftStatus, type Settings, type TagwerkApi } from '@shared/types'
 
 // ?person=2 öffnet eine zweite, getrennte Person (eigene Daten) – zum Ausprobieren geteilter Einkaufslisten in zwei Tabs
@@ -48,7 +49,7 @@ function merge<T>(base: T, over: unknown): T {
   return out as T
 }
 /** Wie im Hauptprozess: neue Bereiche/Karten aus Updates ergänzen */
-const complete = (s: Settings): Settings => ({ ...s, sidebar: completeList(s.sidebar, DEFAULT_SETTINGS.sidebar), dashboardCards: completeList(s.dashboardCards, DEFAULT_SETTINGS.dashboardCards) })
+const complete = (s: Settings): Settings => ({ ...s, ...normalizeAppearance(s), sidebar: completeList(s.sidebar, DEFAULT_SETTINGS.sidebar), dashboardCards: completeList(s.dashboardCards, DEFAULT_SETTINGS.dashboardCards) })
 let settings: Settings = complete(merge(DEFAULT_SETTINGS, read<Partial<Settings>>(K.settings) ?? {}))
 
 // ---------- In-Page-Pop-ups statt eigener Fenster ----------

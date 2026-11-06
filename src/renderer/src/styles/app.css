@@ -1,6 +1,4 @@
 /* Tagwerk – Grundstile, nach Bereichen aufgeteilt (Reihenfolge = Kaskade, nicht umsortieren) */
-@import '@fontsource/instrument-serif/400.css';
-@import '@fontsource/instrument-serif/400-italic.css';
 @import './app/base.css';
 @import './app/layout.css';
 @import './app/controls.css';
