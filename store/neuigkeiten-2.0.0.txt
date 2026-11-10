@@ -1,0 +1,11 @@
+Das große Update 2.0:
+
+• Neues Design: ruhige Glasoptik im Apple-Stil, Hell/Dunkel/Wie Windows und 7 Akzentfarben – alle auf gute Lesbarkeit geprüft.
+• Essen: Wochenplan für Mahlzeiten, Rezeptsuche im Wikibooks-Kochbuch, Portionen umrechnen und Zutaten mit einem Klick auf die Einkaufsliste.
+• Gemeinsame Einkaufsliste: über OneDrive mit Familie oder Mitbewohnern teilen – Änderungen erscheinen sofort bei allen, auch offline.
+• Outlook und Apple Kalender: Outlook-Postfach und -Kalender sowie iCloud-Kalender direkt in Tagwerk.
+• Vorschläge aus E-Mails: Tagwerk erkennt Termine, Fristen und Aufgaben in deinen Mails – lokal auf deinem PC, ohne KI. Übernommen wird nur, was du bestätigst.
+• Cloud-Speicher: deine Daten im eigenen OneDrive sichern und auf jedem PC wiederherstellen.
+• Neue Startseite „Heute“ mit größerem Tagesplan, Überschneidungen auf einen Blick und dem Wichtigsten des Tages.
+• OneNote, Wiedervorlage für Mails, Regeln für Absender, Fenster am Bildschirmrand andocken.
+• Neue Begrüßung mit Demo, kürzere Startanimation, „Bewegung reduzieren“ und viele kleine Verbesserungen.

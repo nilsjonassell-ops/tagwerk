@@ -87,7 +87,8 @@ for (const mode of ['light', 'dark'] as const) {
 }
 
 test('tokens.css ist aus der Palette erzeugt und aktuell', () => {
-  const css = readFileSync(new URL('../src/renderer/src/styles/tokens.css', import.meta.url), 'utf8')
-  assert.equal(css, renderTokens(), 'npm run tokens ausführen')
+  // Windows-Checkout: Zeilenenden können \r\n sein
+  const css = readFileSync(new URL('../src/renderer/src/styles/tokens.css', import.meta.url), 'utf8').replace(/\r\n/g, '\n')
+  assert.equal(css, renderTokens().replace(/\r\n/g, '\n'), 'npm run tokens ausführen')
   for (const { id } of ACCENTS) assert.ok(css.includes(`[data-accent='${id}']`), id)
 })
